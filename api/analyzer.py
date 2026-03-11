@@ -1,13 +1,12 @@
 """
 mybuilding.dev — Upwork Analyzer API
-FastAPI + Anthropic SDK (claude-haiku-4-5, key depuis /root/morpheus/.env)
+FastAPI + claude -p (Claude Max OAuth, zero cost)
 Port : 3002 (localhost only, nginx proxie /api/)
 """
-import json, sys, os
+import subprocess, json, sys
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import anthropic
 
 app = FastAPI(title="mybuilding-api", docs_url=None, redoc_url=None)
 
@@ -17,8 +16,6 @@ app.add_middleware(
     allow_methods=["POST", "GET"],
     allow_headers=["Content-Type"],
 )
-
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 
 class JobRequest(BaseModel):
@@ -32,9 +29,9 @@ CRITÈRES GO: Budget >= $1000, stack match, client sérieux (rating > 4.5, payme
 RED LINES: Budget < $500 → SKIP. Scraping illégal / crypto / NFT → SKIP.
 SCORING: 80-100=GO | 60-79=MAYBE | 0-59=SKIP
 
-Réponds UNIQUEMENT en JSON valide, sans texte avant ou après."""
+Réponds UNIQUEMENT en JSON valide, sans texte avant ou après :
 
-SCHEMA = """{
+{
   "title": "<titre court, max 60 chars>",
   "score": <0-100>,
   "verdict": "<GO|MAYBE|SKIP>",
@@ -71,16 +68,18 @@ async def analyze(req: JobRequest):
     if not req.description.strip():
         raise HTTPException(400, "Description vide")
 
-    prompt = f"Schema JSON obligatoire:\n{SCHEMA}\n\nJOB DESCRIPTION:\n{req.description.strip()}"
+    prompt = SYSTEM + "\n\nJOB DESCRIPTION:\n" + req.description.strip()
 
     try:
-        msg = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
-            system=SYSTEM,
-            messages=[{"role": "user", "content": prompt}],
+        result = subprocess.run(
+            ["claude", "-p", prompt],
+            capture_output=True, text=True, timeout=90,
         )
-        output = msg.content[0].text.strip()
+        output = result.stdout.strip()
+
+        if result.returncode != 0:
+            print(f"claude stderr: {result.stderr[:500]}", file=sys.stderr)
+            raise ValueError(f"claude exit {result.returncode}")
 
         start = output.find("{")
         end = output.rfind("}") + 1
@@ -89,8 +88,11 @@ async def analyze(req: JobRequest):
 
         return json.loads(output[start:end])
 
+    except subprocess.TimeoutExpired:
+        print("claude timeout", file=sys.stderr)
+        raise HTTPException(504, "Timeout Claude")
     except json.JSONDecodeError as e:
-        print(f"JSON parse error: {e} | output: {output[:300]}", file=sys.stderr)
+        print(f"JSON error: {e} | output: {output[:300]}", file=sys.stderr)
         raise HTTPException(500, "Erreur parsing réponse Claude")
     except Exception as e:
         print(f"analyze error: {e}", file=sys.stderr)
