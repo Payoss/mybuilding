@@ -69,6 +69,12 @@
 .paste-hint { font-size: 11px; color: var(--t3); display: flex; align-items: center; gap: 5px; margin-top: 10px; }
 @keyframes scoreIn { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
 .result-content.visible .score-circle { animation: scoreIn 0.4s 0.1s cubic-bezier(0.16,1,0.3,1) both; }
+.proposal-block { border-left-color: var(--teal) !important; }
+.proposal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.proposal-text { width: 100%; background: transparent; border: none; outline: none; color: var(--t2); font-size: 12px; font-family: inherit; resize: none; line-height: 1.65; min-height: 130px; }
+.copy-btn { background: var(--teal-glow); border: 1px solid rgba(13,148,136,0.3); color: var(--teal); font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.copy-btn:hover { background: rgba(13,148,136,0.22); }
+.copy-btn.copied { background: var(--green-bg); border-color: rgba(34,197,94,0.3); color: var(--green); }
 </style>
 </head>
 <body>
@@ -301,7 +307,14 @@ function renderResult(data) {
     </div>
     ${a.strengths ? `<div class="analysis-block ab-green"><div class="ab-title">✓ Points forts</div><div class="ab-content">${a.strengths}</div></div>` : ''}
     ${a.red_flags ? `<div class="analysis-block ab-red"><div class="ab-title">⚠ Red flags</div><div class="ab-content">${a.red_flags}</div></div>` : ''}
-    ${a.angle_proposition ? `<div class="analysis-block ab-teal"><div class="ab-title">✦ Angle recommandé</div><div class="ab-content">${a.angle_proposition}</div></div>` : ''}`;
+    ${a.angle_proposition ? `<div class="analysis-block ab-teal"><div class="ab-title">✦ Angle recommandé</div><div class="ab-content">${a.angle_proposition}</div></div>` : ''}
+    ${data.proposal ? `<div class="analysis-block proposal-block">
+      <div class="proposal-header">
+        <span class="ab-title" style="margin:0">✦ Proposition générée</span>
+        <button class="copy-btn" id="copyBtn" onclick="copyProposal()">📋 Copier</button>
+      </div>
+      <textarea class="proposal-text" id="proposalText" readonly>${data.proposal}</textarea>
+    </div>` : (data.verdict === 'SKIP' ? '' : '')}`;
 
   document.getElementById('resultContent').classList.add('visible');
 }
@@ -316,7 +329,7 @@ async function saveJob(data, description) {
       budget_max:   data.budget_max || null,
       budget_type:  data.budget_type || 'fixed',
       score:        data.score,
-      analysis:     data.analysis || {},
+      analysis:     { ...(data.analysis || {}), verdict: data.verdict, proposal: data.proposal || null },
       keywords_hit: data.keywords_hit || [],
       status:       'new',
     });
@@ -328,7 +341,18 @@ async function saveJob(data, description) {
 async function loadJobResult(id) {
   var { data } = await sb.from('upwork_jobs').select('*').eq('id', id).single();
   if (!data) return;
-  currentJobData = { ...data.analysis, title: data.title, score: data.score, verdict: data.analysis?.verdict || 'MAYBE', budget_min: data.budget_min, budget_max: data.budget_max, client_info: data.client_info, keywords_hit: data.keywords_hit, analysis: data.analysis };
+  currentJobData = {
+    ...data.analysis,
+    title:        data.title,
+    score:        data.score,
+    verdict:      data.analysis?.verdict || 'MAYBE',
+    budget_min:   data.budget_min,
+    budget_max:   data.budget_max,
+    client_info:  data.client_info,
+    keywords_hit: data.keywords_hit,
+    proposal:     data.analysis?.proposal || null,
+    analysis:     data.analysis
+  };
   document.getElementById('resultEmpty').style.display = 'none';
   renderResult(currentJobData);
 }
@@ -337,6 +361,17 @@ async function updateStatus(status) {
   if (!currentJobData?.title) return;
   var { error } = await sb.from('upwork_jobs').update({ status, applied_at: status === 'applied' ? new Date().toISOString() : null }).eq('title', currentJobData.title).order('analyzed_at', { ascending: false }).limit(1);
   if (!error) { toast(status === 'applied' ? 'Marqué comme postulé ✓' : 'Job passé'); loadUpwork(); }
+}
+
+function copyProposal() {
+  var txt = document.getElementById('proposalText');
+  var btn = document.getElementById('copyBtn');
+  if (!txt || !btn) return;
+  navigator.clipboard.writeText(txt.value).then(function() {
+    btn.textContent = '✓ Copié !';
+    btn.classList.add('copied');
+    setTimeout(function() { btn.textContent = '📋 Copier'; btn.classList.remove('copied'); }, 2000);
+  });
 }
 
 function showKeywords() {
