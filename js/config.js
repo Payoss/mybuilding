@@ -1,11 +1,9 @@
 // ============================================================
 // mybuilding.dev — Config Supabase
 // ============================================================
-// Ces valeurs seront remplacées par les vraies clés Supabase
-// NE PAS committer le vrai .env — utiliser .env.example
 
-const SUPABASE_URL  = 'REPLACE_WITH_SUPABASE_URL';
-const SUPABASE_KEY  = 'REPLACE_WITH_SUPABASE_ANON_KEY';
+const SUPABASE_URL  = 'https://hjcdshafjkzzjaztqhte.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_EJChtqZR5pRHHGmU8oF9fg_WH9Rqf19';
 
 // Init client Supabase (CDN chargé dans chaque page HTML)
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
