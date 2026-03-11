@@ -29,6 +29,8 @@ CRITÈRES GO: Budget >= $1000, stack match, client sérieux (rating > 4.5, payme
 RED LINES: Budget < $500 → SKIP. Scraping illégal / crypto / NFT → SKIP.
 SCORING: 80-100=GO | 60-79=MAYBE | 0-59=SKIP
 
+LANGUE : Les champs "note", "strengths", "red_flags", "angle_proposition" doivent être en FRANÇAIS.
+
 RÈGLES PROPOSITION (champ "proposal"):
 - En anglais, voix naturelle de Paul (direct, confiant, pas corporate)
 - 150-220 mots maximum

@@ -314,7 +314,7 @@ function renderResult(data) {
         <button class="copy-btn" id="copyBtn" onclick="copyProposal()">📋 Copier</button>
       </div>
       <textarea class="proposal-text" id="proposalText" readonly>${data.proposal}</textarea>
-    </div>` : (data.verdict === 'SKIP' ? '' : '')}`;
+    </div>` : `<div class="analysis-block" style="border-left-color:var(--t3);opacity:0.55"><div class="ab-title">✦ Proposition</div><div class="ab-content">Job ${data.verdict === 'SKIP' ? 'SKIP — budget ou critères insuffisants, pas de proposition.' : 'non éligible.'}</div></div>`}`;
 
   document.getElementById('resultContent').classList.add('visible');
 }
