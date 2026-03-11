@@ -264,12 +264,37 @@ function renderResult(data) {
   var scoreColor = score >= 75 ? 'var(--green)' : score >= 55 ? 'var(--amber)' : 'var(--red)';
   var circ = 2 * Math.PI * 26;
   var offset = circ - (score / 100) * circ;
-  var budgetStr = [data.budget_min, data.budget_max].filter(Boolean).map(n=>n>=1000?'$'+n/1000+'K':'$'+n).join('–') || '—';
+
+  // Budget — afficher "À négocier" si placeholder Upwork
+  var budgetStr;
+  if (data.budget_is_placeholder) {
+    budgetStr = '💬 Budget à négocier';
+  } else {
+    budgetStr = [data.budget_min, data.budget_max].filter(Boolean).map(n=>n>=1000?'$'+n/1000+'K':'$'+n).join('–') || '—';
+  }
+
   var clientStr = '';
   if (data.client_info) {
     var ci = data.client_info;
-    clientStr = [ci.rating ? '⭐ ' + ci.rating : null, ci.reviews ? ci.reviews + ' reviews' : null, ci.payment_verified ? 'Payment verified' : null, budgetStr].filter(Boolean).join(' · ');
+    var newClientNote = ci.is_new_client ? '🆕 Nouveau client' : null;
+    clientStr = [
+      ci.rating ? '⭐ ' + ci.rating : null,
+      ci.reviews != null ? ci.reviews + ' reviews' : null,
+      ci.payment_verified ? '✓ Vérifié' : null,
+      newClientNote,
+      budgetStr
+    ].filter(Boolean).join(' · ');
   }
+
+  // Niche tier badge
+  var tierBadge = { core: '🎯 Core', adjacent: '↗ Adjacent', stretch: '⚠ Stretch', unknown: '' };
+  var tierColor = { core: 'var(--teal)', adjacent: 'var(--amber)', stretch: 'var(--red)', unknown: 'var(--t3)' };
+  var tier = a.niche_tier || 'unknown';
+
+  // Intent badge
+  var intentLabel = { cheap: '⚠ Cheap buyer', quality: '✓ Quality buyer', neutral: 'Neutre' };
+  var intentColor = { cheap: 'var(--amber)', quality: 'var(--green)', neutral: 'var(--t3)' };
+  var intent = a.client_intent || 'neutral';
 
   document.getElementById('resultContent').innerHTML = `
     <div class="score-header">
@@ -284,24 +309,40 @@ function renderResult(data) {
       <div class="score-info">
         <div class="score-job-title">${data.title || '—'}</div>
         <div class="score-client">${clientStr || budgetStr}</div>
-        <span class="score-verdict verdict-${data.verdict}">${data.verdict === 'GO' ? '✓ GO — Postuler' : data.verdict === 'MAYBE' ? '~ MAYBE' : '✕ SKIP'}</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:5px">
+          <span class="score-verdict verdict-${data.verdict}">${data.verdict === 'GO' ? '✓ GO — Postuler' : data.verdict === 'MAYBE' ? '~ MAYBE' : '✕ SKIP'}</span>
+          ${tier !== 'unknown' ? `<span style="font-size:10px;font-weight:600;color:${tierColor[tier]};padding:3px 8px;border-radius:10px;background:rgba(255,255,255,0.04)">${tierBadge[tier]}</span>` : ''}
+          ${intent !== 'neutral' ? `<span style="font-size:10px;font-weight:600;color:${intentColor[intent]};padding:3px 8px;border-radius:10px;background:rgba(255,255,255,0.04)">${intentLabel[intent]}</span>` : ''}
+        </div>
       </div>
       <div class="score-actions">
         <button class="action-sm action-apply" onclick="updateStatus('applied')">Postuler →</button>
         <button class="action-sm action-skip" onclick="updateStatus('skipped')">Passer</button>
       </div>
     </div>
+
+    ${data.margin_ratio ? `<div class="analysis-block" style="border-left-color:var(--teal);background:rgba(13,148,136,0.04)">
+      <div class="ab-title">⏱ Margin Ratio — Interne</div>
+      <div class="ab-content" style="display:flex;gap:16px;flex-wrap:wrap">
+        <span>⚡ Réel : <strong>${data.real_time_hours}h</strong></span>
+        <span>📄 Facturable : <strong>${data.billable_days}j</strong></span>
+        <span>💎 MR : <strong style="color:var(--teal)">${data.margin_ratio}x</strong></span>
+        <span style="color:var(--t3)">${data.pricing_rule || ''}</span>
+      </div>
+    </div>` : ''}
+
     <div class="breakdown">
-      ${['fit_tech','fit_budget','client_quality','competition'].map(k => {
+      ${['fit_tech','fit_budget','client_quality','competition','scope_clarity'].map(k => {
         var item = a[k] || {};
-        var s = item.score || 0;
+        var s = typeof item === 'object' ? (item.score || 0) : 0;
         var color = s >= 7 ? 'var(--green)' : s >= 5 ? 'var(--teal)' : 'var(--amber)';
-        var labels = { fit_tech: 'Fit technique', fit_budget: 'Budget', client_quality: 'Qualité client', competition: 'Compétition' };
+        var labels = { fit_tech: 'Fit technique', fit_budget: 'Budget', client_quality: 'Qualité client', competition: 'Compétition', scope_clarity: 'Clarté spec' };
+        var note = typeof item === 'object' ? (item.note || '') : '';
         return `<div class="breakdown-item">
           <div class="bi-label">${labels[k]}</div>
           <div class="bi-bar-wrap"><div class="bi-bar" style="width:${s*10}%;background:${color}"></div></div>
           <div class="bi-val" style="color:${color}">${s}/10</div>
-          <div class="bi-note">${item.note || ''}</div>
+          <div class="bi-note">${note}</div>
         </div>`;
       }).join('')}
     </div>
@@ -314,7 +355,7 @@ function renderResult(data) {
         <button class="copy-btn" id="copyBtn" onclick="copyProposal()">📋 Copier</button>
       </div>
       <textarea class="proposal-text" id="proposalText" readonly>${data.proposal}</textarea>
-    </div>` : `<div class="analysis-block" style="border-left-color:var(--t3);opacity:0.55"><div class="ab-title">✦ Proposition</div><div class="ab-content">Job ${data.verdict === 'SKIP' ? 'SKIP — budget ou critères insuffisants, pas de proposition.' : 'non éligible.'}</div></div>`}`;
+    </div>` : `<div class="analysis-block" style="border-left-color:var(--t3);opacity:0.55"><div class="ab-title">✦ Proposition</div><div class="ab-content">Job ${data.verdict === 'SKIP' ? 'SKIP — critères insuffisants, pas de proposition.' : 'non éligible.'}</div></div>`}`;
 
   document.getElementById('resultContent').classList.add('visible');
 }
@@ -322,16 +363,21 @@ function renderResult(data) {
 async function saveJob(data, description) {
   try {
     await sb.from('upwork_jobs').insert({
-      title:        data.title,
-      description:  description,
-      client_info:  data.client_info || {},
-      budget_min:   data.budget_min || null,
-      budget_max:   data.budget_max || null,
-      budget_type:  data.budget_type || 'fixed',
-      score:        data.score,
-      analysis:     { ...(data.analysis || {}), verdict: data.verdict, proposal: data.proposal || null },
-      keywords_hit: data.keywords_hit || [],
-      status:       'new',
+      title:               data.title,
+      description:         description,
+      client_info:         data.client_info || {},
+      budget_min:          data.budget_min || null,
+      budget_max:          data.budget_max || null,
+      budget_type:         data.budget_type || 'fixed',
+      budget_is_placeholder: data.budget_is_placeholder || false,
+      score:               data.score,
+      margin_ratio:        data.margin_ratio || null,
+      real_time_hours:     data.real_time_hours || null,
+      billable_days:       data.billable_days || null,
+      pricing_rule:        data.pricing_rule || null,
+      analysis:            { ...(data.analysis || {}), verdict: data.verdict, proposal: data.proposal || null },
+      keywords_hit:        data.keywords_hit || [],
+      status:              'new',
     });
   } catch(e) {
     console.error('saveJob', e);
