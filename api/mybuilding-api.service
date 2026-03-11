@@ -12,6 +12,7 @@ RestartSec=5
 StandardOutput=append:/root/logs/mybuilding_api.log
 StandardError=append:/root/logs/mybuilding_api.log
 Environment=PATH=/root/mybuilding/api/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=HOME=/root
 EnvironmentFile=/root/morpheus/.env
 
 [Install]
