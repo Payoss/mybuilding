@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mybuilding — Upwork Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+.analyzer-row { display: grid; grid-template-columns: 5fr 7fr; gap: 12px; }
+.paste-area { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 12px; color: var(--t1); font-size: 12px; font-family: inherit; resize: none; outline: none; line-height: 1.5; transition: border-color 0.15s; min-height: 180px; }
+.paste-area:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.12); }
+.paste-area::placeholder { color: var(--t3); }
+.keywords-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
+.kw-chip { background: var(--teal-glow); border: 1px solid rgba(13,148,136,0.2); color: var(--teal); font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.analyze-btn { width: 100%; margin-top: 12px; padding: 10px; background: var(--teal); color: white; border: none; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 0 20px rgba(13,148,136,0.25); }
+.analyze-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 0 28px rgba(13,148,136,0.4); }
+.analyze-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.spinner { display: none; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.analyze-btn.loading .spinner { display: block; }
+.analyze-btn.loading .btn-label { display: none; }
+.result-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 240px; gap: 8px; }
+.result-content { display: none; flex-direction: column; gap: 12px; }
+.result-content.visible { display: flex; }
+.score-header { display: flex; align-items: center; gap: 14px; padding: 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; }
+.score-circle { width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; letter-spacing: -1px; position: relative; }
+.score-circle svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.score-circle .num { position: relative; z-index: 1; }
+.score-info { flex: 1; min-width: 0; }
+.score-job-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.score-client { font-size: 11px; color: var(--t2); margin-bottom: 6px; }
+.score-verdict { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+.verdict-GO    { background: var(--green-bg); color: var(--green); }
+.verdict-MAYBE { background: var(--amber-bg); color: var(--amber); }
+.verdict-SKIP  { background: var(--red-bg); color: var(--red); }
+.score-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.action-sm { padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
+.action-apply { background: var(--teal); color: white; }
+.action-apply:hover { opacity: 0.9; }
+.action-skip { background: var(--glass-h); color: var(--t2); border: 1px solid var(--border); }
+.action-skip:hover { border-color: var(--red); color: var(--red); }
+.breakdown { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.breakdown-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.bi-label { font-size: 10px; color: var(--t3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.bi-bar-wrap { background: rgba(255,255,255,0.05); border-radius: 4px; height: 4px; margin-bottom: 5px; overflow: hidden; }
+.bi-bar { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.16,1,0.3,1); }
+.bi-val { font-size: 11px; font-weight: 600; font-family: 'DM Mono', monospace; }
+.bi-note { font-size: 10px; color: var(--t2); margin-top: 2px; }
+.analysis-block { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 11px 13px; border-left: 2px solid var(--border); }
+.ab-title { font-size: 10px; font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+.ab-content { font-size: 12px; color: var(--t2); line-height: 1.55; }
+.ab-content strong { color: var(--t1); font-weight: 500; }
+.ab-green { border-left-color: var(--green); }
+.ab-red   { border-left-color: var(--red); }
+.ab-teal  { border-left-color: var(--teal); }
+.htable-wrap { overflow-x: auto; }
+.hrow { display: grid; grid-template-columns: 2.5fr 1.2fr 1fr 1fr 1fr 1.2fr; padding: 0 12px; align-items: center; }
+.hhead { border-bottom: 1px solid var(--border); }
+.hhead .hc { font-size: 10px; font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: 0.07em; padding: 8px 0; }
+.hbody-row { border-bottom: 1px solid rgba(255,255,255,0.04); padding: 11px 0; cursor: pointer; transition: background 0.1s; border-radius: 6px; }
+.hbody-row:last-child { border-bottom: none; }
+.hbody-row:hover { background: rgba(255,255,255,0.03); }
+.hc { font-size: 12px; color: var(--t2); }
+.hc-title { font-size: 12px; font-weight: 500; color: var(--t1); }
+.hc-kw { font-size: 10px; color: var(--t3); margin-top: 1px; }
+.action-tiny { font-size: 11px; color: var(--t3); cursor: pointer; transition: color 0.12s; }
+.action-tiny:hover { color: var(--teal); }
+.paste-hint { font-size: 11px; color: var(--t3); display: flex; align-items: center; gap: 5px; margin-top: 10px; }
+@keyframes scoreIn { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
+.result-content.visible .score-circle { animation: scoreIn 0.4s 0.1s cubic-bezier(0.16,1,0.3,1) both; }
+</style>
+</head>
+<body>
+<div id="sidebar-mount"></div>
+
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="breadcrumb">mybuilding /</span>
+      <span class="page-title">Upwork Analyzer</span>
+      <span class="teal-chip">✦ Claude-powered</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-glass" onclick="showKeywords()">⚙ Keywords</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- METRICS -->
+    <div class="metrics" id="upwork-metrics">
+      <div class="metric"><div class="metric-label">Analysés ce mois</div><div class="metric-val" id="m-total">—</div></div>
+      <div class="metric"><div class="metric-label">Score moyen</div><div class="metric-val" id="m-avg">—</div></div>
+      <div class="metric"><div class="metric-label">Propositions</div><div class="metric-val" id="m-applied">—</div></div>
+      <div class="metric"><div class="metric-label">Réponses</div><div class="metric-val" id="m-response">—</div></div>
+    </div>
+
+    <!-- ANALYZER + RESULT -->
+    <div class="analyzer-row fade-up fade-up-2">
+
+      <!-- PASTE -->
+      <div class="tile">
+        <div class="tile-title">Analyser un job <span class="tile-title-sub">Colle la description</span></div>
+        <textarea class="paste-area" id="jobInput" placeholder="Colle ici la description du job Upwork..."></textarea>
+        <div class="keywords-row" id="kw-chips"></div>
+        <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">
+          <div class="spinner"></div>
+          <span class="btn-label">✦ Analyser avec Claude</span>
+        </button>
+        <div class="paste-hint">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a1 1 0 110 2 1 1 0 010-2zm-1 4h2v4H7V8z"/></svg>
+          Profil actif : Paul Annes · React / Claude API / n8n / Full-stack
+        </div>
+      </div>
+
+      <!-- RESULT -->
+      <div class="tile" id="result-tile">
+        <div class="tile-title">Résultat d'analyse</div>
+        <div class="result-empty" id="resultEmpty">
+          <div class="result-empty-icon">✦</div>
+          <div style="font-size:12px;color:var(--t3);text-align:center">Colle une description<br>et clique sur Analyser</div>
+        </div>
+        <div class="result-content" id="resultContent"></div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="tile fade-up fade-up-3" id="history-tile">
+      <div class="tile-title">Historique <span class="tile-title-sub" id="history-count">—</span></div>
+      <div class="htable-wrap">
+        <div class="hrow hhead">
+          <div class="hc">Job</div>
+          <div class="hc">Budget</div>
+          <div class="hc">Score</div>
+          <div class="hc">Keywords</div>
+          <div class="hc">Statut</div>
+          <div class="hc">Action</div>
+        </div>
+        <div id="history-rows">
+          <div class="empty-state"><div class="empty-text">Chargement...</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+document.getElementById('sidebar-mount').innerHTML = renderSidebar('upwork');
+
+// Render keywords chips
+var kwChips = document.getElementById('kw-chips');
+(PROFILE.keywords || []).forEach(function(k) {
+  kwChips.innerHTML += '<span class="kw-chip">' + k + '</span>';
+});
+
+var currentJobData = null;
+
+// ---- Load metrics & history ----
+async function loadUpwork() {
+  try {
+    var startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
+    var { data: all } = await sb.from('upwork_jobs').select('*').order('analyzed_at', { ascending: false });
+    all = all || [];
+    var month = all.filter(j => new Date(j.analyzed_at) >= startOfMonth);
+    var applied = all.filter(j => ['applied','interviewing','won'].includes(j.status));
+    var responded = all.filter(j => ['interviewing','won'].includes(j.status));
+    var scores = month.filter(j => j.score != null).map(j => j.score);
+    var avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
+
+    document.getElementById('m-total').textContent = month.length;
+    document.getElementById('m-avg').innerHTML = avg != null ? avg + '<span style="font-size:13px;color:var(--t3)">/100</span>' : '—';
+    document.getElementById('m-applied').textContent = applied.length;
+    document.getElementById('m-response').textContent = responded.length;
+
+    document.getElementById('history-count').textContent = all.length + ' jobs';
+    renderHistory(all.slice(0, 20));
+  } catch(e) {
+    toast('Erreur chargement', 'error');
+  }
+}
+
+var STATUS_CHIPS = {
+  new:         '<span class="status-chip sc-teal">● Nouveau</span>',
+  applied:     '<span class="status-chip sc-blue">✓ Postulé</span>',
+  skipped:     '<span class="status-chip sc-t3">✕ Passé</span>',
+  interviewing:'<span class="status-chip sc-purple">⟳ Entretien</span>',
+  won:         '<span class="status-chip sc-green">★ Won</span>',
+  lost:        '<span class="status-chip sc-red">✗ Lost</span>',
+};
+
+function renderHistory(jobs) {
+  if (!jobs.length) {
+    document.getElementById('history-rows').innerHTML = '<div class="empty-state"><div class="empty-text">Aucun job analysé</div></div>';
+    return;
+  }
+  var budget_str = function(j) {
+    if (!j.budget_min && !j.budget_max) return '—';
+    if (j.budget_max) return '$' + (j.budget_min||0)/1000 + '–' + j.budget_max/1000 + 'K';
+    return '$' + j.budget_min;
+  };
+  document.getElementById('history-rows').innerHTML = jobs.map(j => `
+    <div class="hrow hbody-row" onclick="loadJobResult('${j.id}')">
+      <div>
+        <div class="hc-title">${j.title}</div>
+        <div class="hc-kw">${(j.keywords_hit||[]).slice(0,2).join(' · ') || '—'}</div>
+      </div>
+      <div class="hc mono">${budget_str(j)}</div>
+      <div class="hc">${scorePill(j.score)}</div>
+      <div class="hc">${(j.keywords_hit||[]).slice(0,1).join('') || '—'}</div>
+      <div class="hc">${STATUS_CHIPS[j.status] || j.status}</div>
+      <div class="hc"><span class="action-tiny">Voir →</span></div>
+    </div>`).join('');
+}
+
+// ---- Analyze ----
+async function runAnalysis() {
+  var input = document.getElementById('jobInput');
+  var btn = document.getElementById('analyzeBtn');
+  if (!input.value.trim()) {
+    input.style.borderColor = 'var(--red)';
+    setTimeout(() => input.style.borderColor = '', 1000);
+    return;
+  }
+  btn.classList.add('loading');
+  btn.disabled = true;
+  document.getElementById('resultEmpty').style.display = 'none';
+  document.getElementById('resultContent').classList.remove('visible');
+
+  try {
+    var res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: input.value, profile: PROFILE })
+    });
+    if (!res.ok) throw new Error('API error ' + res.status);
+    var data = await res.json();
+    currentJobData = data;
+    renderResult(data);
+    await saveJob(data, input.value);
+    await loadUpwork();
+  } catch(e) {
+    toast('Erreur analyse : ' + e.message, 'error');
+    document.getElementById('resultEmpty').style.display = '';
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+function renderResult(data) {
+  var a = data.analysis || {};
+  var score = data.score || 0;
+  var scoreColor = score >= 75 ? 'var(--green)' : score >= 55 ? 'var(--amber)' : 'var(--red)';
+  var circ = 2 * Math.PI * 26;
+  var offset = circ - (score / 100) * circ;
+  var budgetStr = [data.budget_min, data.budget_max].filter(Boolean).map(n=>n>=1000?'$'+n/1000+'K':'$'+n).join('–') || '—';
+  var clientStr = '';
+  if (data.client_info) {
+    var ci = data.client_info;
+    clientStr = [ci.rating ? '⭐ ' + ci.rating : null, ci.reviews ? ci.reviews + ' reviews' : null, ci.payment_verified ? 'Payment verified' : null, budgetStr].filter(Boolean).join(' · ');
+  }
+
+  document.getElementById('resultContent').innerHTML = `
+    <div class="score-header">
+      <div class="score-circle">
+        <svg viewBox="0 0 60 60">
+          <circle cx="30" cy="30" r="26" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="4"/>
+          <circle cx="30" cy="30" r="26" fill="none" stroke="${scoreColor}" stroke-width="4"
+            stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}" stroke-linecap="round"/>
+        </svg>
+        <span class="num" style="color:${scoreColor}">${score}</span>
+      </div>
+      <div class="score-info">
+        <div class="score-job-title">${data.title || '—'}</div>
+        <div class="score-client">${clientStr || budgetStr}</div>
+        <span class="score-verdict verdict-${data.verdict}">${data.verdict === 'GO' ? '✓ GO — Postuler' : data.verdict === 'MAYBE' ? '~ MAYBE' : '✕ SKIP'}</span>
+      </div>
+      <div class="score-actions">
+        <button class="action-sm action-apply" onclick="updateStatus('applied')">Postuler →</button>
+        <button class="action-sm action-skip" onclick="updateStatus('skipped')">Passer</button>
+      </div>
+    </div>
+    <div class="breakdown">
+      ${['fit_tech','fit_budget','client_quality','competition'].map(k => {
+        var item = a[k] || {};
+        var s = item.score || 0;
+        var color = s >= 7 ? 'var(--green)' : s >= 5 ? 'var(--teal)' : 'var(--amber)';
+        var labels = { fit_tech: 'Fit technique', fit_budget: 'Budget', client_quality: 'Qualité client', competition: 'Compétition' };
+        return `<div class="breakdown-item">
+          <div class="bi-label">${labels[k]}</div>
+          <div class="bi-bar-wrap"><div class="bi-bar" style="width:${s*10}%;background:${color}"></div></div>
+          <div class="bi-val" style="color:${color}">${s}/10</div>
+          <div class="bi-note">${item.note || ''}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    ${a.strengths ? `<div class="analysis-block ab-green"><div class="ab-title">✓ Points forts</div><div class="ab-content">${a.strengths}</div></div>` : ''}
+    ${a.red_flags ? `<div class="analysis-block ab-red"><div class="ab-title">⚠ Red flags</div><div class="ab-content">${a.red_flags}</div></div>` : ''}
+    ${a.angle_proposition ? `<div class="analysis-block ab-teal"><div class="ab-title">✦ Angle recommandé</div><div class="ab-content">${a.angle_proposition}</div></div>` : ''}`;
+
+  document.getElementById('resultContent').classList.add('visible');
+}
+
+async function saveJob(data, description) {
+  try {
+    await sb.from('upwork_jobs').insert({
+      title:        data.title,
+      description:  description,
+      client_info:  data.client_info || {},
+      budget_min:   data.budget_min || null,
+      budget_max:   data.budget_max || null,
+      budget_type:  data.budget_type || 'fixed',
+      score:        data.score,
+      analysis:     data.analysis || {},
+      keywords_hit: data.keywords_hit || [],
+      status:       'new',
+    });
+  } catch(e) {
+    console.error('saveJob', e);
+  }
+}
+
+async function loadJobResult(id) {
+  var { data } = await sb.from('upwork_jobs').select('*').eq('id', id).single();
+  if (!data) return;
+  currentJobData = { ...data.analysis, title: data.title, score: data.score, verdict: data.analysis?.verdict || 'MAYBE', budget_min: data.budget_min, budget_max: data.budget_max, client_info: data.client_info, keywords_hit: data.keywords_hit, analysis: data.analysis };
+  document.getElementById('resultEmpty').style.display = 'none';
+  renderResult(currentJobData);
+}
+
+async function updateStatus(status) {
+  if (!currentJobData?.title) return;
+  var { error } = await sb.from('upwork_jobs').update({ status, applied_at: status === 'applied' ? new Date().toISOString() : null }).eq('title', currentJobData.title).order('analyzed_at', { ascending: false }).limit(1);
+  if (!error) { toast(status === 'applied' ? 'Marqué comme postulé ✓' : 'Job passé'); loadUpwork(); }
+}
+
+function showKeywords() {
+  toast('Keywords actifs : ' + PROFILE.keywords.join(', '));
+}
+
+loadUpwork();
+</script>
+</body>
+</html>

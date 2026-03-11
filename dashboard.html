@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mybuilding — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+.bento { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bento-tall { grid-row: span 2; }
+.activity-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.activity-row:last-child { border-bottom: none; }
+.activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+.activity-content { flex: 1; min-width: 0; }
+.activity-title { font-size: 12px; color: var(--t1); font-weight: 500; }
+.activity-meta  { font-size: 11px; color: var(--t3); margin-top: 2px; }
+.activity-time  { font-size: 10px; color: var(--t3); flex-shrink: 0; }
+.deal-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.deal-row:last-child { border-bottom: none; }
+.deal-name { flex: 1; font-size: 12px; font-weight: 500; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deal-val  { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--teal); }
+.metric-trend { display: flex; align-items: center; gap: 4px; font-size: 11px; margin-top: 5px; }
+.skeleton { background: rgba(255,255,255,0.05); border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
+</style>
+</head>
+<body>
+<div id="sidebar-mount"></div>
+
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="breadcrumb">mybuilding /</span>
+      <span class="page-title">Dashboard</span>
+    </div>
+    <div class="topbar-right">
+      <a href="/crm.html" class="btn btn-teal">+ Nouveau contact</a>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- KPI CARDS -->
+    <div class="metrics" id="kpis">
+      <div class="metric"><div class="metric-label">MRR</div><div class="metric-val skeleton" style="width:80px;height:28px">&nbsp;</div></div>
+      <div class="metric"><div class="metric-label">Pipeline pondéré</div><div class="metric-val skeleton" style="width:80px;height:28px">&nbsp;</div></div>
+      <div class="metric"><div class="metric-label">À encaisser</div><div class="metric-val skeleton" style="width:80px;height:28px">&nbsp;</div></div>
+      <div class="metric"><div class="metric-label">Revenue ce mois</div><div class="metric-val skeleton" style="width:80px;height:28px">&nbsp;</div></div>
+    </div>
+
+    <!-- BENTO -->
+    <div class="bento">
+
+      <!-- Deals récents -->
+      <div class="tile fade-up fade-up-1">
+        <div class="tile-title">Deals actifs <span class="tile-title-sub" id="deals-count">—</span></div>
+        <div id="deals-list">
+          <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Chargement...</div></div>
+        </div>
+        <a href="/crm.html" class="btn btn-glass" style="margin-top:12px;font-size:11px">Voir tout le pipeline →</a>
+      </div>
+
+      <!-- Upwork -->
+      <div class="tile fade-up fade-up-2">
+        <div class="tile-title">Upwork <span class="teal-chip" style="font-size:9px">✦ Claude-powered</span> <span class="tile-title-sub" id="upwork-count">—</span></div>
+        <div id="upwork-list">
+          <div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-text">Chargement...</div></div>
+        </div>
+        <a href="/upwork.html" class="btn btn-glass" style="margin-top:12px;font-size:11px">Analyser un job →</a>
+      </div>
+
+      <!-- Factures en attente -->
+      <div class="tile fade-up fade-up-3">
+        <div class="tile-title">Factures en attente <span class="tile-title-sub" id="inv-total">—</span></div>
+        <div id="inv-list">
+          <div class="empty-state"><div class="empty-icon">🧾</div><div class="empty-text">Aucune facture en attente</div></div>
+        </div>
+      </div>
+
+      <!-- Activité récente -->
+      <div class="tile fade-up fade-up-4">
+        <div class="tile-title">Activité récente</div>
+        <div id="activity-list">
+          <div class="empty-state"><div class="empty-icon">⚡</div><div class="empty-text">Chargement...</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+document.getElementById('sidebar-mount').innerHTML = renderSidebar('dashboard');
+
+async function loadDashboard() {
+  try {
+    const [mrrRes, pipeRes, recvRes, revRes, dealsRes, upworkRes, invRes, actRes] = await Promise.all([
+      sb.from('v_mrr').select('mrr').single(),
+      sb.from('v_pipeline').select('*').single(),
+      sb.from('v_receivables').select('*').single(),
+      sb.from('v_revenue_month').select('revenue').single(),
+      sb.from('deals').select('id, title, value, value_type, stage, contacts(name)').in('stage', ['prospect','proposal','negotiation','active']).order('created_at', { ascending: false }).limit(5),
+      sb.from('upwork_jobs').select('id, title, score, status, analyzed_at').order('analyzed_at', { ascending: false }).limit(4),
+      sb.from('invoices').select('id, invoice_number, total, due_date, contacts(name)').in('status', ['sent','overdue']).order('due_date', { ascending: true }).limit(4),
+      sb.from('interactions').select('id, type, title, created_at, contacts(name)').order('created_at', { ascending: false }).limit(5),
+    ]);
+
+    // KPIs
+    const mrr  = mrrRes.data?.mrr || 0;
+    const pipe = pipeRes.data?.weighted_value || 0;
+    const recv = recvRes.data?.total || 0;
+    const rev  = revRes.data?.revenue || 0;
+    const dealsCount = pipeRes.data?.deals_count || 0;
+
+    document.getElementById('kpis').innerHTML = `
+      <div class="metric">
+        <div class="metric-label">MRR</div>
+        <div class="metric-val teal">${fmtEur(mrr)}</div>
+        <div class="metric-sub muted">retainers actifs</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Pipeline pondéré</div>
+        <div class="metric-val">${fmtEur(pipe)}</div>
+        <div class="metric-sub muted">${dealsCount} deal${dealsCount !== 1 ? 's' : ''} actifs</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">À encaisser</div>
+        <div class="metric-val ${recv > 0 ? 'warn' : ''}">${fmtEur(recv)}</div>
+        <div class="metric-sub muted">factures envoyées</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Revenue ce mois</div>
+        <div class="metric-val up">${fmtEur(rev)}</div>
+        <div class="metric-sub muted">factures payées</div>
+      </div>`;
+
+    // Deals
+    const deals = dealsRes.data || [];
+    document.getElementById('deals-count').textContent = deals.length + ' récents';
+    document.getElementById('deals-list').innerHTML = deals.length ? deals.map(d => `
+      <div class="deal-row">
+        <div class="deal-name">${d.title}</div>
+        ${stageBadge(d.stage)}
+        <div class="deal-val">${fmtEur(d.value)}</div>
+      </div>`).join('') : '<div class="empty-state"><div class="empty-text">Aucun deal en cours</div></div>';
+
+    // Upwork
+    const jobs = upworkRes.data || [];
+    document.getElementById('upwork-count').textContent = jobs.length + ' récents';
+    document.getElementById('upwork-list').innerHTML = jobs.length ? jobs.map(j => `
+      <div class="deal-row">
+        <div class="deal-name">${j.title}</div>
+        ${scorePill(j.score)}
+        <div class="activity-time">${fmtRelative(j.analyzed_at)}</div>
+      </div>`).join('') : '<div class="empty-state"><div class="empty-text">Aucun job analysé</div></div>';
+
+    // Factures
+    const invs = invRes.data || [];
+    document.getElementById('inv-total').textContent = invs.length > 0 ? fmtEur(invs.reduce((s,i)=>s+parseFloat(i.total||0),0)) : '—';
+    document.getElementById('inv-list').innerHTML = invs.length ? invs.map(i => `
+      <div class="deal-row">
+        <div style="flex:1">
+          <div class="td-main">${i.contacts?.name || '—'}</div>
+          <div class="td-sub">${i.invoice_number}</div>
+        </div>
+        <div class="deal-val">${fmtEur(i.total)}</div>
+        <div class="activity-time ${i.due_date && new Date(i.due_date) < new Date() ? 'up' : 'muted'}">${fmtDate(i.due_date)}</div>
+      </div>`).join('') : '<div class="empty-state"><div class="empty-text">Aucune facture en attente</div></div>';
+
+    // Activity
+    const acts = actRes.data || [];
+    const typeColors = { note:'#94a3b8', email:'#93c5fd', call:'#34d399', meeting:'#a78bfa', invoice_sent:'#fbbf24', invoice_paid:'#34d399', deal_won:'#34d399', upwork_applied:'#0d9488' };
+    document.getElementById('activity-list').innerHTML = acts.length ? acts.map(a => `
+      <div class="activity-row">
+        <div class="activity-dot" style="background:${typeColors[a.type]||'#475569'}"></div>
+        <div class="activity-content">
+          <div class="activity-title">${a.title || a.type}</div>
+          <div class="activity-meta">${a.contacts?.name || ''}</div>
+        </div>
+        <div class="activity-time">${fmtRelative(a.created_at)}</div>
+      </div>`).join('') : '<div class="empty-state"><div class="empty-text">Aucune activité récente</div></div>';
+
+  } catch(e) {
+    console.error(e);
+    toast('Erreur de chargement', 'error');
+  }
+}
+
+loadDashboard();
+</script>
+</body>
+</html>

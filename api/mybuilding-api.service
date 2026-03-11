@@ -1,0 +1,17 @@
+[Unit]
+Description=mybuilding.dev API (Upwork Analyzer)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/mybuilding/api
+ExecStart=/root/mybuilding/api/venv/bin/uvicorn analyzer:app --host 127.0.0.1 --port 3001
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/root/logs/mybuilding_api.log
+StandardError=append:/root/logs/mybuilding_api.log
+Environment=PATH=/root/mybuilding/api/venv/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=multi-user.target
