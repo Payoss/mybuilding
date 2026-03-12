@@ -256,6 +256,19 @@ function renderPage() {
     + scoreBox('Temps estime', timeStr || '—', null, 'var(--blue)')
     + '</div>'
 
+    // Generate Zone (right after scores)
+    + '<div class="jd-generate-zone jd-card">'
+    + '<div class="jd-card-title">✦ Candidature</div>'
+    + '<div id="generate-zone-inner">'
+    + '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()">'
+    + '<div class="gen-spinner"></div>'
+    + '<span class="gen-label">✦ Generer ma candidature (Version A + B)</span>'
+    + '<span class="gen-status" id="genStatus">Analyse du job...</span>'
+    + '</button>'
+    + '</div>'
+    + '<div class="jd-cover-results" id="coverResults"></div>'
+    + '</div>'
+
     // Two columns
     + '<div class="jd-columns">'
 
@@ -297,20 +310,7 @@ function renderPage() {
     + '</div>'
     + '</div>'
 
-    + '</div>' // end columns
-
-    // Generate Zone
-    + '<div class="jd-generate-zone jd-card">'
-    + '<div class="jd-card-title">✦ Candidature</div>'
-    + '<div id="generate-zone-inner">'
-    + '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()">'
-    + '<div class="gen-spinner"></div>'
-    + '<span class="gen-label">✦ Generer ma candidature (Version A + B)</span>'
-    + '<span class="gen-status" id="genStatus">Analyse du job...</span>'
-    + '</button>'
-    + '</div>'
-    + '<div class="jd-cover-results" id="coverResults"></div>'
-    + '</div>';
+    + '</div>'; // end columns
 
   document.getElementById('jd-main').innerHTML = html;
 
