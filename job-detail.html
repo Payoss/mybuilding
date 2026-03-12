@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Detail | mybuilding · Upwork CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+/* ── Job Detail Page ── */
+.jd-content { padding: 20px 28px 60px; max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Back button ── */
+.jd-back { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t3); cursor: pointer; border: none; background: none; font-family: inherit; transition: color 0.15s; padding: 0; }
+.jd-back:hover { color: var(--teal); }
+
+/* ── Hero Card ── */
+.jd-hero { background: var(--glass); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; backdrop-filter: blur(12px); animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+.jd-hero-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+.jd-hero-info { flex: 1; min-width: 0; }
+.jd-hero-title { font-size: 18px; font-weight: 700; color: var(--t1); line-height: 1.35; margin-bottom: 8px; }
+.jd-hero-meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--t2); }
+.jd-hero-meta span { display: flex; align-items: center; gap: 4px; }
+.jd-hero-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ── Badges ── */
+.jd-badges { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.jd-badge { font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; }
+.jd-badge-go { background: var(--green-bg); color: var(--green); border: 1px solid rgba(52,211,153,0.3); }
+.jd-badge-maybe { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(251,191,36,0.3); }
+.jd-badge-skip { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+.jd-badge-sniper { background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); animation: sniperPulse 2s ease-in-out infinite; }
+.jd-badge-fr { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(147,197,253,0.3); }
+
+/* ── Score Boxes ── */
+.jd-scores { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; animation: fadeUp 0.35s 0.05s cubic-bezier(0.16,1,0.3,1) both; }
+.jd-score-box { background: var(--glass); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; backdrop-filter: blur(12px); transition: border-color 0.15s; }
+.jd-score-box:hover { border-color: var(--border-h); }
+.jd-score-label { font-size: 10px; color: var(--t3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; font-weight: 600; }
+.jd-score-val { font-size: 24px; font-weight: 800; font-family: 'DM Mono', monospace; }
+.jd-score-bar { height: 4px; background: rgba(255,255,255,0.06); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+.jd-score-fill { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.16,1,0.3,1); }
+
+/* ── Two Column Layout ── */
+.jd-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* ── Card generic ── */
+.jd-card { background: var(--glass); border: 1px solid var(--border); border-radius: 12px; padding: 18px; backdrop-filter: blur(12px); }
+.jd-card-title { font-size: 12px; font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+.jd-card-full { grid-column: 1 / -1; }
+
+/* ── Skills Tags ── */
+.jd-skills { display: flex; gap: 6px; flex-wrap: wrap; }
+.jd-skill { font-size: 10px; padding: 3px 9px; border-radius: 10px; background: var(--teal-glow); border: 1px solid rgba(13,148,136,0.2); color: var(--teal); font-weight: 500; }
+
+/* ── Description ── */
+.jd-desc { font-size: 12px; color: var(--t2); line-height: 1.65; white-space: pre-wrap; word-break: break-word; max-height: 300px; overflow-y: auto; }
+.jd-desc::-webkit-scrollbar { width: 3px; }
+.jd-desc::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* ── Enrichment sections ── */
+.jd-enrich-loader { display: flex; align-items: center; gap: 10px; padding: 16px; font-size: 12px; color: var(--t3); }
+.jd-enrich-spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--teal); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.jd-why { font-size: 13px; color: var(--t1); line-height: 1.6; }
+
+/* ── Battle Card ── */
+.jd-battle-section { margin-bottom: 10px; }
+.jd-battle-label { font-size: 10px; font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+.jd-battle-list { list-style: none; padding: 0; }
+.jd-battle-list li { font-size: 12px; color: var(--t2); padding: 3px 0; display: flex; align-items: flex-start; gap: 6px; }
+.jd-battle-list li::before { content: ''; display: block; width: 5px; height: 5px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.jd-battle-strengths li::before { background: var(--green); }
+.jd-battle-risks li::before { background: var(--red); }
+.jd-battle-diff li::before { background: var(--teal); }
+
+/* ── Plan d'exécution Timeline ── */
+.jd-plan-timeline { position: relative; padding-left: 20px; }
+.jd-plan-timeline::before { content: ''; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 2px; background: var(--border); border-radius: 1px; }
+.jd-plan-step { position: relative; margin-bottom: 16px; }
+.jd-plan-step:last-child { margin-bottom: 0; }
+.jd-plan-dot { position: absolute; left: -20px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg, #0e0e1a); border: 2px solid var(--teal); z-index: 1; }
+.jd-plan-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+.jd-plan-num { font-size: 10px; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 0.05em; }
+.jd-plan-time { font-size: 10px; font-weight: 600; color: var(--t3); font-family: 'DM Mono', monospace; background: var(--glass); padding: 1px 7px; border-radius: 4px; border: 1px solid var(--border); }
+.jd-plan-title { font-size: 13px; font-weight: 600; color: var(--t1); margin-bottom: 3px; }
+.jd-plan-desc { font-size: 11px; color: var(--t2); line-height: 1.5; margin-bottom: 4px; }
+.jd-plan-tools { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 3px; }
+.jd-plan-tool { font-size: 9px; background: var(--teal-glow); color: var(--teal); padding: 1px 6px; border-radius: 4px; font-weight: 500; border: 1px solid rgba(13,148,136,0.15); }
+.jd-plan-deliverable { font-size: 10px; color: var(--green); font-weight: 500; }
+
+/* ── Generate Zone ── */
+.jd-generate-zone { animation: fadeUp 0.35s 0.15s cubic-bezier(0.16,1,0.3,1) both; }
+.jd-generate-btn { width: 100%; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 0 24px rgba(13,148,136,0.3); }
+.jd-generate-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 0 32px rgba(13,148,136,0.45); }
+.jd-generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.jd-generate-btn .gen-spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+.jd-generate-btn.loading .gen-spinner { display: block; }
+.jd-generate-btn.loading .gen-label { display: none; }
+
+/* ── Cover Letter Results ── */
+.jd-cover-results { display: none; margin-top: 14px; }
+.jd-cover-results.visible { display: block; animation: fadeUp 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+.jd-cover-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.jd-cover-tab { flex: 1; padding: 8px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.15s; color: var(--t3); background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
+.jd-cover-tab.active { background: var(--teal-dim); color: var(--teal); border-color: rgba(13,148,136,0.3); }
+.jd-cover-panel { display: none; }
+.jd-cover-panel.active { display: block; }
+.jd-cover-text { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 14px; color: var(--t1); font-size: 12px; font-family: inherit; line-height: 1.65; resize: vertical; min-height: 200px; outline: none; transition: border-color 0.15s; }
+.jd-cover-text:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.12); }
+.jd-cover-actions { display: flex; gap: 8px; margin-top: 8px; }
+.jd-copy-btn { background: var(--teal-glow); border: 1px solid rgba(13,148,136,0.3); color: var(--teal); font-size: 11px; font-weight: 600; padding: 6px 14px; border-radius: 7px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.jd-copy-btn:hover { background: rgba(13,148,136,0.22); }
+.jd-copy-btn.copied { background: var(--green-bg); border-color: rgba(34,197,94,0.3); color: var(--green); }
+
+/* ── Description FR ── */
+.jd-desc-fr { font-size: 12px; color: var(--t2); line-height: 1.6; white-space: pre-wrap; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .jd-columns { grid-template-columns: 1fr; }
+  .jd-scores { grid-template-columns: 1fr 1fr; }
+  .jd-content { padding: 12px 14px 40px; }
+  .jd-hero-top { flex-direction: column; }
+  .jd-hero-actions { width: 100%; }
+}
+@media (max-width: 768px) {
+  .jd-scores { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div id="sidebar-mount"></div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="breadcrumb">Upwork</span>
+      <span style="color:var(--t3)">›</span>
+      <span class="page-title" id="jd-topbar-title">Job Detail</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-glass jd-back" onclick="window.location.href='/upwork.html'">← Retour</button>
+    </div>
+  </div>
+
+  <div class="jd-content" id="jd-main">
+    <!-- Loader initial -->
+    <div class="jd-enrich-loader" id="jd-page-loader">
+      <div class="jd-enrich-spinner"></div>
+      <span>Chargement du job...</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast-el"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+document.getElementById('sidebar-mount').innerHTML = renderSidebar('upwork');
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+var _job = null;
+var _enrichment = null;
+
+// ══════════════════════════════════════════════════════════════
+// INIT — Load job from URL param
+// ══════════════════════════════════════════════════════════════
+(async function init() {
+  var params = new URLSearchParams(window.location.search);
+  var jobId = params.get('id');
+  if (!jobId) { window.location.href = '/upwork.html'; return; }
+
+  try {
+    var res = await sb.from('upwork_jobs').select('*').eq('id', jobId).single();
+    if (!res.data) { toast('Job introuvable', 'error'); setTimeout(function() { window.location.href = '/upwork.html'; }, 1500); return; }
+    _job = res.data;
+    document.getElementById('jd-topbar-title').textContent = _job.title || 'Job Detail';
+    document.title = (_job.title || 'Job') + ' | mybuilding';
+    renderPage();
+  } catch(e) {
+    toast('Erreur chargement: ' + e.message, 'error');
+  }
+})();
+
+// ══════════════════════════════════════════════════════════════
+// RENDER — Full page
+// ══════════════════════════════════════════════════════════════
+function renderPage() {
+  var j = _job;
+  var feas = j.feasibility || 0;
+  var worth = j.worth_score || 0;
+  var feasColor = feas >= 80 ? 'var(--green)' : feas >= 55 ? 'var(--amber)' : 'var(--red)';
+  var worthColor = worth >= 8 ? 'var(--green)' : worth >= 6 ? 'var(--amber)' : 'var(--red)';
+
+  // Verdict
+  var verdictText, verdictClass;
+  if (j.sniper_mode) { verdictText = '🎯 SNIPER. Postuler immediatement'; verdictClass = 'jd-badge-sniper'; }
+  else if (worth >= 8) { verdictText = '✓ GO. Excellent match'; verdictClass = 'jd-badge-go'; }
+  else if (worth >= 6) { verdictText = '~ MAYBE. A evaluer'; verdictClass = 'jd-badge-maybe'; }
+  else { verdictText = '✕ SKIP. Pas assez rentable'; verdictClass = 'jd-badge-skip'; }
+
+  // Budget
+  var budgetStr = formatBudget(j);
+  var timeStr = j.time_estimate || '';
+  var postedStr = j.posted_at ? new Date(j.posted_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+
+  // Status
+  var statusLabels = { new: '● Nouveau', applied: '✓ Postule', skipped: '✕ Passe', interviewing: '⟳ Entretien', won: '★ Won', lost: '✗ Lost' };
+
+  var html = ''
+    // Back
+    + '<button class="jd-back" onclick="window.location.href=\'/upwork.html\'">← Retour a la liste</button>'
+
+    // Hero
+    + '<div class="jd-hero">'
+    + '<div class="jd-badges">'
+    + '<span class="jd-badge ' + verdictClass + '">' + verdictText + '</span>'
+    + (j.sniper_mode ? '<span class="jd-badge jd-badge-sniper">🎯 SNIPER</span>' : '')
+    + (j.is_french ? '<span class="jd-badge jd-badge-fr">🇫🇷 France</span>' : '')
+    + '</div>'
+    + '<div class="jd-hero-top">'
+    + '<div class="jd-hero-info">'
+    + '<div class="jd-hero-title">' + escHtml(j.title || 'Sans titre') + '</div>'
+    + '<div class="jd-hero-meta">'
+    + '<span>💰 ' + budgetStr + '</span>'
+    + (j.budget_type ? '<span>📋 ' + j.budget_type + '</span>' : '')
+    + (j.country ? '<span>📍 ' + escHtml(j.country) + '</span>' : '')
+    + (timeStr ? '<span>⏱ ' + timeStr + '</span>' : '')
+    + (postedStr ? '<span>📅 ' + postedStr + '</span>' : '')
+    + '<span>📊 ' + (statusLabels[j.status] || j.status || 'Nouveau') + '</span>'
+    + '</div>'
+    + '</div>'
+    + '<div class="jd-hero-actions">'
+    + (j.url ? '<button class="btn btn-teal" onclick="window.open(\'' + escAttr(j.url) + '\',\'_blank\')">↗ Upwork</button>' : '')
+    + '<button class="btn btn-glass" id="btn-applied" onclick="markStatus(\'applied\')">✓ Postule</button>'
+    + '<button class="btn btn-danger" onclick="markStatus(\'skipped\')">✕ Passer</button>'
+    + '</div>'
+    + '</div>'
+    + '</div>'
+
+    // Score boxes
+    + '<div class="jd-scores">'
+    + scoreBox('Faisabilite', feas + '%', feas, feasColor)
+    + scoreBox('Worth Score', worth + '/10', worth * 10, worthColor)
+    + scoreBox('Budget', budgetStr, null, 'var(--teal)')
+    + scoreBox('Temps estime', timeStr || '—', null, 'var(--blue)')
+    + '</div>'
+
+    // Two columns
+    + '<div class="jd-columns">'
+
+    // Left column
+    + '<div style="display:flex;flex-direction:column;gap:14px">'
+    // Skills
+    + '<div class="jd-card">'
+    + '<div class="jd-card-title">🏷 Skills</div>'
+    + renderSkills(j.skills)
+    + '</div>'
+    // Pourquoi pour toi
+    + '<div class="jd-card" id="card-why">'
+    + '<div class="jd-card-title">🎯 Pourquoi pour toi</div>'
+    + '<div id="why-content"><div class="jd-enrich-loader"><div class="jd-enrich-spinner"></div><span>Analyse en cours...</span></div></div>'
+    + '</div>'
+    // Battle Card
+    + '<div class="jd-card" id="card-battle">'
+    + '<div class="jd-card-title">⚔ Battle Card</div>'
+    + '<div id="battle-content"><div class="jd-enrich-loader"><div class="jd-enrich-spinner"></div><span>Analyse en cours...</span></div></div>'
+    + '</div>'
+    + '</div>'
+
+    // Right column
+    + '<div style="display:flex;flex-direction:column;gap:14px">'
+    // Description
+    + '<div class="jd-card">'
+    + '<div class="jd-card-title">📄 Description originale</div>'
+    + '<div class="jd-desc" id="desc-original">' + (j.description ? escHtml(j.description).replace(/\n/g, '<br>') : '<span class="muted">Pas de description</span>') + '</div>'
+    + '</div>'
+    // Description FR
+    + '<div class="jd-card" id="card-desc-fr">'
+    + '<div class="jd-card-title">🇫🇷 Description traduite</div>'
+    + '<div id="descfr-content"><div class="jd-enrich-loader"><div class="jd-enrich-spinner"></div><span>Traduction en cours...</span></div></div>'
+    + '</div>'
+    // Plan d'execution
+    + '<div class="jd-card" id="card-plan">'
+    + '<div class="jd-card-title">📋 Plan d\'execution</div>'
+    + '<div id="plan-content"><div class="jd-enrich-loader"><div class="jd-enrich-spinner"></div><span>Generation du plan...</span></div></div>'
+    + '</div>'
+    + '</div>'
+
+    + '</div>' // end columns
+
+    // Generate Zone
+    + '<div class="jd-generate-zone jd-card">'
+    + '<div class="jd-card-title">✦ Candidature</div>'
+    + '<div id="generate-zone-inner">'
+    + '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()">'
+    + '<div class="gen-spinner"></div>'
+    + '<span class="gen-label">✦ Generer ma candidature (Version A + B)</span>'
+    + '</button>'
+    + '</div>'
+    + '<div class="jd-cover-results" id="coverResults"></div>'
+    + '</div>';
+
+  document.getElementById('jd-main').innerHTML = html;
+
+  // Trigger enrichment
+  loadEnrichment();
+
+  // If cover letters already exist in DB, show them
+  if (j.cover_letter || j.cover_letter_b) {
+    showExistingCovers(j.cover_letter, j.cover_letter_b);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════
+function escHtml(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function escAttr(s) { return (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+function formatBudget(j) {
+  if (!j.budget_min && !j.budget_max) return '—';
+  var bmin = j.budget_min || 0, bmax = j.budget_max || bmin;
+  var s = '$' + (bmin >= 1000 ? (bmin/1000).toFixed(1)+'K' : bmin);
+  if (bmax !== bmin) s += ' – $' + (bmax >= 1000 ? (bmax/1000).toFixed(1)+'K' : bmax);
+  if (j.budget_type === 'hourly') s += '/h';
+  return s;
+}
+
+function scoreBox(label, value, pct, color) {
+  var bar = pct != null
+    ? '<div class="jd-score-bar"><div class="jd-score-fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
+    : '';
+  return '<div class="jd-score-box">'
+    + '<div class="jd-score-label">' + label + '</div>'
+    + '<div class="jd-score-val" style="color:' + color + '">' + value + '</div>'
+    + bar
+    + '</div>';
+}
+
+function renderSkills(skills) {
+  var arr = (skills || []).filter(function(s) {
+    // Filter out noise from scraper (location, payment info etc)
+    return s && !/^(Location|Unverified|Payment|\$\d)/.test(s);
+  });
+  if (!arr.length) return '<span class="muted" style="font-size:12px">Aucun skill detecte</span>';
+  return '<div class="jd-skills">' + arr.map(function(s) { return '<span class="jd-skill">' + escHtml(s) + '</span>'; }).join('') + '</div>';
+}
+
+// ══════════════════════════════════════════════════════════════
+// ENRICHMENT — IA (with cache)
+// ══════════════════════════════════════════════════════════════
+async function loadEnrichment() {
+  // Check cache in job.analysis.enrichment
+  if (_job.analysis && _job.analysis.enrichment) {
+    _enrichment = _job.analysis.enrichment;
+    renderEnrichment(_enrichment);
+    return;
+  }
+
+  // Call API
+  try {
+    var res = await fetch('/api/job-enrich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: _job.title,
+        description: _job.description,
+        skills: (_job.skills || []).filter(function(s) { return s && !/^(Location|Unverified|Payment|\$\d)/.test(s); }),
+        budget_min: _job.budget_min,
+        budget_max: _job.budget_max,
+        budget_type: _job.budget_type,
+        country: _job.country,
+        feasibility: _job.feasibility,
+        worth_score: _job.worth_score,
+        time_estimate: _job.time_estimate
+      })
+    });
+
+    if (!res.ok) throw new Error('API error ' + res.status);
+    _enrichment = await res.json();
+
+    // Cache in Supabase
+    var updatedAnalysis = Object.assign({}, _job.analysis || {}, { enrichment: _enrichment });
+    await sb.from('upwork_jobs').update({ analysis: updatedAnalysis }).eq('id', _job.id);
+    _job.analysis = updatedAnalysis;
+
+    renderEnrichment(_enrichment);
+  } catch(e) {
+    console.error('Enrichment error:', e);
+    var fallback = '<span class="muted" style="font-size:12px">Enrichissement indisponible. L\'API n\'est pas accessible.</span>';
+    document.getElementById('why-content').innerHTML = fallback;
+    document.getElementById('battle-content').innerHTML = fallback;
+    document.getElementById('plan-content').innerHTML = fallback;
+    document.getElementById('descfr-content').innerHTML = fallback;
+  }
+}
+
+function renderEnrichment(e) {
+  // Why for you
+  document.getElementById('why-content').innerHTML = '<div class="jd-why">' + escHtml(e.why_for_you || '').replace(/\n/g, '<br>') + '</div>';
+
+  // Battle card
+  var battleHtml = '';
+  if (e.battle_card) {
+    var bc = e.battle_card;
+    if (bc.strengths && bc.strengths.length) {
+      battleHtml += '<div class="jd-battle-section"><div class="jd-battle-label">✓ Forces</div><ul class="jd-battle-list jd-battle-strengths">'
+        + bc.strengths.map(function(s) { return '<li>' + escHtml(s) + '</li>'; }).join('') + '</ul></div>';
+    }
+    if (bc.risks && bc.risks.length) {
+      battleHtml += '<div class="jd-battle-section"><div class="jd-battle-label">⚠ Risques</div><ul class="jd-battle-list jd-battle-risks">'
+        + bc.risks.map(function(s) { return '<li>' + escHtml(s) + '</li>'; }).join('') + '</ul></div>';
+    }
+    if (bc.differentiators && bc.differentiators.length) {
+      battleHtml += '<div class="jd-battle-section"><div class="jd-battle-label">⚡ Differenciateurs</div><ul class="jd-battle-list jd-battle-diff">'
+        + bc.differentiators.map(function(s) { return '<li>' + escHtml(s) + '</li>'; }).join('') + '</ul></div>';
+    }
+  }
+  document.getElementById('battle-content').innerHTML = battleHtml || '<span class="muted" style="font-size:12px">Aucune donnee</span>';
+
+  // Execution plan
+  if (e.execution_plan && e.execution_plan.length) {
+    var planHtml = '<div class="jd-plan-timeline">';
+    e.execution_plan.forEach(function(step, i) {
+      planHtml += '<div class="jd-plan-step">'
+        + '<div class="jd-plan-dot"></div>'
+        + '<div class="jd-plan-header">'
+        + '<span class="jd-plan-num">Etape ' + (i + 1) + '</span>'
+        + '<span class="jd-plan-time">' + escHtml(step.hours || '') + '</span>'
+        + '</div>'
+        + '<div class="jd-plan-title">' + escHtml(step.title || '') + '</div>'
+        + '<div class="jd-plan-desc">' + escHtml(step.description || '') + '</div>'
+        + (step.tools && step.tools.length ? '<div class="jd-plan-tools">' + step.tools.map(function(t) { return '<span class="jd-plan-tool">' + escHtml(t) + '</span>'; }).join('') + '</div>' : '')
+        + (step.deliverable ? '<div class="jd-plan-deliverable">→ ' + escHtml(step.deliverable) + '</div>' : '')
+        + '</div>';
+    });
+    planHtml += '</div>';
+    document.getElementById('plan-content').innerHTML = planHtml;
+  } else {
+    document.getElementById('plan-content').innerHTML = '<span class="muted" style="font-size:12px">Aucun plan genere</span>';
+  }
+
+  // Description FR
+  document.getElementById('descfr-content').innerHTML = e.description_fr
+    ? '<div class="jd-desc-fr">' + escHtml(e.description_fr).replace(/\n/g, '<br>') + '</div>'
+    : '<span class="muted" style="font-size:12px">Traduction indisponible</span>';
+}
+
+// ══════════════════════════════════════════════════════════════
+// COVER LETTER GENERATION
+// ══════════════════════════════════════════════════════════════
+async function generateCoverLetter() {
+  var btn = document.getElementById('generateBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    var res = await fetch('/api/cover-letter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: _job.title,
+        description: _job.description,
+        skills: (_job.skills || []).filter(function(s) { return s && !/^(Location|Unverified|Payment|\$\d)/.test(s); }),
+        budget_min: _job.budget_min,
+        budget_max: _job.budget_max,
+        budget_type: _job.budget_type,
+        country: _job.country,
+        enrichment: _enrichment
+      })
+    });
+
+    if (!res.ok) throw new Error('API error ' + res.status);
+    var data = await res.json();
+
+    // Save to Supabase
+    await sb.from('upwork_jobs').update({
+      cover_letter: data.version_a,
+      cover_letter_b: data.version_b
+    }).eq('id', _job.id);
+
+    _job.cover_letter = data.version_a;
+    _job.cover_letter_b = data.version_b;
+
+    // Hide button, show results
+    btn.style.display = 'none';
+    showCovers(data.version_a, data.version_b);
+    toast('Candidatures generees ✓');
+
+  } catch(e) {
+    toast('Erreur generation: ' + e.message, 'error');
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+function showExistingCovers(a, b) {
+  document.getElementById('generateBtn').style.display = 'none';
+  showCovers(a, b);
+}
+
+function showCovers(versionA, versionB) {
+  var container = document.getElementById('coverResults');
+  container.innerHTML = ''
+    + '<div class="jd-cover-tabs">'
+    + '<div class="jd-cover-tab active" id="tab-a" onclick="switchCoverTab(\'a\')">Version A — Direct</div>'
+    + '<div class="jd-cover-tab" id="tab-b" onclick="switchCoverTab(\'b\')">Version B — Conversationnel</div>'
+    + '</div>'
+    + '<div class="jd-cover-panel active" id="panel-a">'
+    + '<textarea class="jd-cover-text" id="cover-text-a">' + escHtml(versionA || '') + '</textarea>'
+    + '<div class="jd-cover-actions">'
+    + '<button class="jd-copy-btn" onclick="copyCover(\'a\')">📋 Copier</button>'
+    + '<button class="jd-copy-btn" onclick="sendCoverToExtension(\'a\')">🚀 Extension</button>'
+    + '<button class="jd-copy-btn" onclick="regenerateCover()">🔄 Regenerer</button>'
+    + '</div>'
+    + '</div>'
+    + '<div class="jd-cover-panel" id="panel-b">'
+    + '<textarea class="jd-cover-text" id="cover-text-b">' + escHtml(versionB || '') + '</textarea>'
+    + '<div class="jd-cover-actions">'
+    + '<button class="jd-copy-btn" onclick="copyCover(\'b\')">📋 Copier</button>'
+    + '<button class="jd-copy-btn" onclick="sendCoverToExtension(\'b\')">🚀 Extension</button>'
+    + '</div>'
+    + '</div>';
+  container.classList.add('visible');
+}
+
+function switchCoverTab(tab) {
+  document.querySelectorAll('.jd-cover-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.jd-cover-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+function copyCover(version) {
+  var ta = document.getElementById('cover-text-' + version);
+  if (!ta) return;
+  navigator.clipboard.writeText(ta.value).then(function() {
+    toast('Cover letter copiee ✓');
+  });
+}
+
+function sendCoverToExtension(version) {
+  var ta = document.getElementById('cover-text-' + version);
+  if (!ta || !ta.value.trim()) { toast('Aucune cover letter', 'error'); return; }
+  try {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      chrome.runtime.sendMessage({ type: 'SET_COVER', cover: ta.value }, function(response) {
+        if (chrome.runtime.lastError) {
+          localStorage.setItem('mb_last_cover', ta.value);
+          toast('Cover stockee localement. Ouvre la page Upwork proposal.');
+        } else {
+          toast('Cover envoyee a l\'extension ✓');
+        }
+      });
+    } else {
+      localStorage.setItem('mb_last_cover', ta.value);
+      toast('Cover prete. Va sur la page proposal Upwork.');
+    }
+  } catch(e) {
+    localStorage.setItem('mb_last_cover', ta.value);
+    toast('Cover stockee.');
+  }
+}
+
+function regenerateCover() {
+  document.getElementById('coverResults').classList.remove('visible');
+  document.getElementById('coverResults').innerHTML = '';
+  var btn = document.getElementById('generateBtn');
+  if (btn) { btn.style.display = ''; btn.classList.remove('loading'); btn.disabled = false; }
+  else {
+    document.getElementById('generate-zone-inner').innerHTML = '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()">'
+      + '<div class="gen-spinner"></div><span class="gen-label">✦ Regenerer ma candidature</span></button>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ACTIONS — Mark status
+// ══════════════════════════════════════════════════════════════
+async function markStatus(status) {
+  if (!_job) return;
+  var updates = { status: status };
+  if (status === 'applied') updates.applied_at = new Date().toISOString();
+  await sb.from('upwork_jobs').update(updates).eq('id', _job.id);
+  _job.status = status;
+  toast(status === 'applied' ? 'Marque postule ✓' : 'Job passe');
+  // Update the status display in hero
+  renderPage();
+}
+</script>
+</body>
+</html>

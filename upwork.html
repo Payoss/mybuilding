@@ -81,34 +81,7 @@
 .sp-med { background: rgba(245,158,11,0.15); color: #f59e0b; }
 .sp-low { background: rgba(248,113,113,0.15); color: #f87171; }
 
-/* Job Detail Modal */
-.jd-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); z-index: 9998; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
-.jd-overlay.open { opacity: 1; pointer-events: all; }
-.jd-panel { position: fixed; top: 0; right: 0; width: 520px; max-width: 92vw; height: 100vh; background: var(--bg, #080810); border-left: 1px solid var(--border); z-index: 9999; transform: translateX(100%); transition: transform 0.28s cubic-bezier(0.16,1,0.3,1); overflow-y: auto; padding: 24px 22px 32px; display: flex; flex-direction: column; gap: 16px; }
-.jd-overlay.open + .jd-panel, .jd-panel.open { transform: translateX(0); }
-.jd-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: var(--t3); font-size: 20px; cursor: pointer; z-index: 2; }
-.jd-close:hover { color: var(--t1); }
-.jd-title { font-size: 17px; font-weight: 700; color: var(--t1); line-height: 1.35; padding-right: 30px; }
-.jd-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-.jd-tag { font-size: 10px; padding: 3px 9px; border-radius: 10px; background: var(--teal-glow, rgba(13,148,136,0.1)); border: 1px solid rgba(13,148,136,0.2); color: var(--teal); font-weight: 500; }
-.jd-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--t2); }
-.jd-meta span { display: flex; align-items: center; gap: 4px; }
-.jd-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.jd-score-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
-.jd-score-label { font-size: 10px; color: var(--t3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; font-weight: 600; }
-.jd-score-val { font-size: 22px; font-weight: 800; font-family: 'DM Mono', monospace; }
-.jd-bar-wrap { height: 5px; background: rgba(255,255,255,0.06); border-radius: 4px; margin-top: 8px; overflow: hidden; }
-.jd-bar { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
-.jd-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 20px; }
-.jd-desc { font-size: 12px; color: var(--t2); line-height: 1.65; max-height: 200px; overflow-y: auto; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-.jd-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
-.jd-actions button { flex: 1; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
-.jd-btn-primary { background: var(--teal); color: white; box-shadow: 0 0 16px rgba(13,148,136,0.25); }
-.jd-btn-primary:hover { opacity: 0.9; }
-.jd-btn-secondary { background: rgba(255,255,255,0.06); color: var(--t2); border: 1px solid var(--border) !important; }
-.jd-btn-secondary:hover { border-color: var(--teal) !important; color: var(--t1); }
-.jd-btn-danger { background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.2) !important; }
-.jd-btn-danger:hover { background: rgba(248,113,113,0.2); }
+/* Job Detail — redirects to job-detail.html */
 </style>
 </head>
 <body>
@@ -242,8 +215,6 @@
 </main>
 
 <!-- Job Detail Slide Panel -->
-<div class="jd-overlay" id="jd-overlay"></div>
-<div class="jd-panel" id="jd-panel"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/js/config.js"></script>
@@ -751,114 +722,10 @@ loadUpwork();
 loadScraped();
 loadProposalBank();
 
-// ---- Job Detail Panel ----
-var _detailJob = null;
-
+// ---- Job Detail — redirect to dedicated page ----
 function openJobDetail(jobId) {
-  var job = allScraped.find(function(j) { return j.id == jobId; })
-         || allHistory.find(function(j) { return j.id == jobId; });
-  if (!job) {
-    sb.from('upwork_jobs').select('*').eq('id', jobId).single().then(function(res) {
-      if (res.data) _renderJobDetail(res.data);
-    });
-    return;
-  }
-  _renderJobDetail(job);
+  window.location.href = '/job-detail.html?id=' + jobId;
 }
-
-function _renderJobDetail(j) {
-  _detailJob = j;
-  var feas = j.feasibility || 0;
-  var worth = j.worth_score || 0;
-  var feasColor = feas >= 80 ? 'var(--green)' : feas >= 55 ? 'var(--amber)' : 'var(--red)';
-  var worthColor = worth >= 8 ? 'var(--green)' : worth >= 6 ? 'var(--amber)' : 'var(--red)';
-
-  var sniperBadge = j.sniper_mode ? '<span class="jd-badge" style="background:rgba(245,158,11,0.12);color:#f59e0b">🎯 SNIPER</span>' : '';
-  var frBadge = j.is_french ? '<span class="jd-badge" style="background:rgba(59,130,246,0.12);color:#60a5fa">🇫🇷 France</span>' : '';
-
-  var verdictText, verdictStyle;
-  if (j.sniper_mode) { verdictText = '🎯 SNIPER — Postuler immédiatement'; verdictStyle = 'background:rgba(245,158,11,0.12);color:#f59e0b;border:1px solid rgba(245,158,11,0.3)'; }
-  else if (worth >= 8) { verdictText = '✓ GO — Excellent match'; verdictStyle = 'background:var(--green-bg);color:var(--green);border:1px solid rgba(34,197,94,0.3)'; }
-  else if (worth >= 6) { verdictText = '~ MAYBE — À évaluer'; verdictStyle = 'background:var(--amber-bg);color:var(--amber);border:1px solid rgba(245,158,11,0.3)'; }
-  else { verdictText = '✕ SKIP — Pas assez rentable'; verdictStyle = 'background:var(--red-bg);color:var(--red);border:1px solid rgba(248,113,113,0.3)'; }
-
-  var budgetStr = '—';
-  if (j.budget) budgetStr = j.budget;
-  else if (j.budget_min || j.budget_max) {
-    var bmin = j.budget_min || 0, bmax = j.budget_max || bmin;
-    budgetStr = '$' + (bmin >= 1000 ? (bmin/1000).toFixed(1)+'K' : bmin);
-    if (bmax !== bmin) budgetStr += ' – $' + (bmax >= 1000 ? (bmax/1000).toFixed(1)+'K' : bmax);
-  }
-
-  var timeStr = j.time_estimate ? j.time_estimate + 'h estimées' : '';
-  var postedStr = j.posted_at ? new Date(j.posted_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-
-  var statusLabel = { new: '● Nouveau', applied: '✓ Postulé', skipped: '✕ Passé', interviewing: '⟳ Entretien', won: '★ Won', lost: '✗ Lost' };
-
-  document.getElementById('jd-panel').innerHTML = '<button class="jd-close" onclick="closeJobDetail()">✕</button>'
-    + '<div class="jd-title">' + (j.title || '—') + '</div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
-    + '<span class="jd-badge" style="' + verdictStyle + ';font-size:12px;padding:5px 14px;border-radius:20px">' + verdictText + '</span>'
-    + sniperBadge + frBadge
-    + '</div>'
-
-    + '<div class="jd-scores">'
-    + '<div class="jd-score-card"><div class="jd-score-label">Faisabilité</div><div class="jd-score-val" style="color:' + feasColor + '">' + feas + '%</div>'
-    + '<div class="jd-bar-wrap"><div class="jd-bar" style="width:' + feas + '%;background:' + feasColor + '"></div></div></div>'
-    + '<div class="jd-score-card"><div class="jd-score-label">Worth Score</div><div class="jd-score-val" style="color:' + worthColor + '">' + worth + '<span style="font-size:12px;color:var(--t3)">/10</span></div>'
-    + '<div class="jd-bar-wrap"><div class="jd-bar" style="width:' + (worth * 10) + '%;background:' + worthColor + '"></div></div></div>'
-    + '</div>'
-
-    + '<div class="jd-meta">'
-    + '<span>💰 ' + budgetStr + '</span>'
-    + (j.budget_type ? '<span>📋 ' + j.budget_type + '</span>' : '')
-    + (j.country ? '<span>📍 ' + j.country + '</span>' : '')
-    + (timeStr ? '<span>⏱ ' + timeStr + '</span>' : '')
-    + (postedStr ? '<span>📅 ' + postedStr + '</span>' : '')
-    + '<span>📊 ' + (statusLabel[j.status] || j.status || 'Nouveau') + '</span>'
-    + '</div>'
-
-    + (j.skills && j.skills.length ? '<div class="jd-tags">' + j.skills.map(function(s) { return '<span class="jd-tag">' + s + '</span>'; }).join('') + '</div>' : '')
-
-    + (j.description ? '<div><div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Description</div><div class="jd-desc">' + j.description.replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div></div>' : '')
-
-    + '<div class="jd-actions">'
-    + '<button class="jd-btn-primary" onclick="window.open(\'' + (j.url || '#') + '\',\'_blank\')">↗ Voir sur Upwork</button>'
-    + '<button class="jd-btn-secondary" onclick="markAppliedDetail()">✓ Marquer Postulé</button>'
-    + '<button class="jd-btn-danger" onclick="skipDetail()">✕ Passer</button>'
-    + '</div>';
-
-  document.getElementById('jd-overlay').classList.add('open');
-  document.getElementById('jd-panel').classList.add('open');
-}
-
-function closeJobDetail() {
-  document.getElementById('jd-overlay').classList.remove('open');
-  document.getElementById('jd-panel').classList.remove('open');
-  _detailJob = null;
-}
-
-async function markAppliedDetail() {
-  if (!_detailJob) return;
-  await sb.from('upwork_jobs').update({ status: 'applied', applied_at: new Date().toISOString() }).eq('id', _detailJob.id);
-  toast('Marqué postulé ✓');
-  closeJobDetail();
-  loadScraped();
-  loadUpwork();
-}
-
-async function skipDetail() {
-  if (!_detailJob) return;
-  await sb.from('upwork_jobs').update({ status: 'skipped' }).eq('id', _detailJob.id);
-  toast('Job passé');
-  closeJobDetail();
-  loadScraped();
-  loadUpwork();
-}
-
-// Close on overlay click or Escape
-document.getElementById('jd-overlay').addEventListener('click', closeJobDetail);
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeJobDetail(); });
 </script>
 </body>
 </html>

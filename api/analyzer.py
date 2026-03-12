@@ -23,6 +23,30 @@ class JobRequest(BaseModel):
     profile: dict = {}
 
 
+class EnrichRequest(BaseModel):
+    title: str
+    description: str = ""
+    skills: list = []
+    budget_min: float = None
+    budget_max: float = None
+    budget_type: str = "fixed"
+    country: str = ""
+    feasibility: int = None
+    worth_score: float = None
+    time_estimate: str = ""
+
+
+class CoverLetterRequest(BaseModel):
+    title: str
+    description: str = ""
+    skills: list = []
+    budget_min: float = None
+    budget_max: float = None
+    budget_type: str = "fixed"
+    country: str = ""
+    enrichment: dict = None
+
+
 SYSTEM = """Tu es GUS, analyste Upwork expert ET rédacteur de propositions. Tu travailles pour Paul Annes.
 
 ## PROFIL PAUL ANNES
@@ -190,4 +214,176 @@ async def analyze(req: JobRequest):
         raise HTTPException(500, "Erreur parsing réponse Claude")
     except Exception as e:
         print(f"analyze error: {e}", file=sys.stderr)
+        raise HTTPException(500, str(e))
+
+
+# ══════════════════════════════════════════════════════════════
+# JOB ENRICH — Generates "why for you", battle card, plan, FR desc
+# ══════════════════════════════════════════════════════════════
+
+ENRICH_SYSTEM = """Tu es un analyste expert Upwork qui travaille pour Paul Annes, freelance AI/automation.
+
+PROFIL PAUL :
+- Stack : n8n, Claude API, RAG, agents IA, automation Python, Supabase, webhooks, Make, Zapier, React, Next.js
+- Il a construit son propre systeme IA avec 38 agents specialises sur 4 applications en production
+- Il va 5-8x plus vite qu'un dev humain grace a son agent IA Morpheus
+- Langues : francais natif, anglais courant
+
+A partir de la description du job, genere un JSON avec :
+
+1. "why_for_you" : 3-4 phrases en francais expliquant pourquoi CE job est fait pour Paul. Specifique au job, pas generique. Mentionne les skills qui matchent, l'avantage competitif, pourquoi il peut livrer plus vite.
+
+2. "battle_card" : {
+  "strengths": [3-4 points forts de Paul pour CE job],
+  "risks": [2-3 risques ou points d'attention],
+  "differentiators": [2-3 choses qui differencient Paul des autres freelancers]
+}
+
+3. "execution_plan" : tableau de 4-6 etapes, chaque etape = {
+  "step": numero,
+  "title": "titre court",
+  "description": "1-2 phrases decrivant ce qui est fait",
+  "hours": "~Xh" (estimation realiste AVEC l'IA),
+  "tools": ["outil1", "outil2"],
+  "deliverable": "ce qui est livre a la fin de cette etape"
+}
+Le plan doit etre SPECIFIQUE au job (pas generique). Les heures = temps reel avec Morpheus (pas temps humain).
+
+4. "description_fr" : traduction fidele de la description du job en francais. Pas de resume, traduction complete.
+
+Reponds UNIQUEMENT en JSON valide, sans texte avant ou apres."""
+
+
+@app.post("/api/job-enrich")
+async def job_enrich(req: EnrichRequest):
+    if not req.title.strip():
+        raise HTTPException(400, "Titre vide")
+
+    context = f"""JOB TITLE: {req.title}
+DESCRIPTION: {req.description or 'Non disponible'}
+SKILLS: {', '.join(req.skills) if req.skills else 'Non specifies'}
+BUDGET: {req.budget_min or '?'} - {req.budget_max or '?'} ({req.budget_type})
+COUNTRY: {req.country or 'Non specifie'}
+FEASIBILITY: {req.feasibility or '?'}%
+WORTH SCORE: {req.worth_score or '?'}/10
+TIME ESTIMATE: {req.time_estimate or '?'}"""
+
+    prompt = ENRICH_SYSTEM + "\n\n" + context
+
+    try:
+        result = subprocess.run(
+            ["claude", "-p", prompt],
+            capture_output=True, text=True, timeout=90,
+        )
+        output = result.stdout.strip()
+
+        if result.returncode != 0:
+            print(f"claude enrich stderr: {result.stderr[:500]}", file=sys.stderr)
+            raise ValueError(f"claude exit {result.returncode}")
+
+        start = output.find("{")
+        end = output.rfind("}") + 1
+        if start == -1 or end == 0:
+            raise ValueError("No JSON in enrich response")
+
+        return json.loads(output[start:end])
+
+    except subprocess.TimeoutExpired:
+        print("claude enrich timeout", file=sys.stderr)
+        raise HTTPException(504, "Timeout Claude")
+    except json.JSONDecodeError as e:
+        print(f"Enrich JSON error: {e} | output: {output[:300]}", file=sys.stderr)
+        raise HTTPException(500, "Erreur parsing reponse Claude")
+    except Exception as e:
+        print(f"enrich error: {e}", file=sys.stderr)
+        raise HTTPException(500, str(e))
+
+
+# ══════════════════════════════════════════════════════════════
+# COVER LETTER — Generates Version A (direct) + B (conversational)
+# ══════════════════════════════════════════════════════════════
+
+COVER_SYSTEM = """Tu es un expert copywriter Upwork qui ecrit pour Paul Annes.
+
+## REGLES ABSOLUES
+- Anglais uniquement
+- 150-200 mots MAX par version
+- JAMAIS de tiret long (em dash). Utilise des points ou des virgules.
+- JAMAIS "Dear Hiring Manager", "I hope this finds you well", "I would love the opportunity"
+- Voix naturelle de Paul : direct, confiant, technique, jamais corporate
+- Structure 6 blocs obligatoire (ci-dessous)
+
+## STRUCTURE 6 BLOCS
+L1 — HOOK MIROIR : Reprendre les mots du client + nommer le vrai probleme sous-jacent. 1-2 phrases.
+L2 — DELIVERABLE : Ce que Paul va concretement livrer. Specifique au job. 1-2 phrases.
+L3 — PROOF : "I've built my own AI system with 38 specialized agents across 4 production applications. One person, output of a small team."
+L4 — HOW I FIT : Pourquoi Paul est le bon choix pour CE job specifiquement. Mentionner un skill ou experience pertinente.
+L5 — CTA : Presumptive close. "Once I have your answer, I'll have first version by [jour raisonnable]." ou similaire.
+L6 — LOOM : Adapter selon la taille du job.
+  - Petit job (< $500 ou fix rapide) : "Short Loom so you can see who you'd be working with. [LOOM_LINK]"
+  - Gros job (> $500 ou projet complexe) : "Recorded a short walkthrough of my approach. [LOOM_LINK]"
+
+## OUTPUT
+Genere un JSON avec :
+{
+  "version_a": "Version directe, efficace, va droit au but",
+  "version_b": "Version conversationnelle, un peu plus chaleureuse, meme structure"
+}
+
+Les deux versions suivent les 6 blocs mais avec un ton different.
+Version A = chirurgical, minimal. Version B = plus humain, plus storytelling.
+
+Reponds UNIQUEMENT en JSON valide."""
+
+
+@app.post("/api/cover-letter")
+async def cover_letter(req: CoverLetterRequest):
+    if not req.title.strip():
+        raise HTTPException(400, "Titre vide")
+
+    context = f"""JOB TITLE: {req.title}
+DESCRIPTION: {req.description or 'Non disponible'}
+SKILLS: {', '.join(req.skills) if req.skills else 'Non specifies'}
+BUDGET: {req.budget_min or '?'} - {req.budget_max or '?'} ({req.budget_type})
+COUNTRY: {req.country or 'Non specifie'}"""
+
+    if req.enrichment:
+        if req.enrichment.get("why_for_you"):
+            context += f"\n\nWHY FOR PAUL (context): {req.enrichment['why_for_you']}"
+        if req.enrichment.get("execution_plan"):
+            steps = req.enrichment["execution_plan"]
+            plan_str = "\n".join(
+                f"  Step {s.get('step', i+1)}: {s.get('title', '')} ({s.get('hours', '')})"
+                for i, s in enumerate(steps)
+            )
+            context += f"\n\nEXECUTION PLAN:\n{plan_str}"
+
+    prompt = COVER_SYSTEM + "\n\n" + context
+
+    try:
+        result = subprocess.run(
+            ["claude", "-p", prompt],
+            capture_output=True, text=True, timeout=90,
+        )
+        output = result.stdout.strip()
+
+        if result.returncode != 0:
+            print(f"claude cover stderr: {result.stderr[:500]}", file=sys.stderr)
+            raise ValueError(f"claude exit {result.returncode}")
+
+        start = output.find("{")
+        end = output.rfind("}") + 1
+        if start == -1 or end == 0:
+            raise ValueError("No JSON in cover response")
+
+        return json.loads(output[start:end])
+
+    except subprocess.TimeoutExpired:
+        print("claude cover timeout", file=sys.stderr)
+        raise HTTPException(504, "Timeout Claude")
+    except json.JSONDecodeError as e:
+        print(f"Cover JSON error: {e} | output: {output[:300]}", file=sys.stderr)
+        raise HTTPException(500, "Erreur parsing reponse Claude")
+    except Exception as e:
+        print(f"cover error: {e}", file=sys.stderr)
         raise HTTPException(500, str(e))
