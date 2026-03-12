@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mybuilding — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0e0e1a;
+  --teal: #0d9488;
+  --glass: rgba(255,255,255,0.07);
+  --border: rgba(255,255,255,0.10);
+  --t1: #f1f5f9;
+  --t2: #94a3b8;
+  --t3: #475569;
+  --red: #f87171;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--t1);
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.blob { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; }
+.blob-1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(13,148,136,0.12) 0%, transparent 70%); top: -100px; right: 100px; animation: bf1 22s ease-in-out infinite; }
+.blob-2 { width: 350px; height: 350px; background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%); bottom: -60px; left: 150px; animation: bf2 28s ease-in-out infinite; }
+@keyframes bf1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,20px)} }
+@keyframes bf2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,-25px)} }
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 36px;
+  width: 380px;
+  text-align: center;
+}
+.login-logo {
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, var(--teal), #0f766e);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+  box-shadow: 0 0 24px rgba(13,148,136,0.4);
+}
+.login-logo svg { width: 24px; height: 24px; }
+.login-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
+.login-sub { font-size: 12px; color: var(--t3); margin-bottom: 28px; }
+.login-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--t1);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-bottom: 14px;
+}
+.login-input:focus { border-color: var(--teal); }
+.login-input::placeholder { color: var(--t3); }
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--teal);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 20px rgba(13,148,136,0.3);
+}
+.login-btn:hover { opacity: 0.9; box-shadow: 0 0 28px rgba(13,148,136,0.45); }
+.login-error {
+  color: var(--red);
+  font-size: 12px;
+  margin-top: 12px;
+  display: none;
+}
+.login-error.visible { display: block; animation: shake 0.3s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+</style>
+</head>
+<body>
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<div class="login-card">
+  <div class="login-logo">
+    <svg width="24" height="24" viewBox="0 0 18 18" fill="none">
+      <rect x="3" y="8" width="12" height="9" rx="1" fill="white" opacity="0.9"/>
+      <path d="M1.5 9L9 2L16.5 9" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <rect x="7" y="12" width="4" height="5" rx="0.5" fill="rgba(13,148,136,0.9)"/>
+    </svg>
+  </div>
+  <div class="login-title">mybuilding</div>
+  <div class="login-sub">Espace prive — acces restreint</div>
+
+  <form id="loginForm" onsubmit="return doLogin(event)">
+    <input type="password" class="login-input" id="pwd" placeholder="Mot de passe" autocomplete="current-password" autofocus>
+    <button type="submit" class="login-btn">Entrer</button>
+  </form>
+  <div class="login-error" id="loginError">Mot de passe incorrect</div>
+</div>
+
+<script>
+// SHA-256 hash of the password (client-side check)
+var HASH = 'e1ab3c814d33d5c6588c5bd00d96b5bda179157650b9e3a32fb0b65ed305cf13';
+
+async function sha256(str) {
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  var pwd = document.getElementById('pwd').value;
+  var hash = await sha256(pwd);
+  if (hash === HASH) {
+    sessionStorage.setItem('mb_auth', hash);
+    var redirect = new URLSearchParams(window.location.search).get('r') || '/dashboard.html';
+    window.location.href = redirect;
+  } else {
+    document.getElementById('loginError').classList.add('visible');
+    document.getElementById('pwd').value = '';
+    setTimeout(function() { document.getElementById('loginError').classList.remove('visible'); }, 2000);
+  }
+  return false;
+}
+
+// Already logged in?
+if (sessionStorage.getItem('mb_auth') === HASH) {
+  var r = new URLSearchParams(window.location.search).get('r') || '/dashboard.html';
+  window.location.href = r;
+}
+</script>
+</body>
+</html>
