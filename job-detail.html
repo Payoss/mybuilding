@@ -284,6 +284,18 @@ function renderPage() {
     + '<div class="jd-cover-results" id="coverResults"></div>'
     + '</div>'
 
+    // Enrich progress tracker
+    + '<div class="gen-progress visible" id="enrichProgress">'
+    + '<div class="gen-steps">'
+    + '<div class="gen-step active" id="es-0"><div class="gen-step-dot">1</div><div class="gen-step-label">Analyse</div></div>'
+    + '<div class="gen-step" id="es-1"><div class="gen-step-dot">2</div><div class="gen-step-label">Traduction</div></div>'
+    + '<div class="gen-step" id="es-2"><div class="gen-step-dot">3</div><div class="gen-step-label">Battle Card</div></div>'
+    + '<div class="gen-step" id="es-3"><div class="gen-step-dot">4</div><div class="gen-step-label">Plan</div></div>'
+    + '</div>'
+    + '<div class="gen-track"><div class="gen-track-fill" id="enrichTrackFill"></div></div>'
+    + '<div class="gen-elapsed" id="enrichElapsed">0s</div>'
+    + '</div>'
+
     // Two columns
     + '<div class="jd-columns">'
 
@@ -297,12 +309,12 @@ function renderPage() {
     // Pourquoi pour toi
     + '<div class="jd-card" id="card-why">'
     + '<div class="jd-card-title">🎯 Pourquoi pour toi</div>'
-    + '<div id="why-content"><div class="jd-enrich-loader"><div class="jd-enrich-spinner"></div><span>Analyse en cours...</span></div></div>'
+    + '<div id="why-content"></div>'
     + '</div>'
     // Battle Card
     + '<div class="jd-card" id="card-battle">'
     + '<div class="jd-card-title">⚔ Battle Card</div>'
-    + '<div id="battle-content"><div class="jd-enrich-loader"><div class="jd-enrich-spinner"></div><span>Analyse en cours...</span></div></div>'
+    + '<div id="battle-content"></div>'
     + '</div>'
     + '</div>'
 
@@ -316,12 +328,12 @@ function renderPage() {
     // Description FR
     + '<div class="jd-card" id="card-desc-fr">'
     + '<div class="jd-card-title">🇫🇷 Description traduite</div>'
-    + '<div id="descfr-content"><div class="jd-enrich-loader"><div class="jd-enrich-spinner"></div><span>Traduction en cours...</span></div></div>'
+    + '<div id="descfr-content"></div>'
     + '</div>'
     // Plan d'execution
     + '<div class="jd-card" id="card-plan">'
     + '<div class="jd-card-title">📋 Plan d\'execution</div>'
-    + '<div id="plan-content"><div class="jd-enrich-loader"><div class="jd-enrich-spinner"></div><span>Generation du plan...</span></div></div>'
+    + '<div id="plan-content"></div>'
     + '</div>'
     + '</div>'
 
@@ -376,13 +388,67 @@ function renderSkills(skills) {
 // ══════════════════════════════════════════════════════════════
 // ENRICHMENT — IA (with cache)
 // ══════════════════════════════════════════════════════════════
+var _enrichTimer = null;
+var _enrichElapsedTimer = null;
+var _enrichStart = 0;
+
+function startEnrichProgress() {
+  _enrichStart = Date.now();
+  setEnrichStep(0);
+  var stepTimes = [0, 12000, 24000, 36000];
+  _enrichTimer = setInterval(function() {
+    var elapsed = Date.now() - _enrichStart;
+    if (elapsed > stepTimes[3]) setEnrichStep(3);
+    else if (elapsed > stepTimes[2]) setEnrichStep(2);
+    else if (elapsed > stepTimes[1]) setEnrichStep(1);
+    var pct = Math.min(95, (elapsed / 50000) * 100);
+    document.getElementById('enrichTrackFill').style.width = pct + '%';
+  }, 500);
+  _enrichElapsedTimer = setInterval(function() {
+    var s = Math.floor((Date.now() - _enrichStart) / 1000);
+    document.getElementById('enrichElapsed').textContent = s + 's';
+  }, 1000);
+}
+
+function setEnrichStep(idx) {
+  for (var i = 0; i < 4; i++) {
+    var el = document.getElementById('es-' + i);
+    el.classList.remove('done', 'active');
+    if (i < idx) { el.classList.add('done'); el.querySelector('.gen-step-dot').textContent = '✓'; }
+    else if (i === idx) el.classList.add('active');
+  }
+}
+
+function stopEnrichProgress(success) {
+  if (_enrichTimer) { clearInterval(_enrichTimer); _enrichTimer = null; }
+  if (_enrichElapsedTimer) { clearInterval(_enrichElapsedTimer); _enrichElapsedTimer = null; }
+  var ep = document.getElementById('enrichProgress');
+  if (success) {
+    for (var i = 0; i < 4; i++) {
+      var el = document.getElementById('es-' + i);
+      el.classList.remove('active'); el.classList.add('done');
+      el.querySelector('.gen-step-dot').textContent = '✓';
+    }
+    document.getElementById('enrichTrackFill').style.width = '100%';
+    var s = Math.floor((Date.now() - _enrichStart) / 1000);
+    document.getElementById('enrichElapsed').textContent = 'Termine en ' + s + 's';
+    setTimeout(function() { ep.classList.remove('visible'); }, 1200);
+  } else {
+    ep.classList.remove('visible');
+  }
+}
+
 async function loadEnrichment() {
   // Check cache in job.analysis.enrichment
   if (_job.analysis && _job.analysis.enrichment) {
     _enrichment = _job.analysis.enrichment;
+    document.getElementById('enrichProgress').classList.remove('visible');
     renderEnrichment(_enrichment);
     return;
   }
+
+  // Start progress
+  startEnrichProgress();
 
   // Call API
   try {
@@ -411,9 +477,11 @@ async function loadEnrichment() {
     await sb.from('upwork_jobs').update({ analysis: updatedAnalysis }).eq('id', _job.id);
     _job.analysis = updatedAnalysis;
 
+    stopEnrichProgress(true);
     renderEnrichment(_enrichment);
   } catch(e) {
     console.error('Enrichment error:', e);
+    stopEnrichProgress(false);
     var fallback = '<span class="muted" style="font-size:12px">Enrichissement indisponible. L\'API n\'est pas accessible.</span>';
     document.getElementById('why-content').innerHTML = fallback;
     document.getElementById('battle-content').innerHTML = fallback;
