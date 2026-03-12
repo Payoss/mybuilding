@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "mybuilding — Upwork Scraper",
+  "version": "1.0",
+  "description": "Scrape les jobs Upwork en safe-mode et les envoie vers mybuilding.dev CRM",
+  "permissions": [
+    "tabs",
+    "storage",
+    "notifications",
+    "alarms",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.upwork.com/*",
+    "https://*.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.upwork.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

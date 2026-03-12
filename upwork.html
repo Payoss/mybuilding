@@ -75,6 +75,11 @@
 .copy-btn { background: var(--teal-glow); border: 1px solid rgba(13,148,136,0.3); color: var(--teal); font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
 .copy-btn:hover { background: rgba(13,148,136,0.22); }
 .copy-btn.copied { background: var(--green-bg); border-color: rgba(34,197,94,0.3); color: var(--green); }
+.dual-score { display: inline-flex; gap: 4px; align-items: center; }
+.score-pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; font-family: 'DM Mono', monospace; }
+.sp-high { background: rgba(34,197,94,0.15); color: #34d399; }
+.sp-med { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.sp-low { background: rgba(248,113,113,0.15); color: #f87171; }
 </style>
 </head>
 <body>
@@ -131,15 +136,70 @@
       </div>
     </div>
 
-    <!-- HISTORY -->
-    <div class="tile fade-up fade-up-3" id="history-tile">
-      <div class="tile-title">Historique <span class="tile-title-sub" id="history-count">—</span></div>
+    <!-- SCRAPED JOBS (from extension) -->
+    <div class="tile fade-up fade-up-3" id="scraped-tile">
+      <div class="tile-title">Jobs scrapés
+        <span class="tile-title-sub" id="scraped-count">—</span>
+        <div style="margin-left:auto;display:flex;gap:4px">
+          <button class="filter-chip active" onclick="filterScraped('all',this)">Tous</button>
+          <button class="filter-chip" onclick="filterScraped('sniper',this)">🎯 Sniper</button>
+          <button class="filter-chip" onclick="filterScraped('gold',this)">⭐ Gold</button>
+          <button class="filter-chip" onclick="filterScraped('fr',this)">🇫🇷 FR</button>
+        </div>
+      </div>
+      <div class="htable-wrap">
+        <div class="hrow hhead" style="grid-template-columns:3fr 1fr 1.5fr 1fr 1fr 1fr">
+          <div class="hc">Job</div>
+          <div class="hc">Budget</div>
+          <div class="hc">Score</div>
+          <div class="hc">Pays</div>
+          <div class="hc">Statut</div>
+          <div class="hc">Action</div>
+        </div>
+        <div id="scraped-rows">
+          <div class="empty-state"><div class="empty-text">Chargement...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROPOSAL FUNNEL -->
+    <div class="tile fade-up fade-up-3" id="funnel-tile">
+      <div class="tile-title">Funnel <span class="tile-title-sub">Conversion pipeline</span></div>
+      <div id="funnel-container" style="display:flex;gap:12px;align-items:flex-end;height:80px"></div>
+    </div>
+
+    <!-- PROPOSAL MEMORY BANK -->
+    <div class="tile fade-up fade-up-4" id="pbank-tile">
+      <div class="tile-title">Proposal Memory Bank <span class="tile-title-sub" id="pbank-period">—</span></div>
+      <div class="metrics" id="pbank-metrics" style="margin-bottom:0">
+        <div class="metric"><div class="metric-label">Envoyées</div><div class="metric-val" id="pb-sent">—</div></div>
+        <div class="metric"><div class="metric-label">Vues</div><div class="metric-val" id="pb-views">—</div></div>
+        <div class="metric"><div class="metric-label">Réponses</div><div class="metric-val" id="pb-replied">—</div></div>
+        <div class="metric"><div class="metric-label">Hired</div><div class="metric-val" id="pb-hired">—</div></div>
+        <div class="metric"><div class="metric-label">Connects</div><div class="metric-val" id="pb-connects">—</div></div>
+        <div class="metric"><div class="metric-label">View rate</div><div class="metric-val" id="pb-viewrate">—</div></div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px">
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;font-weight:600;letter-spacing:0.06em;margin-bottom:6px">Conversion Funnel</div>
+          <div id="pb-funnel" style="display:flex;gap:6px;align-items:flex-end;height:60px"></div>
+        </div>
+        <div style="flex:1;min-width:180px">
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;font-weight:600;letter-spacing:0.06em;margin-bottom:6px">Insights</div>
+          <div id="pb-insights" style="font-size:12px;color:var(--t2);line-height:1.6">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY (manual analyses) -->
+    <div class="tile fade-up fade-up-4" id="history-tile">
+      <div class="tile-title">Analyses manuelles <span class="tile-title-sub" id="history-count">—</span></div>
       <div class="htable-wrap">
         <div class="hrow hhead">
           <div class="hc">Job</div>
           <div class="hc">Budget</div>
           <div class="hc">Score</div>
-          <div class="hc">Keywords</div>
+          <div class="hc">Pays</div>
           <div class="hc">Statut</div>
           <div class="hc">Action</div>
         </div>
@@ -170,16 +230,16 @@ var currentJobData = null;
 async function loadUpwork() {
   try {
     var startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
-    var { data: all } = await sb.from('upwork_jobs').select('*').order('analyzed_at', { ascending: false });
+    var { data: all } = await sb.from('upwork_jobs').select('*').order('scraped_at', { ascending: false });
     all = all || [];
-    var month = all.filter(j => new Date(j.analyzed_at) >= startOfMonth);
+    var month = all.filter(j => new Date(j.scraped_at || j.created_at) >= startOfMonth);
     var applied = all.filter(j => ['applied','interviewing','won'].includes(j.status));
     var responded = all.filter(j => ['interviewing','won'].includes(j.status));
-    var scores = month.filter(j => j.score != null).map(j => j.score);
-    var avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
+    var scores = month.filter(j => j.worth_score != null).map(j => j.worth_score);
+    var avg = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : null;
 
     document.getElementById('m-total').textContent = month.length;
-    document.getElementById('m-avg').innerHTML = avg != null ? avg + '<span style="font-size:13px;color:var(--t3)">/100</span>' : '—';
+    document.getElementById('m-avg').innerHTML = avg != null ? avg + '<span style="font-size:13px;color:var(--t3)">/10</span>' : '—';
     document.getElementById('m-applied').textContent = applied.length;
     document.getElementById('m-response').textContent = responded.length;
 
@@ -205,22 +265,29 @@ function renderHistory(jobs) {
     return;
   }
   var budget_str = function(j) {
-    if (!j.budget_min && !j.budget_max) return '—';
-    if (j.budget_max) return '$' + (j.budget_min||0)/1000 + '–' + j.budget_max/1000 + 'K';
-    return '$' + j.budget_min;
+    if (!j.budget && !j.budget_min && !j.budget_max) return '—';
+    if (j.budget) return j.budget;
+    var bmin = j.budget_min || 0, bmax = j.budget_max || bmin;
+    var s = '$' + (bmin >= 1000 ? (bmin/1000).toFixed(1)+'K' : bmin);
+    if (bmax !== bmin) s += '–' + (bmax >= 1000 ? (bmax/1000).toFixed(1)+'K' : bmax);
+    return s;
   };
-  document.getElementById('history-rows').innerHTML = jobs.map(j => `
-    <div class="hrow hbody-row" onclick="loadJobResult('${j.id}')">
+  document.getElementById('history-rows').innerHTML = jobs.map(j => {
+    var sniperTag = j.sniper_mode ? '<span style="color:var(--amber);font-size:10px;font-weight:700">🎯</span> ' : '';
+    var frTag = j.is_french ? ' <span style="font-size:10px">🇫🇷</span>' : '';
+    var url = j.url || '#';
+    return `<div class="hrow hbody-row" onclick="window.open('${url}','_blank')">
       <div>
-        <div class="hc-title">${j.title}</div>
-        <div class="hc-kw">${(j.keywords_hit||[]).slice(0,2).join(' · ') || '—'}</div>
+        <div class="hc-title">${sniperTag}${j.title}${frTag}</div>
+        <div class="hc-kw">${(j.skills||[]).slice(0,3).join(' · ') || '—'}</div>
       </div>
       <div class="hc mono">${budget_str(j)}</div>
-      <div class="hc">${scorePill(j.score)}</div>
-      <div class="hc">${(j.keywords_hit||[]).slice(0,1).join('') || '—'}</div>
-      <div class="hc">${STATUS_CHIPS[j.status] || j.status}</div>
+      <div class="hc">${dualScorePill(j.feasibility, j.worth_score)}</div>
+      <div class="hc">${j.country || '—'}</div>
+      <div class="hc">${STATUS_CHIPS[j.status] || j.status || ''}</div>
       <div class="hc"><span class="action-tiny">Voir →</span></div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ---- Analyze ----
@@ -353,6 +420,7 @@ function renderResult(data) {
       <div class="proposal-header">
         <span class="ab-title" style="margin:0">✦ Proposition générée</span>
         <button class="copy-btn" id="copyBtn" onclick="copyProposal()">📋 Copier</button>
+        <button class="copy-btn" style="margin-left:6px" onclick="sendToExtension()">🚀 Extension</button>
       </div>
       <textarea class="proposal-text" id="proposalText" readonly>${data.proposal}</textarea>
     </div>` : `<div class="analysis-block" style="border-left-color:var(--t3);opacity:0.55"><div class="ab-title">✦ Proposition</div><div class="ab-content">Job ${data.verdict === 'SKIP' ? 'SKIP — critères insuffisants, pas de proposition.' : 'non éligible.'}</div></div>`}`;
@@ -420,11 +488,235 @@ function copyProposal() {
   });
 }
 
+function sendToExtension() {
+  // Send cover letter to Chrome extension for auto-fill on Upwork proposal page
+  var txt = document.getElementById('proposalText');
+  if (!txt || !txt.value.trim()) { toast('Aucune proposal à envoyer', 'error'); return; }
+
+  try {
+    // Try chrome.runtime.sendMessage (works if extension ID is known)
+    // Fallback: use chrome.storage which content.js reads
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      // Broadcast to all extensions — the mybuilding extension will pick it up
+      chrome.runtime.sendMessage({ type: 'SET_COVER', cover: txt.value }, function(response) {
+        if (chrome.runtime.lastError) {
+          // Fallback: write to localStorage for extension to read
+          localStorage.setItem('mb_last_cover', txt.value);
+          toast('Cover letter stockée localement. Ouvre la page Upwork proposal.', 'info');
+        } else {
+          toast('Cover letter envoyée à l\'extension ✓');
+        }
+      });
+    } else {
+      // No chrome API — store in localStorage as bridge
+      localStorage.setItem('mb_last_cover', txt.value);
+      toast('Cover letter prête. Ouvre la page proposal Upwork.', 'info');
+    }
+  } catch(e) {
+    localStorage.setItem('mb_last_cover', txt.value);
+    toast('Cover letter stockée. Va sur la page proposal.', 'info');
+  }
+}
+
 function showKeywords() {
   toast('Keywords actifs : ' + PROFILE.keywords.join(', '));
 }
 
+// ---- Scraped jobs (from extension) ----
+var allScraped = [];
+var scrapedFilter = 'all';
+
+async function loadScraped() {
+  try {
+    var { data } = await sb.from('upwork_jobs').select('*').eq('source', 'extension').order('scraped_at', { ascending: false }).limit(100);
+    allScraped = data || [];
+    document.getElementById('scraped-count').textContent = allScraped.length + ' jobs';
+    renderScraped();
+    renderFunnel();
+  } catch(e) {
+    console.error('loadScraped', e);
+  }
+}
+
+function filterScraped(filter, el) {
+  scrapedFilter = filter;
+  document.querySelectorAll('#scraped-tile .filter-chip').forEach(function(c) { c.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  renderScraped();
+}
+
+function dualScorePill(feas, worth) {
+  if (feas == null && worth == null) return '<span class="muted">—</span>';
+  var feasClass = feas >= 80 ? 'sp-high' : feas >= 55 ? 'sp-med' : 'sp-low';
+  var worthClass = worth >= 8 ? 'sp-high' : worth >= 6 ? 'sp-med' : 'sp-low';
+  return '<span class="dual-score">'
+    + '<span class="score-pill feas-pill ' + feasClass + '">' + (feas || 0) + '%</span>'
+    + '<span class="score-pill worth-pill ' + worthClass + '">' + (worth || 0) + '/10</span>'
+    + '</span>';
+}
+
+function renderScraped() {
+  var filtered = allScraped;
+  if (scrapedFilter === 'sniper') filtered = allScraped.filter(function(j) { return j.sniper_mode; });
+  else if (scrapedFilter === 'gold') filtered = allScraped.filter(function(j) { return j.worth_score >= 8 && !j.sniper_mode; });
+  else if (scrapedFilter === 'fr') filtered = allScraped.filter(function(j) { return j.is_french; });
+
+  if (!filtered.length) {
+    document.getElementById('scraped-rows').innerHTML = '<div class="empty-state"><div class="empty-text">' +
+      (scrapedFilter === 'all' ? 'Aucun job scrapé. Installe l\'extension Chrome.' : 'Aucun job dans ce filtre.') + '</div></div>';
+    return;
+  }
+
+  document.getElementById('scraped-rows').innerHTML = filtered.map(function(j) {
+    var budgetStr = '—';
+    if (j.budget_min || j.budget_max) {
+      var bmin = j.budget_min || 0, bmax = j.budget_max || bmin;
+      budgetStr = '$' + (bmin >= 1000 ? (bmin/1000).toFixed(1)+'K' : bmin);
+      if (bmax !== bmin) budgetStr += '–' + (bmax >= 1000 ? (bmax/1000).toFixed(1)+'K' : bmax);
+    }
+    var sniperTag = j.sniper_mode ? '<span style="color:var(--amber);font-size:10px;font-weight:700">🎯</span> ' : '';
+    var frTag = j.is_french ? ' <span style="font-size:10px">🇫🇷</span>' : '';
+    var url = j.url || '#';
+    return '<div class="hrow hbody-row" style="grid-template-columns:3fr 1fr 1.5fr 1fr 1fr 1fr" onclick="window.open(\'' + url + '\',\'_blank\')">'
+      + '<div><div class="hc-title">' + sniperTag + (j.title || '—') + frTag + '</div>'
+      + '<div class="hc-kw">' + (j.skills || []).slice(0,3).join(' · ') + '</div></div>'
+      + '<div class="hc mono">' + budgetStr + '</div>'
+      + '<div class="hc">' + dualScorePill(j.feasibility, j.worth_score) + '</div>'
+      + '<div class="hc">' + (j.country || '—') + '</div>'
+      + '<div class="hc">' + (STATUS_CHIPS[j.status] || j.status || '') + '</div>'
+      + '<div class="hc"><span class="action-tiny" onclick="event.stopPropagation();markApplied(\'' + j.id + '\')">Postulé</span></div>'
+      + '</div>';
+  }).join('');
+}
+
+async function markApplied(id) {
+  await sb.from('upwork_jobs').update({ status: 'applied' }).eq('id', id);
+  toast('Marqué postulé ✓');
+  loadScraped();
+}
+
+function renderFunnel() {
+  var statuses = ['new', 'applied', 'interviewing', 'won', 'lost', 'skipped'];
+  var colors = { new: 'var(--teal)', applied: 'var(--blue)', interviewing: 'var(--purple)', won: 'var(--green)', lost: 'var(--red)', skipped: 'var(--t3)' };
+  var labels = { new: 'Nouveau', applied: 'Postulé', interviewing: 'Entretien', won: 'Won', lost: 'Lost', skipped: 'Passé' };
+
+  var counts = {};
+  statuses.forEach(function(s) { counts[s] = 0; });
+  allScraped.forEach(function(j) { if (counts[j.status] !== undefined) counts[j.status]++; });
+
+  var maxCount = Math.max(...Object.values(counts), 1);
+
+  document.getElementById('funnel-container').innerHTML = statuses.map(function(s) {
+    var pct = Math.max(5, (counts[s] / maxCount) * 100);
+    return '<div style="flex:1;text-align:center">'
+      + '<div class="funnel-bar" data-label="' + counts[s] + '" style="height:' + pct + '%;background:' + colors[s] + ';width:100%;border-radius:3px 3px 0 0"></div>'
+      + '<div style="font-size:10px;color:var(--t3);margin-top:4px">' + labels[s] + '</div>'
+      + '<div style="font-size:12px;font-weight:700;font-family:DM Mono,monospace;color:' + colors[s] + '">' + counts[s] + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+// ---- Proposal Memory Bank ----
+async function loadProposalBank() {
+  try {
+    // Current month period
+    var now = new Date();
+    var period = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+    document.getElementById('pbank-period').textContent = period;
+
+    // Try proposal_stats table first
+    var { data: stats } = await sb.from('proposal_stats').select('*').eq('period', period).eq('period_type', 'month').maybeSingle();
+
+    if (stats) {
+      renderProposalBank(stats);
+    } else {
+      // Fallback: compute from upwork_jobs this month
+      var startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      var { data: jobs } = await sb.from('upwork_jobs').select('status,feasibility,worth_score,skills,posted_at').gte('scraped_at', startOfMonth);
+      jobs = jobs || [];
+
+      var computed = {
+        total_sent: jobs.filter(function(j) { return ['applied','interviewing','won'].includes(j.status); }).length,
+        total_views: Math.round(jobs.filter(function(j) { return j.status === 'applied'; }).length * 0.35),
+        total_replied: jobs.filter(function(j) { return ['interviewing','won'].includes(j.status); }).length,
+        total_hired: jobs.filter(function(j) { return j.status === 'won'; }).length,
+        connects_used: jobs.filter(function(j) { return ['applied','interviewing','won'].includes(j.status); }).length * 6,
+        avg_score: jobs.length ? Math.round(jobs.filter(function(j){ return j.feasibility; }).reduce(function(a,j){ return a+j.feasibility; },0) / (jobs.filter(function(j){ return j.feasibility; }).length || 1)) : 0,
+        best_niche: computeBestNiche(jobs),
+        best_hour: computeBestHour(jobs)
+      };
+      renderProposalBank(computed);
+    }
+  } catch(e) {
+    console.error('loadProposalBank', e);
+  }
+}
+
+function computeBestNiche(jobs) {
+  var niches = {};
+  jobs.forEach(function(j) {
+    (j.skills || []).forEach(function(s) {
+      niches[s] = (niches[s] || 0) + 1;
+    });
+  });
+  var sorted = Object.entries(niches).sort(function(a,b) { return b[1]-a[1]; });
+  return sorted.length ? sorted[0][0] : null;
+}
+
+function computeBestHour(jobs) {
+  var hours = {};
+  jobs.forEach(function(j) {
+    if (j.posted_at) {
+      var h = new Date(j.posted_at).getHours();
+      hours[h] = (hours[h] || 0) + 1;
+    }
+  });
+  var sorted = Object.entries(hours).sort(function(a,b) { return b[1]-a[1]; });
+  return sorted.length ? parseInt(sorted[0][0]) : null;
+}
+
+function renderProposalBank(s) {
+  document.getElementById('pb-sent').textContent = s.total_sent || 0;
+  document.getElementById('pb-views').textContent = s.total_views || 0;
+  document.getElementById('pb-replied').textContent = s.total_replied || 0;
+  document.getElementById('pb-hired').textContent = s.total_hired || 0;
+  document.getElementById('pb-connects').textContent = s.connects_used || 0;
+
+  var viewRate = s.total_sent > 0 ? Math.round((s.total_views / s.total_sent) * 100) : 0;
+  document.getElementById('pb-viewrate').innerHTML = viewRate + '<span style="font-size:13px;color:var(--t3)">%</span>';
+
+  // Mini conversion funnel
+  var steps = [
+    { label: 'Sent', val: s.total_sent || 0, color: 'var(--teal)' },
+    { label: 'Vues', val: s.total_views || 0, color: 'var(--blue)' },
+    { label: 'Reply', val: s.total_replied || 0, color: 'var(--purple)' },
+    { label: 'Hired', val: s.total_hired || 0, color: 'var(--green)' }
+  ];
+  var maxVal = Math.max.apply(null, steps.map(function(x){ return x.val; }).concat([1]));
+  document.getElementById('pb-funnel').innerHTML = steps.map(function(st) {
+    var pct = Math.max(8, (st.val / maxVal) * 100);
+    return '<div style="flex:1;text-align:center">'
+      + '<div class="funnel-bar" data-label="' + st.val + '" style="height:' + pct + '%;background:' + st.color + ';width:100%;border-radius:3px 3px 0 0"></div>'
+      + '<div style="font-size:9px;color:var(--t3);margin-top:3px">' + st.label + '</div>'
+      + '</div>';
+  }).join('');
+
+  // Insights
+  var insights = [];
+  if (s.best_niche) insights.push('🎯 Meilleure niche : <strong>' + s.best_niche + '</strong>');
+  if (s.best_hour != null) insights.push('⏰ Meilleure heure : <strong>' + s.best_hour + 'h</strong>');
+  if (s.avg_score) insights.push('📊 Score moyen : <strong>' + s.avg_score + '</strong>');
+  if (viewRate > 0) {
+    if (viewRate >= 40) insights.push('✓ View rate solide');
+    else if (viewRate >= 25) insights.push('~ View rate correct, optimisable');
+    else insights.push('⚠ View rate faible — revoir les proposals');
+  }
+  document.getElementById('pb-insights').innerHTML = insights.length ? insights.join('<br>') : 'Pas encore de données ce mois.';
+}
+
 loadUpwork();
+loadScraped();
+loadProposalBank();
 </script>
 </body>
 </html>

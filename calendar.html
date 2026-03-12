@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mybuilding — Calendrier</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+.cal-tabs { display: flex; gap: 2px; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; padding: 3px; width: fit-content; }
+.cal-tab { padding: 5px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; color: var(--t2); transition: all 0.15s; }
+.cal-tab.active { background: var(--teal-dim); color: var(--t1); font-weight: 500; }
+.cal-panel { display: none; }
+.cal-panel.active { display: block; }
+.event-form-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.event-form-row .form-group { flex: 1; min-width: 120px; }
+</style>
+</head>
+<body>
+<div id="sidebar-mount"></div>
+
+<!-- ADD EVENT MODAL -->
+<div class="modal" id="eventModal">
+  <div class="modal-backdrop" onclick="closeEventModal()"></div>
+  <div class="modal-box">
+    <div class="modal-title">
+      <span id="event-modal-title">Nouvel événement</span>
+      <button class="modal-close" onclick="closeEventModal()">×</button>
+    </div>
+    <form id="eventForm" onsubmit="saveEvent(event)">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Titre *</label>
+          <input class="form-input" name="title" placeholder="Réunion client, deadline..." required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date *</label>
+          <input class="form-input" name="event_date" type="date" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Heure</label>
+          <input class="form-input" name="event_time" type="time">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Durée (min)</label>
+          <input class="form-input" name="duration_min" type="number" value="60" min="15" step="15">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select class="form-select" name="type">
+            <option value="task">Tâche</option>
+            <option value="meeting">Réunion</option>
+            <option value="deadline">Deadline</option>
+            <option value="followup">Follow-up</option>
+            <option value="reminder">Rappel</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" name="description" placeholder="Détails..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-glass" onclick="closeEventModal()">Annuler</button>
+        <button type="submit" class="btn btn-teal" id="eventSaveBtn">Créer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="breadcrumb">mybuilding /</span>
+      <span class="page-title">Calendrier</span>
+      <span class="teal-chip" id="event-count">—</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-teal" onclick="openEventModal()">+ Événement</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- TABS -->
+    <div class="cal-tabs">
+      <div class="cal-tab active" onclick="switchCalTab('month',this)">Mois</div>
+      <div class="cal-tab" onclick="switchCalTab('week',this)">Semaine</div>
+      <div class="cal-tab" onclick="switchCalTab('heatmap',this)">Best Hours</div>
+      <div class="cal-tab" onclick="switchCalTab('checkin',this)">Daily Check-in</div>
+    </div>
+
+    <!-- CHECKIN BANNER (visible when pending) -->
+    <div class="checkin-banner" id="checkin-banner" style="display:none">
+      <div class="checkin-icon">📋</div>
+      <div class="checkin-text"><strong>Daily Check-in</strong> — des questions t'attendent aujourd'hui</div>
+      <button class="btn btn-teal checkin-action" onclick="switchCalTab('checkin',document.querySelector('[onclick*=checkin]'))">Répondre</button>
+    </div>
+
+    <!-- MONTH VIEW -->
+    <div class="cal-panel active" id="panel-month">
+      <div class="tile cal-wrap fade-up">
+        <div class="cal-header">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="navMonth(-1)">←</button>
+            <div class="cal-month" id="cal-month-label">Mars 2026</div>
+            <button class="cal-nav-btn" onclick="navMonth(1)">→</button>
+          </div>
+          <button class="cal-nav-btn" onclick="goToday()">Aujourd'hui</button>
+        </div>
+        <div class="cal-grid" id="cal-grid">
+          <div class="cal-day-label">Lun</div><div class="cal-day-label">Mar</div><div class="cal-day-label">Mer</div>
+          <div class="cal-day-label">Jeu</div><div class="cal-day-label">Ven</div><div class="cal-day-label">Sam</div><div class="cal-day-label">Dim</div>
+        </div>
+      </div>
+
+      <!-- Today's events -->
+      <div class="tile fade-up fade-up-2" id="today-events-tile">
+        <div class="tile-title">Aujourd'hui <span class="tile-title-sub" id="today-count">0 événements</span></div>
+        <div class="cal-event-list" id="today-events"></div>
+      </div>
+    </div>
+
+    <!-- WEEK VIEW -->
+    <div class="cal-panel" id="panel-week">
+      <div class="tile fade-up">
+        <div class="tile-title">Cette semaine <span class="tile-title-sub" id="week-count">—</span></div>
+        <div class="cal-event-list" id="week-events"></div>
+      </div>
+    </div>
+
+    <!-- BEST HOURS HEATMAP -->
+    <div class="cal-panel" id="panel-heatmap">
+      <div class="tile fade-up">
+        <div class="tile-title">Best Hours — Quand poster <span class="tile-title-sub">Basé sur les jobs scrapés</span></div>
+        <div class="heatmap-labels" id="heatmap-hours">
+        </div>
+        <div id="heatmap-grid"></div>
+        <div class="heatmap-labels" style="margin-top:6px" id="heatmap-hour-labels"></div>
+      </div>
+      <div class="tile fade-up fade-up-2">
+        <div class="tile-title">Recommandation</div>
+        <div id="heatmap-reco" style="font-size:12px;color:var(--t2);line-height:1.6">Pas encore assez de données. Les heures optimales apparaîtront après quelques scans.</div>
+      </div>
+    </div>
+
+    <!-- DAILY CHECKIN -->
+    <div class="cal-panel" id="panel-checkin">
+      <div class="tile fade-up">
+        <div class="tile-title">Daily Check-in <span class="tile-title-sub" id="checkin-date">—</span></div>
+        <div class="checkin-list" id="checkin-list">
+          <div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Pas de check-in aujourd'hui</div></div>
+        </div>
+      </div>
+      <div class="tile fade-up fade-up-2">
+        <div class="tile-title">Ajouter une question</div>
+        <div class="event-form-row">
+          <div class="form-group" style="flex:3">
+            <input class="form-input" id="new-checkin-q" placeholder="Ex: Combien de proposals envoyées aujourd'hui ?">
+          </div>
+          <button class="btn btn-teal" onclick="addCheckin()">+ Ajouter</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+document.getElementById('sidebar-mount').innerHTML = renderSidebar('calendar');
+
+var allEvents = [];
+var currentDate = new Date();
+var editingEventId = null;
+var DAY_NAMES = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+var MONTH_NAMES = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+var EVENT_TYPE_CLASS = { task:'cal-event-task', meeting:'cal-event-meeting', deadline:'cal-event-deadline', followup:'cal-event-followup', reminder:'cal-event-reminder' };
+
+// ── Tab switching ──
+function switchCalTab(tab, el) {
+  document.querySelectorAll('.cal-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.cal-panel').forEach(p => p.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+  if (tab === 'heatmap') loadHeatmap();
+  if (tab === 'checkin') loadCheckins();
+}
+
+// ── Load events ──
+async function loadEvents() {
+  try {
+    var { data, error } = await sb.from('calendar_events').select('*').order('event_date', { ascending: true }).order('event_time', { ascending: true });
+    if (error) throw error;
+    allEvents = data || [];
+    document.getElementById('event-count').textContent = allEvents.length + ' événements';
+    renderCalendar();
+    renderToday();
+    renderWeek();
+    checkPendingCheckins();
+  } catch(e) {
+    toast('Erreur chargement calendrier', 'error');
+  }
+}
+
+// ── Calendar grid ──
+function renderCalendar() {
+  var year = currentDate.getFullYear(), month = currentDate.getMonth();
+  document.getElementById('cal-month-label').textContent = MONTH_NAMES[month] + ' ' + year;
+
+  var firstDay = new Date(year, month, 1);
+  var startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+  var prevMonthDays = new Date(year, month, 0).getDate();
+
+  var today = new Date(); today.setHours(0,0,0,0);
+  var grid = document.getElementById('cal-grid');
+
+  // Keep day labels
+  var html = '<div class="cal-day-label">Lun</div><div class="cal-day-label">Mar</div><div class="cal-day-label">Mer</div><div class="cal-day-label">Jeu</div><div class="cal-day-label">Ven</div><div class="cal-day-label">Sam</div><div class="cal-day-label">Dim</div>';
+
+  // Map events by date string
+  var eventsByDate = {};
+  allEvents.forEach(function(ev) {
+    if (!ev.event_date) return;
+    var d = ev.event_date.slice(0, 10);
+    if (!eventsByDate[d]) eventsByDate[d] = [];
+    eventsByDate[d].push(ev);
+  });
+
+  var totalCells = startOffset + daysInMonth;
+  var rows = Math.ceil(totalCells / 7);
+
+  for (var i = 0; i < rows * 7; i++) {
+    var dayNum, dateStr, isOther = false;
+    if (i < startOffset) {
+      dayNum = prevMonthDays - startOffset + i + 1;
+      dateStr = new Date(year, month - 1, dayNum).toISOString().slice(0, 10);
+      isOther = true;
+    } else if (i >= startOffset + daysInMonth) {
+      dayNum = i - startOffset - daysInMonth + 1;
+      dateStr = new Date(year, month + 1, dayNum).toISOString().slice(0, 10);
+      isOther = true;
+    } else {
+      dayNum = i - startOffset + 1;
+      dateStr = new Date(year, month, dayNum).toISOString().slice(0, 10);
+    }
+
+    var cellDate = new Date(dateStr + 'T00:00:00');
+    var isToday = cellDate.getTime() === today.getTime();
+    var cls = 'cal-cell' + (isToday ? ' today' : '') + (isOther ? ' other-month' : '');
+
+    var eventsHtml = '';
+    var dayEvents = eventsByDate[dateStr] || [];
+    dayEvents.slice(0, 3).forEach(function(ev) {
+      var typeClass = EVENT_TYPE_CLASS[ev.type] || 'cal-event-task';
+      eventsHtml += '<div class="cal-event ' + typeClass + '">' + (ev.event_time ? ev.event_time.slice(0,5) + ' ' : '') + ev.title + '</div>';
+    });
+    if (dayEvents.length > 3) eventsHtml += '<div style="font-size:8px;color:var(--t3)">+' + (dayEvents.length - 3) + '</div>';
+
+    html += '<div class="' + cls + '" onclick="openEventModal(null,\'' + dateStr + '\')">'
+      + '<div class="cal-date">' + dayNum + '</div>'
+      + eventsHtml + '</div>';
+  }
+
+  grid.innerHTML = html;
+}
+
+function navMonth(dir) {
+  currentDate.setMonth(currentDate.getMonth() + dir);
+  renderCalendar();
+}
+
+function goToday() {
+  currentDate = new Date();
+  renderCalendar();
+}
+
+// ── Today's events ──
+function renderToday() {
+  var todayStr = new Date().toISOString().slice(0, 10);
+  var events = allEvents.filter(function(ev) { return ev.event_date && ev.event_date.slice(0, 10) === todayStr; });
+  document.getElementById('today-count').textContent = events.length + ' événements';
+
+  if (!events.length) {
+    document.getElementById('today-events').innerHTML = '<div class="empty-state"><div class="empty-text">Rien prévu aujourd\'hui</div></div>';
+    return;
+  }
+
+  document.getElementById('today-events').innerHTML = events.map(function(ev) {
+    var typeClass = EVENT_TYPE_CLASS[ev.type] || 'cal-event-task';
+    var typeBadge = '<span class="cal-event-type ' + typeClass + '" style="padding:1px 6px;border-radius:4px">' + (ev.type || 'task') + '</span>';
+    return '<div class="cal-event-row" onclick="editEvent(\'' + ev.id + '\')">'
+      + '<div class="cal-event-time">' + (ev.event_time ? ev.event_time.slice(0,5) : '—') + '</div>'
+      + '<div class="cal-event-title">' + ev.title + '</div>'
+      + typeBadge
+      + '</div>';
+  }).join('');
+}
+
+// ── Week view ──
+function renderWeek() {
+  var now = new Date();
+  var monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  monday.setHours(0,0,0,0);
+  var sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  var weekEvents = allEvents.filter(function(ev) {
+    if (!ev.event_date) return false;
+    var d = new Date(ev.event_date + 'T00:00:00');
+    return d >= monday && d <= sunday;
+  });
+
+  document.getElementById('week-count').textContent = weekEvents.length + ' événements';
+
+  if (!weekEvents.length) {
+    document.getElementById('week-events').innerHTML = '<div class="empty-state"><div class="empty-text">Semaine libre</div></div>';
+    return;
+  }
+
+  document.getElementById('week-events').innerHTML = weekEvents.map(function(ev) {
+    var d = new Date(ev.event_date + 'T00:00:00');
+    var dayLabel = DAY_NAMES[d.getDay()] + ' ' + d.getDate();
+    var typeClass = EVENT_TYPE_CLASS[ev.type] || 'cal-event-task';
+    return '<div class="cal-event-row" onclick="editEvent(\'' + ev.id + '\')">'
+      + '<div class="cal-event-time" style="min-width:60px">' + dayLabel + '</div>'
+      + '<div class="cal-event-time">' + (ev.event_time ? ev.event_time.slice(0,5) : '—') + '</div>'
+      + '<div class="cal-event-title">' + ev.title + '</div>'
+      + '<span class="cal-event-type ' + typeClass + '" style="padding:1px 6px;border-radius:4px">' + (ev.type || 'task') + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+// ── Best Hours Heatmap ──
+async function loadHeatmap() {
+  try {
+    var { data } = await sb.from('job_hour_stats').select('*').order('hour', { ascending: true });
+    if (!data || !data.length) {
+      // Fallback: compute from upwork_jobs posted_at
+      var { data: jobs } = await sb.from('upwork_jobs').select('posted_at,worth_score').not('posted_at', 'is', null);
+      if (jobs && jobs.length > 0) {
+        renderHeatmapFromJobs(jobs);
+        return;
+      }
+      document.getElementById('heatmap-grid').innerHTML = '<div class="empty-state"><div class="empty-text">Pas de données. Les stats apparaîtront après quelques scans.</div></div>';
+      return;
+    }
+    renderHeatmapFromStats(data);
+  } catch(e) {
+    console.error('heatmap', e);
+  }
+}
+
+function renderHeatmapFromJobs(jobs) {
+  var hourCounts = new Array(24).fill(0);
+  var hourScores = new Array(24).fill(0);
+  var dayHour = {};
+
+  jobs.forEach(function(j) {
+    if (!j.posted_at) return;
+    try {
+      var d = new Date(j.posted_at);
+      var h = d.getUTCHours();
+      var dow = d.getUTCDay();
+      hourCounts[h]++;
+      hourScores[h] += (j.worth_score || 5);
+      var key = dow + '-' + h;
+      if (!dayHour[key]) dayHour[key] = { count: 0, score: 0 };
+      dayHour[key].count++;
+      dayHour[key].score += (j.worth_score || 5);
+    } catch(e) {}
+  });
+
+  var maxCount = Math.max(...hourCounts, 1);
+  var dayLabels = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  var html = '';
+
+  // Hour labels
+  var hourLabelsHtml = '';
+  for (var h = 0; h < 24; h++) {
+    hourLabelsHtml += '<div class="heatmap-label">' + h + 'h</div>';
+  }
+  document.getElementById('heatmap-hour-labels').innerHTML = hourLabelsHtml;
+
+  // Grid by day of week
+  for (var dow = 1; dow <= 7; dow++) {
+    var actualDow = dow % 7; // 1=Mon ... 7=Sun→0
+    html += '<div class="heatmap-row"><div class="heatmap-day-label">' + dayLabels[actualDow] + '</div>';
+    for (var h = 0; h < 24; h++) {
+      var key = actualDow + '-' + h;
+      var entry = dayHour[key] || { count: 0, score: 0 };
+      var level = Math.min(5, Math.round((entry.count / Math.max(maxCount / 7, 1)) * 5));
+      var title = entry.count + ' jobs, avg ' + (entry.count ? (entry.score / entry.count).toFixed(1) : '0') + '/10';
+      html += '<div class="heatmap-cell h' + level + '" title="' + title + '">' + (entry.count || '') + '</div>';
+    }
+    html += '</div>';
+  }
+
+  document.getElementById('heatmap-grid').innerHTML = html;
+
+  // Best hour recommendation
+  var bestHour = 0, bestCount = 0;
+  hourCounts.forEach(function(c, i) { if (c > bestCount) { bestCount = c; bestHour = i; } });
+  var bestScore = hourScores[bestHour] / Math.max(hourCounts[bestHour], 1);
+
+  document.getElementById('heatmap-reco').innerHTML =
+    '<strong style="color:var(--teal)">Heure optimale : ' + bestHour + 'h UTC</strong> — '
+    + bestCount + ' jobs postés, score moyen ' + bestScore.toFixed(1) + '/10. '
+    + 'Les clients postent le plus entre <strong>' + bestHour + 'h</strong> et <strong>' + ((bestHour + 2) % 24) + 'h</strong> UTC.';
+}
+
+function renderHeatmapFromStats(stats) {
+  var dayLabels = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  var maxCount = Math.max(...stats.map(function(s) { return s.jobs_count || 0; }), 1);
+  var html = '';
+
+  var hourLabelsHtml = '';
+  for (var h = 0; h < 24; h++) {
+    hourLabelsHtml += '<div class="heatmap-label">' + h + 'h</div>';
+  }
+  document.getElementById('heatmap-hour-labels').innerHTML = hourLabelsHtml;
+
+  var byDayHour = {};
+  stats.forEach(function(s) {
+    var key = (s.day_of_week || 0) + '-' + s.hour;
+    byDayHour[key] = s;
+  });
+
+  for (var dow = 1; dow <= 7; dow++) {
+    var actualDow = dow % 7;
+    html += '<div class="heatmap-row"><div class="heatmap-day-label">' + dayLabels[actualDow] + '</div>';
+    for (var h = 0; h < 24; h++) {
+      var entry = byDayHour[actualDow + '-' + h] || { jobs_count: 0 };
+      var level = Math.min(5, Math.round((entry.jobs_count / maxCount) * 5));
+      var avgS = entry.avg_score ? parseFloat(entry.avg_score).toFixed(1) : '—';
+      html += '<div class="heatmap-cell h' + level + '" title="' + (entry.jobs_count || 0) + ' jobs, score ' + avgS + '">' + (entry.jobs_count || '') + '</div>';
+    }
+    html += '</div>';
+  }
+
+  document.getElementById('heatmap-grid').innerHTML = html;
+}
+
+// ── Daily Check-in ──
+async function loadCheckins() {
+  var todayStr = new Date().toISOString().slice(0, 10);
+  document.getElementById('checkin-date').textContent = todayStr;
+
+  try {
+    var { data } = await sb.from('checkins').select('*').eq('due_date', todayStr).order('created_at', { ascending: true });
+    if (!data || !data.length) {
+      document.getElementById('checkin-list').innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Pas de check-in aujourd\'hui.<br>Ajoute des questions ci-dessous.</div></div>';
+      return;
+    }
+    renderCheckins(data);
+  } catch(e) {
+    toast('Erreur chargement check-ins', 'error');
+  }
+}
+
+function renderCheckins(checkins) {
+  document.getElementById('checkin-list').innerHTML = checkins.map(function(c) {
+    var isDone = c.status === 'done';
+    return '<div class="checkin-item' + (isDone ? ' done' : '') + '">'
+      + '<div class="checkin-q"><strong>' + c.question + '</strong></div>'
+      + (isDone
+        ? '<div style="font-size:11px;color:var(--green)">✓ ' + (c.answer || 'Done') + '</div>'
+        : '<input class="checkin-answer" placeholder="Répondre..." onkeydown="if(event.key===\'Enter\')answerCheckin(\'' + c.id + '\',this.value)">'
+           + '<button class="btn btn-glass" style="padding:4px 10px;font-size:10px" onclick="skipCheckin(\'' + c.id + '\')">Skip</button>')
+      + '</div>';
+  }).join('');
+}
+
+async function answerCheckin(id, answer) {
+  if (!answer.trim()) return;
+  await sb.from('checkins').update({ status: 'done', answer: answer, answered_at: new Date().toISOString() }).eq('id', id);
+  toast('Check-in répondu ✓');
+  loadCheckins();
+}
+
+async function skipCheckin(id) {
+  await sb.from('checkins').update({ status: 'skipped' }).eq('id', id);
+  loadCheckins();
+}
+
+async function addCheckin() {
+  var q = document.getElementById('new-checkin-q').value.trim();
+  if (!q) return;
+  var todayStr = new Date().toISOString().slice(0, 10);
+  await sb.from('checkins').insert({ question: q, due_date: todayStr, status: 'pending' });
+  document.getElementById('new-checkin-q').value = '';
+  toast('Question ajoutée ✓');
+  loadCheckins();
+}
+
+async function checkPendingCheckins() {
+  var todayStr = new Date().toISOString().slice(0, 10);
+  try {
+    var { data } = await sb.from('checkins').select('id').eq('due_date', todayStr).eq('status', 'pending');
+    if (data && data.length > 0) {
+      document.getElementById('checkin-banner').style.display = '';
+    }
+  } catch(e) {}
+}
+
+// ── Event modal ──
+function openEventModal(event, dateStr) {
+  editingEventId = event ? event.id : null;
+  var form = document.getElementById('eventForm');
+  form.reset();
+  document.getElementById('event-modal-title').textContent = event ? 'Modifier l\'événement' : 'Nouvel événement';
+  document.getElementById('eventSaveBtn').textContent = event ? 'Sauvegarder' : 'Créer';
+
+  if (event) {
+    form.elements.title.value = event.title || '';
+    form.elements.event_date.value = (event.event_date || '').slice(0, 10);
+    form.elements.event_time.value = event.event_time || '';
+    form.elements.duration_min.value = event.duration_min || 60;
+    form.elements.type.value = event.type || 'task';
+    form.elements.description.value = event.description || '';
+  } else if (dateStr) {
+    form.elements.event_date.value = dateStr;
+  } else {
+    form.elements.event_date.value = new Date().toISOString().slice(0, 10);
+  }
+
+  document.getElementById('eventModal').classList.add('open');
+}
+
+function closeEventModal() {
+  document.getElementById('eventModal').classList.remove('open');
+  editingEventId = null;
+}
+
+function editEvent(id) {
+  var ev = allEvents.find(function(e) { return e.id === id; });
+  if (ev) openEventModal(ev);
+}
+
+async function saveEvent(e) {
+  e.preventDefault();
+  var form = e.target;
+  var data = {
+    title: form.title.value,
+    event_date: form.event_date.value,
+    event_time: form.event_time.value || null,
+    duration_min: parseInt(form.duration_min.value) || 60,
+    type: form.type.value,
+    description: form.description.value || null,
+    status: 'pending',
+  };
+
+  try {
+    var btn = document.getElementById('eventSaveBtn');
+    btn.disabled = true;
+    if (editingEventId) {
+      await sb.from('calendar_events').update(data).eq('id', editingEventId);
+      toast('Événement mis à jour ✓');
+    } else {
+      await sb.from('calendar_events').insert(data);
+      toast('Événement créé ✓');
+    }
+    closeEventModal();
+    await loadEvents();
+  } catch(err) {
+    toast(err.message || 'Erreur', 'error');
+  } finally {
+    document.getElementById('eventSaveBtn').disabled = false;
+  }
+}
+
+// Init
+loadEvents();
+</script>
+</body>
+</html>

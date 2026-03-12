@@ -78,6 +78,7 @@ function renderSidebar(activePage) {
     { page: 'dashboard', href: '/dashboard.html', icon: '<path d="M2 3h5v5H2zm7 0h5v5H9zm-7 7h5v5H2zm7 0h5v5H9z"/>', label: 'Dashboard' },
     { page: 'crm',       href: '/crm.html',       icon: '<path d="M8 8a3 3 0 100-6 3 3 0 000 6zm-5 5a5 5 0 0110 0H3z"/>', label: 'CRM' },
     { page: 'upwork',    href: '/upwork.html',     icon: '<path d="M13 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V3a1 1 0 00-1-1zM6 9H4V7h2v2zm0-3H4V4h2v2zm3 3H7V7h2v2zm0-3H7V4h2v2zm3 3h-2V7h2v2zm0-3h-2V4h2v2z"/>', label: 'Upwork' },
+    { page: 'calendar',  href: '/calendar.html',   icon: '<path d="M12 2H4a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2zM4 6h8v6H4V6zm1-3h2v1H5V3zm4 0h2v1H9V3z"/>', label: 'Calendrier' },
   ];
   var financeLinks = [
     { page: 'invoices', href: '/invoices.html', icon: '<path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v1H2V3zm0 3h12v8a1 1 0 01-1 1H3a1 1 0 01-1-1V6z"/>', label: 'Factures' },
