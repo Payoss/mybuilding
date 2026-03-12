@@ -95,9 +95,12 @@
 .jd-generate-btn { width: 100%; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 0 24px rgba(13,148,136,0.3); }
 .jd-generate-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 0 32px rgba(13,148,136,0.45); }
 .jd-generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.jd-generate-btn .gen-spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+.jd-generate-btn .gen-spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+.jd-generate-btn.loading { background: linear-gradient(135deg, var(--teal), rgba(13,148,136,0.7)); box-shadow: 0 0 32px rgba(13,148,136,0.4); }
 .jd-generate-btn.loading .gen-spinner { display: block; }
 .jd-generate-btn.loading .gen-label { display: none; }
+.jd-generate-btn .gen-status { display: none; font-size: 13px; font-weight: 500; opacity: 0.95; }
+.jd-generate-btn.loading .gen-status { display: block; animation: fadeUp 0.3s ease; }
 
 /* ── Cover Letter Results ── */
 .jd-cover-results { display: none; margin-top: 14px; }
@@ -303,6 +306,7 @@ function renderPage() {
     + '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()">'
     + '<div class="gen-spinner"></div>'
     + '<span class="gen-label">✦ Generer ma candidature (Version A + B)</span>'
+    + '<span class="gen-status" id="genStatus">Analyse du job...</span>'
     + '</button>'
     + '</div>'
     + '<div class="jd-cover-results" id="coverResults"></div>'
@@ -457,10 +461,33 @@ function renderEnrichment(e) {
 // ══════════════════════════════════════════════════════════════
 // COVER LETTER GENERATION
 // ══════════════════════════════════════════════════════════════
+var _genSteps = ['Analyse du job...', 'Redaction Version A...', 'Redaction Version B...', 'Finalisation...'];
+var _genTimer = null;
+
+function startGenProgress() {
+  var idx = 0;
+  var el = document.getElementById('genStatus');
+  _genTimer = setInterval(function() {
+    idx++;
+    if (idx < _genSteps.length) {
+      el.style.opacity = '0';
+      setTimeout(function() {
+        el.textContent = _genSteps[idx];
+        el.style.opacity = '1';
+      }, 200);
+    }
+  }, 8000);
+}
+
+function stopGenProgress() {
+  if (_genTimer) { clearInterval(_genTimer); _genTimer = null; }
+}
+
 async function generateCoverLetter() {
   var btn = document.getElementById('generateBtn');
   btn.classList.add('loading');
   btn.disabled = true;
+  startGenProgress();
 
   try {
     var res = await fetch('/api/cover-letter', {
@@ -490,15 +517,18 @@ async function generateCoverLetter() {
     _job.cover_letter = data.version_a;
     _job.cover_letter_b = data.version_b;
 
+    stopGenProgress();
     // Hide button, show results
     btn.style.display = 'none';
     showCovers(data.version_a, data.version_b);
     toast('Candidatures generees ✓');
 
   } catch(e) {
+    stopGenProgress();
     toast('Erreur generation: ' + e.message, 'error');
     btn.classList.remove('loading');
     btn.disabled = false;
+    document.getElementById('genStatus').textContent = _genSteps[0];
   }
 }
 
@@ -577,7 +607,8 @@ function regenerateCover() {
   if (btn) { btn.style.display = ''; btn.classList.remove('loading'); btn.disabled = false; }
   else {
     document.getElementById('generate-zone-inner').innerHTML = '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()">'
-      + '<div class="gen-spinner"></div><span class="gen-label">✦ Regenerer ma candidature</span></button>';
+      + '<div class="gen-spinner"></div><span class="gen-label">✦ Regenerer ma candidature</span>'
+      + '<span class="gen-status" id="genStatus">Analyse du job...</span></button>';
   }
 }
 
