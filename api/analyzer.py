@@ -4,6 +4,7 @@ FastAPI + claude -p (Claude Max OAuth, zero cost)
 Port : 3002 (localhost only, nginx proxie /api/)
 """
 import subprocess, json, sys
+from typing import Optional, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -27,24 +28,24 @@ class EnrichRequest(BaseModel):
     title: str
     description: str = ""
     skills: list = []
-    budget_min: float = None
-    budget_max: float = None
+    budget_min: Optional[Any] = None
+    budget_max: Optional[Any] = None
     budget_type: str = "fixed"
     country: str = ""
-    feasibility: int = None
-    worth_score: float = None
-    time_estimate: str = ""
+    feasibility: Optional[Any] = None
+    worth_score: Optional[Any] = None
+    time_estimate: Optional[str] = ""
 
 
 class CoverLetterRequest(BaseModel):
     title: str
     description: str = ""
     skills: list = []
-    budget_min: float = None
-    budget_max: float = None
+    budget_min: Optional[Any] = None
+    budget_max: Optional[Any] = None
     budget_type: str = "fixed"
     country: str = ""
-    enrichment: dict = None
+    enrichment: Optional[dict] = None
 
 
 SYSTEM = """Tu es GUS, analyste Upwork expert ET rédacteur de propositions. Tu travailles pour Paul Annes.
