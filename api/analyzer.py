@@ -326,7 +326,7 @@ L2 — LOOM: Place the Loom link EARLY so the client clicks before reading the r
   - Big job (budget > $500 or complex): "I recorded a quick Loom walking through how I'd tackle your project specifically. [LOOM_LINK]"
   - Small job (budget <= $500 or quick fix): "Short Loom so you can see who you'd be working with. [LOOM_LINK]"
 
-L3 — CREDIBILITY: Use this EXACT sentence, no changes: "I've built 65+ specialized AI agents across 350k+ lines of code and 4 production applications. One person, output of a small team."
+L3 — CREDIBILITY: Use this EXACT sentence, no changes: "I've built my own AI system with 38 specialized agents across 4 production applications. One person, output of a small team."
 
 L4 — UNDERSTANDING (THE KEY BLOC — spend the most effort here):
   - Open with "Looking at what you've described" or similar natural transition
