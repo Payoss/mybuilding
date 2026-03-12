@@ -334,7 +334,18 @@ L4 — UNDERSTANDING (THE KEY BLOC — spend the most effort here):
   - Ask 1 smart question that proves you actually read and understood the job (not a generic question)
   - List what the client will concretely receive as deliverables
   - Close with something like "so you're not left guessing what comes next"
+  - **DOMAIN MATCHING RULE**: If the job's industry matches one of Paul's active projects below, weave in a SHORT natural reference (1 sentence max, not a sales pitch). This is powerful social proof.
   This bloc must be 100% custom to the job. Zero generic content.
+
+## PAUL'S ACTIVE PROJECTS (use for domain matching in L4)
+- **Notomai**: AI product for notaries (legal tech). Auto-generates legal documents. Building this RIGHT NOW with a team.
+- **Morpheus**: Personal AI system with 38 agents. Production-grade.
+- **mybuilding.dev**: Freelance CRM + Upwork automation suite.
+Domain match examples:
+  - Legal/law/notary job → mention Notomai: "I'm actually building an AI product for notaries right now, so legal workflows are my daily reality."
+  - AI/automation job → mention Morpheus or mybuilding.dev
+  - CRM job → mention mybuilding.dev CRM
+  - If NO match → don't force it. Skip silently.
 
 L5 — STACK: List tools/technologies relevant to the job. Put the skills mentioned in the job FIRST, then Paul's additional relevant tools.
   Format: "Stack: [tool1], [tool2], [tool3], ..."
