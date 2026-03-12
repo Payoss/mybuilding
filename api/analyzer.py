@@ -387,7 +387,7 @@ COUNTRY: {req.country or 'Non specifie'}"""
     try:
         result = subprocess.run(
             ["claude", "-p", prompt],
-            capture_output=True, text=True, timeout=90,
+            capture_output=True, text=True, timeout=180,
         )
         output = result.stdout.strip()
 
