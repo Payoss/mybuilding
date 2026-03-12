@@ -95,12 +95,21 @@
 .jd-generate-btn { width: 100%; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 0 24px rgba(13,148,136,0.3); }
 .jd-generate-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 0 32px rgba(13,148,136,0.45); }
 .jd-generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.jd-generate-btn .gen-spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
-.jd-generate-btn.loading { background: linear-gradient(135deg, var(--teal), rgba(13,148,136,0.7)); box-shadow: 0 0 32px rgba(13,148,136,0.4); }
-.jd-generate-btn.loading .gen-spinner { display: block; }
-.jd-generate-btn.loading .gen-label { display: none; }
-.jd-generate-btn .gen-status { display: none; font-size: 13px; font-weight: 500; opacity: 0.95; }
-.jd-generate-btn.loading .gen-status { display: block; animation: fadeUp 0.3s ease; }
+
+/* ── Generation Progress ── */
+.gen-progress { display: none; width: 100%; padding: 20px 0 8px; }
+.gen-progress.visible { display: block; animation: fadeUp 0.3s ease; }
+.gen-steps { display: flex; justify-content: space-between; position: relative; margin-bottom: 12px; }
+.gen-step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; z-index: 1; }
+.gen-step-dot { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.4s cubic-bezier(0.16,1,0.3,1); }
+.gen-step.done .gen-step-dot { background: var(--teal); border-color: var(--teal); box-shadow: 0 0 12px rgba(13,148,136,0.5); }
+.gen-step.active .gen-step-dot { background: rgba(13,148,136,0.2); border-color: var(--teal); animation: pulse-dot 1.5s ease infinite; }
+.gen-step-label { font-size: 10px; color: var(--t3); font-weight: 500; transition: color 0.3s; white-space: nowrap; }
+.gen-step.done .gen-step-label, .gen-step.active .gen-step-label { color: var(--teal); }
+.gen-track { position: relative; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.gen-track-fill { height: 100%; background: linear-gradient(90deg, var(--teal), rgba(13,148,136,0.6)); border-radius: 2px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); width: 0%; }
+.gen-elapsed { text-align: center; margin-top: 8px; font-size: 11px; color: var(--t3); }
+@keyframes pulse-dot { 0%, 100% { box-shadow: 0 0 6px rgba(13,148,136,0.3); } 50% { box-shadow: 0 0 16px rgba(13,148,136,0.6); } }
 
 /* ── Cover Letter Results ── */
 .jd-cover-results { display: none; margin-top: 14px; }
@@ -260,11 +269,17 @@ function renderPage() {
     + '<div class="jd-generate-zone jd-card">'
     + '<div class="jd-card-title">✦ Candidature</div>'
     + '<div id="generate-zone-inner">'
-    + '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()">'
-    + '<div class="gen-spinner"></div>'
-    + '<span class="gen-label">✦ Generer ma candidature (Version A + B)</span>'
-    + '<span class="gen-status" id="genStatus">Analyse du job...</span>'
-    + '</button>'
+    + '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()">✦ Generer ma candidature (Version A + B)</button>'
+    + '<div class="gen-progress" id="genProgress">'
+    + '<div class="gen-steps">'
+    + '<div class="gen-step" id="gs-0"><div class="gen-step-dot">1</div><div class="gen-step-label">Analyse</div></div>'
+    + '<div class="gen-step" id="gs-1"><div class="gen-step-dot">2</div><div class="gen-step-label">Version A</div></div>'
+    + '<div class="gen-step" id="gs-2"><div class="gen-step-dot">3</div><div class="gen-step-label">Version B</div></div>'
+    + '<div class="gen-step" id="gs-3"><div class="gen-step-dot">4</div><div class="gen-step-label">Finalisation</div></div>'
+    + '</div>'
+    + '<div class="gen-track"><div class="gen-track-fill" id="genTrackFill"></div></div>'
+    + '<div class="gen-elapsed" id="genElapsed">0s</div>'
+    + '</div>'
     + '</div>'
     + '<div class="jd-cover-results" id="coverResults"></div>'
     + '</div>'
@@ -461,32 +476,66 @@ function renderEnrichment(e) {
 // ══════════════════════════════════════════════════════════════
 // COVER LETTER GENERATION
 // ══════════════════════════════════════════════════════════════
-var _genSteps = ['Analyse du job...', 'Redaction Version A...', 'Redaction Version B...', 'Finalisation...'];
 var _genTimer = null;
+var _genElapsedTimer = null;
+var _genStart = 0;
 
 function startGenProgress() {
-  var idx = 0;
-  var el = document.getElementById('genStatus');
+  var progress = document.getElementById('genProgress');
+  progress.classList.add('visible');
+  _genStart = Date.now();
+
+  // Step 0 = active immediately
+  setGenStep(0);
+
+  // Simulate progression based on typical ~40s total
+  var stepTimes = [0, 10000, 22000, 35000]; // ms when each step activates
   _genTimer = setInterval(function() {
-    idx++;
-    if (idx < _genSteps.length) {
-      el.style.opacity = '0';
-      setTimeout(function() {
-        el.textContent = _genSteps[idx];
-        el.style.opacity = '1';
-      }, 200);
-    }
-  }, 8000);
+    var elapsed = Date.now() - _genStart;
+    if (elapsed > stepTimes[3]) setGenStep(3);
+    else if (elapsed > stepTimes[2]) setGenStep(2);
+    else if (elapsed > stepTimes[1]) setGenStep(1);
+    // Update progress bar smoothly
+    var pct = Math.min(95, (elapsed / 45000) * 100);
+    document.getElementById('genTrackFill').style.width = pct + '%';
+  }, 500);
+
+  // Elapsed timer
+  _genElapsedTimer = setInterval(function() {
+    var s = Math.floor((Date.now() - _genStart) / 1000);
+    document.getElementById('genElapsed').textContent = s + 's';
+  }, 1000);
 }
 
-function stopGenProgress() {
+function setGenStep(idx) {
+  for (var i = 0; i < 4; i++) {
+    var el = document.getElementById('gs-' + i);
+    el.classList.remove('done', 'active');
+    if (i < idx) { el.classList.add('done'); el.querySelector('.gen-step-dot').textContent = '✓'; }
+    else if (i === idx) el.classList.add('active');
+  }
+}
+
+function stopGenProgress(success) {
   if (_genTimer) { clearInterval(_genTimer); _genTimer = null; }
+  if (_genElapsedTimer) { clearInterval(_genElapsedTimer); _genElapsedTimer = null; }
+  if (success) {
+    // All steps done
+    for (var i = 0; i < 4; i++) {
+      var el = document.getElementById('gs-' + i);
+      el.classList.remove('active');
+      el.classList.add('done');
+      el.querySelector('.gen-step-dot').textContent = '✓';
+    }
+    document.getElementById('genTrackFill').style.width = '100%';
+    var s = Math.floor((Date.now() - _genStart) / 1000);
+    document.getElementById('genElapsed').textContent = 'Termine en ' + s + 's';
+  }
 }
 
 async function generateCoverLetter() {
   var btn = document.getElementById('generateBtn');
-  btn.classList.add('loading');
-  btn.disabled = true;
+  btn.style.display = 'none';
   startGenProgress();
 
   try {
@@ -517,18 +566,19 @@ async function generateCoverLetter() {
     _job.cover_letter = data.version_a;
     _job.cover_letter_b = data.version_b;
 
-    stopGenProgress();
-    // Hide button, show results
-    btn.style.display = 'none';
-    showCovers(data.version_a, data.version_b);
-    toast('Candidatures generees ✓');
+    stopGenProgress(true);
+    // Brief pause to show 100% then show results
+    setTimeout(function() {
+      document.getElementById('genProgress').classList.remove('visible');
+      showCovers(data.version_a, data.version_b);
+      toast('Candidatures generees ✓');
+    }, 800);
 
   } catch(e) {
-    stopGenProgress();
+    stopGenProgress(false);
     toast('Erreur generation: ' + e.message, 'error');
-    btn.classList.remove('loading');
-    btn.disabled = false;
-    document.getElementById('genStatus').textContent = _genSteps[0];
+    document.getElementById('genProgress').classList.remove('visible');
+    btn.style.display = '';
   }
 }
 
@@ -603,12 +653,18 @@ function sendCoverToExtension(version) {
 function regenerateCover() {
   document.getElementById('coverResults').classList.remove('visible');
   document.getElementById('coverResults').innerHTML = '';
+  document.getElementById('genProgress').classList.remove('visible');
+  // Reset step dots
+  for (var i = 0; i < 4; i++) {
+    var el = document.getElementById('gs-' + i);
+    if (el) { el.classList.remove('done', 'active'); el.querySelector('.gen-step-dot').textContent = (i + 1); }
+  }
+  document.getElementById('genTrackFill').style.width = '0%';
   var btn = document.getElementById('generateBtn');
-  if (btn) { btn.style.display = ''; btn.classList.remove('loading'); btn.disabled = false; }
+  if (btn) { btn.style.display = ''; }
   else {
-    document.getElementById('generate-zone-inner').innerHTML = '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()">'
-      + '<div class="gen-spinner"></div><span class="gen-label">✦ Regenerer ma candidature</span>'
-      + '<span class="gen-status" id="genStatus">Analyse du job...</span></button>';
+    document.getElementById('generate-zone-inner').insertAdjacentHTML('afterbegin',
+      '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()">✦ Regenerer ma candidature</button>');
   }
 }
 
