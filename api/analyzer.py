@@ -62,9 +62,10 @@ class CoverLetterRequest(BaseModel):
 
 def _run_claude(prompt: str, model: str = "haiku", timeout: int = 90) -> dict:
     """Run claude -p with model selection. Returns parsed JSON dict.
-    model: 'haiku' (fast/cheap) or 'sonnet' (nuanced writing)."""
-    cmd = ["claude", "-p", "--model", model, prompt]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    model: 'haiku' (fast/cheap) or 'sonnet' (nuanced writing).
+    Prompt passed via stdin to avoid shell argument size limits."""
+    cmd = ["claude", "-p", "--model", model]
+    result = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         print(f"claude [{model}] stderr: {result.stderr[:500]}", file=sys.stderr)
         raise ValueError(f"claude [{model}] exit {result.returncode}")
