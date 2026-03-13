@@ -66,6 +66,11 @@
 .hc-kw { font-size: 10px; color: var(--t3); margin-top: 1px; }
 .action-tiny { font-size: 11px; color: var(--t3); cursor: pointer; transition: color 0.12s; }
 .action-tiny:hover { color: var(--teal); }
+.action-del { font-size: 11px; color: var(--t3); cursor: pointer; transition: color 0.12s; background: none; border: none; font-family: inherit; padding: 2px 6px; border-radius: 4px; }
+.action-del:hover { color: var(--red); background: var(--red-bg); }
+.time-stale { color: var(--amber) !important; }
+.time-dead { color: var(--red) !important; opacity: 0.7; }
+.hc-actions { display: flex; gap: 6px; align-items: center; }
 .paste-hint { font-size: 11px; color: var(--t3); display: flex; align-items: center; gap: 5px; margin-top: 10px; }
 @keyframes scoreIn { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
 .result-content.visible .score-circle { animation: scoreIn 0.4s 0.1s cubic-bezier(0.16,1,0.3,1) both; }
@@ -151,8 +156,9 @@
         </div>
       </div>
       <div class="htable-wrap">
-        <div class="hrow hhead" style="grid-template-columns:3fr 1fr 1.5fr 1fr 1fr 1fr">
+        <div class="hrow hhead" style="grid-template-columns:3fr 1fr 1fr 1.5fr 1fr 1fr 1fr">
           <div class="hc">Job</div>
+          <div class="hc">Publié</div>
           <div class="hc">Budget</div>
           <div class="hc">Score</div>
           <div class="hc">Pays</div>
@@ -198,8 +204,9 @@
     <div class="tile fade-up fade-up-4" id="history-tile">
       <div class="tile-title">Analyses manuelles <span class="tile-title-sub" id="history-count">—</span></div>
       <div class="htable-wrap">
-        <div class="hrow hhead">
+        <div class="hrow hhead" style="grid-template-columns:3fr 1fr 1fr 1.5fr 1fr 1fr 1fr">
           <div class="hc">Job</div>
+          <div class="hc">Publié</div>
           <div class="hc">Budget</div>
           <div class="hc">Score</div>
           <div class="hc">Pays</div>
@@ -281,16 +288,21 @@ function renderHistory(jobs) {
   document.getElementById('history-rows').innerHTML = jobs.map(j => {
     var sniperTag = j.sniper_mode ? '<span style="color:var(--amber);font-size:10px;font-weight:700">🎯</span> ' : '';
     var frTag = j.is_french ? ' <span style="font-size:10px">🇫🇷</span>' : '';
-    return `<div class="hrow hbody-row" onclick="openJobDetail('${j.id}')">
+    var ago = timeAgo(j.posted_at || j.scraped_at || j.analyzed_at);
+    return `<div class="hrow hbody-row" style="grid-template-columns:3fr 1fr 1fr 1.5fr 1fr 1fr 1fr" onclick="openJobDetail('${j.id}')">
       <div>
         <div class="hc-title">${sniperTag}${j.title}${frTag}</div>
         <div class="hc-kw">${(j.skills||[]).slice(0,3).join(' · ') || '—'}</div>
       </div>
+      <div class="hc ${ago.cls}" style="font-size:11px;font-weight:600">${ago.text}</div>
       <div class="hc mono">${budget_str(j)}</div>
       <div class="hc">${dualScorePill(j.feasibility, j.worth_score)}</div>
       <div class="hc">${j.country || '—'}</div>
       <div class="hc">${STATUS_CHIPS[j.status] || j.status || ''}</div>
-      <div class="hc"><span class="action-tiny">Voir →</span></div>
+      <div class="hc hc-actions">
+        <span class="action-tiny">Voir →</span>
+        <button class="action-del" onclick="event.stopPropagation();deleteJob('${j.id}')" title="Supprimer">✕</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -561,6 +573,20 @@ function dualScorePill(feas, worth) {
     + '</span>';
 }
 
+function timeAgo(dateStr) {
+  if (!dateStr) return { text: '—', cls: '' };
+  var diff = Date.now() - new Date(dateStr).getTime();
+  var mins = Math.floor(diff / 60000);
+  var hrs = Math.floor(mins / 60);
+  var days = Math.floor(hrs / 24);
+  var text, cls = '';
+  if (mins < 60) text = mins + 'min';
+  else if (hrs < 24) text = hrs + 'h';
+  else if (days < 7) { text = days + 'j'; cls = days >= 2 ? 'time-dead' : 'time-stale'; }
+  else { text = Math.floor(days / 7) + 'sem'; cls = 'time-dead'; }
+  return { text: text, cls: cls };
+}
+
 function renderScraped() {
   var filtered = allScraped;
   if (scrapedFilter === 'sniper') filtered = allScraped.filter(function(j) { return j.sniper_mode; });
@@ -582,14 +608,19 @@ function renderScraped() {
     }
     var sniperTag = j.sniper_mode ? '<span style="color:var(--amber);font-size:10px;font-weight:700">🎯</span> ' : '';
     var frTag = j.is_french ? ' <span style="font-size:10px">🇫🇷</span>' : '';
-    return '<div class="hrow hbody-row" style="grid-template-columns:3fr 1fr 1.5fr 1fr 1fr 1fr" onclick="openJobDetail(\'' + j.id + '\')">'
+    var ago = timeAgo(j.posted_at || j.scraped_at);
+    return '<div class="hrow hbody-row" style="grid-template-columns:3fr 1fr 1fr 1.5fr 1fr 1fr 1fr" onclick="openJobDetail(\'' + j.id + '\')">'
       + '<div><div class="hc-title">' + sniperTag + (j.title || '—') + frTag + '</div>'
       + '<div class="hc-kw">' + (j.skills || []).slice(0,3).join(' · ') + '</div></div>'
+      + '<div class="hc ' + ago.cls + '" style="font-size:11px;font-weight:600">' + ago.text + '</div>'
       + '<div class="hc mono">' + budgetStr + '</div>'
       + '<div class="hc">' + dualScorePill(j.feasibility, j.worth_score) + '</div>'
       + '<div class="hc">' + (j.country || '—') + '</div>'
       + '<div class="hc">' + (STATUS_CHIPS[j.status] || j.status || '') + '</div>'
-      + '<div class="hc"><span class="action-tiny" onclick="event.stopPropagation();markApplied(\'' + j.id + '\')">Postulé</span></div>'
+      + '<div class="hc hc-actions">'
+      + '<span class="action-tiny" onclick="event.stopPropagation();markApplied(\'' + j.id + '\')">Postulé</span>'
+      + '<button class="action-del" onclick="event.stopPropagation();deleteJob(\'' + j.id + '\')" title="Supprimer">✕</button>'
+      + '</div>'
       + '</div>';
   }).join('');
 }
@@ -598,6 +629,17 @@ async function markApplied(id) {
   await sb.from('upwork_jobs').update({ status: 'applied' }).eq('id', id);
   toast('Marqué postulé ✓');
   loadScraped();
+}
+
+async function deleteJob(id) {
+  var { error } = await sb.from('upwork_jobs').delete().eq('id', id);
+  if (error) { toast('Erreur suppression', 'error'); return; }
+  toast('Job supprimé');
+  allScraped = allScraped.filter(function(j) { return j.id !== id; });
+  document.getElementById('scraped-count').textContent = allScraped.length + ' jobs';
+  renderScraped();
+  renderFunnel();
+  loadUpwork();
 }
 
 function renderFunnel() {
