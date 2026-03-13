@@ -78,7 +78,7 @@ def _run_claude(prompt: str, model: str = "haiku", timeout: int = 120) -> dict:
     # Strip em-dashes from cover letter fields (Claude sometimes ignores the "no em dashes" rule)
     for key in ("cover_letter_a", "cover_letter_b", "version_a", "version_b", "proposal"):
         if key in data and isinstance(data[key], str):
-            data[key] = data[key].replace("—", "-").replace("–", "-")
+            data[key] = data[key].replace("—", ",").replace("–", ",")
     return data
 
 
