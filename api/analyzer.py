@@ -60,7 +60,7 @@ class CoverLetterRequest(BaseModel):
 # CLAUDE RUNNER — centralized subprocess with model selection
 # ══════════════════════════════════════════════════════════════
 
-def _run_claude(prompt: str, model: str = "haiku", timeout: int = 90) -> dict:
+def _run_claude(prompt: str, model: str = "haiku", timeout: int = 120) -> dict:
     """Run claude -p with model selection. Returns parsed JSON dict.
     model: 'haiku' (fast/cheap) or 'sonnet' (nuanced writing).
     Prompt passed via stdin to avoid shell argument size limits."""
@@ -224,7 +224,7 @@ async def analyze(req: JobRequest):
     prompt = SYSTEM + "\n\nJOB DESCRIPTION:\n" + req.description.strip()
     try:
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(_executor, _run_claude, prompt, "haiku", 90)
+        data = await loop.run_in_executor(_executor, _run_claude, prompt, "haiku", 120)
         return data
     except subprocess.TimeoutExpired:
         raise HTTPException(504, "Timeout Claude")
@@ -291,7 +291,7 @@ TIME ESTIMATE: {req.time_estimate or '?'}"""
     prompt = ENRICH_SYSTEM + "\n\n" + context
     try:
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(_executor, _run_claude, prompt, "haiku", 90)
+        data = await loop.run_in_executor(_executor, _run_claude, prompt, "haiku", 120)
         return data
     except subprocess.TimeoutExpired:
         raise HTTPException(504, "Timeout Claude")
@@ -562,7 +562,7 @@ COUNTRY: {req.country or 'Non specifie'}"""
     # Step 1: Haiku — analyze + enrich in 1 call
     try:
         prompt_ae = ANALYZE_ENRICH_SYSTEM + "\n\n" + job_context
-        analysis = await loop.run_in_executor(_executor, _run_claude, prompt_ae, "haiku", 90)
+        analysis = await loop.run_in_executor(_executor, _run_claude, prompt_ae, "haiku", 120)
     except subprocess.TimeoutExpired:
         raise HTTPException(504, "Timeout Claude (analyze+enrich)")
     except Exception as e:
@@ -635,7 +635,7 @@ COUNTRY: {req.country or 'Non specifie'}"""
     try:
         loop = asyncio.get_event_loop()
         prompt = ANALYZE_ENRICH_SYSTEM + "\n\n" + job_context
-        data = await loop.run_in_executor(_executor, _run_claude, prompt, "haiku", 90)
+        data = await loop.run_in_executor(_executor, _run_claude, prompt, "haiku", 120)
         return data
     except subprocess.TimeoutExpired:
         raise HTTPException(504, "Timeout Claude")
