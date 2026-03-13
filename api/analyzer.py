@@ -2,12 +2,20 @@
 mybuilding.dev — Upwork Analyzer API
 FastAPI + claude -p (Claude Max OAuth, zero cost)
 Port : 3002 (localhost only, nginx proxie /api/)
+
+Performance:
+  - /api/full-pipeline : analyze+enrich in 1 Haiku call, then cover in 1 Sonnet call (2 calls vs 3)
+  - /api/pre-enrich : analyze+enrich only (called at scan time for pre-computation)
+  - Haiku = scoring/enrich (fast, structured), Sonnet = cover letter (nuanced writing)
 """
-import subprocess, json, sys
+import subprocess, json, sys, asyncio
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+_executor = ThreadPoolExecutor(max_workers=4)
 
 app = FastAPI(title="mybuilding-api", docs_url=None, redoc_url=None)
 
@@ -46,6 +54,26 @@ class CoverLetterRequest(BaseModel):
     budget_type: str = "fixed"
     country: str = ""
     enrichment: Optional[dict] = None
+
+
+# ══════════════════════════════════════════════════════════════
+# CLAUDE RUNNER — centralized subprocess with model selection
+# ══════════════════════════════════════════════════════════════
+
+def _run_claude(prompt: str, model: str = "haiku", timeout: int = 90) -> dict:
+    """Run claude -p with model selection. Returns parsed JSON dict.
+    model: 'haiku' (fast/cheap) or 'sonnet' (nuanced writing)."""
+    cmd = ["claude", "-p", "--model", model, prompt]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    if result.returncode != 0:
+        print(f"claude [{model}] stderr: {result.stderr[:500]}", file=sys.stderr)
+        raise ValueError(f"claude [{model}] exit {result.returncode}")
+    output = result.stdout.strip()
+    start = output.find("{")
+    end = output.rfind("}") + 1
+    if start == -1 or end == 0:
+        raise ValueError(f"No JSON in claude [{model}] response")
+    return json.loads(output[start:end])
 
 
 SYSTEM = """Tu es GUS, analyste Upwork expert ET rédacteur de propositions. Tu travailles pour Paul Annes.
@@ -192,33 +220,16 @@ async def health():
 async def analyze(req: JobRequest):
     if not req.description.strip():
         raise HTTPException(400, "Description vide")
-
     prompt = SYSTEM + "\n\nJOB DESCRIPTION:\n" + req.description.strip()
-
     try:
-        result = subprocess.run(
-            ["claude", "-p", prompt],
-            capture_output=True, text=True, timeout=90,
-        )
-        output = result.stdout.strip()
-
-        if result.returncode != 0:
-            print(f"claude stderr: {result.stderr[:500]}", file=sys.stderr)
-            raise ValueError(f"claude exit {result.returncode}")
-
-        start = output.find("{")
-        end = output.rfind("}") + 1
-        if start == -1 or end == 0:
-            raise ValueError("No JSON in response")
-
-        return json.loads(output[start:end])
-
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(_executor, _run_claude, prompt, "haiku", 90)
+        return data
     except subprocess.TimeoutExpired:
-        print("claude timeout", file=sys.stderr)
         raise HTTPException(504, "Timeout Claude")
-    except json.JSONDecodeError as e:
-        print(f"JSON error: {e} | output: {output[:300]}", file=sys.stderr)
-        raise HTTPException(500, "Erreur parsing réponse Claude")
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"analyze error: {e}", file=sys.stderr)
+        raise HTTPException(500, str(e))
     except Exception as e:
         print(f"analyze error: {e}", file=sys.stderr)
         raise HTTPException(500, str(e))
@@ -268,7 +279,6 @@ Reponds UNIQUEMENT en JSON valide, sans texte avant ou apres."""
 async def job_enrich(req: EnrichRequest):
     if not req.title.strip():
         raise HTTPException(400, "Titre vide")
-
     context = f"""JOB TITLE: {req.title}
 DESCRIPTION: {req.description or 'Non disponible'}
 SKILLS: {', '.join(req.skills) if req.skills else 'Non specifies'}
@@ -277,33 +287,13 @@ COUNTRY: {req.country or 'Non specifie'}
 FEASIBILITY: {req.feasibility or '?'}%
 WORTH SCORE: {req.worth_score or '?'}/10
 TIME ESTIMATE: {req.time_estimate or '?'}"""
-
     prompt = ENRICH_SYSTEM + "\n\n" + context
-
     try:
-        result = subprocess.run(
-            ["claude", "-p", prompt],
-            capture_output=True, text=True, timeout=90,
-        )
-        output = result.stdout.strip()
-
-        if result.returncode != 0:
-            print(f"claude enrich stderr: {result.stderr[:500]}", file=sys.stderr)
-            raise ValueError(f"claude exit {result.returncode}")
-
-        start = output.find("{")
-        end = output.rfind("}") + 1
-        if start == -1 or end == 0:
-            raise ValueError("No JSON in enrich response")
-
-        return json.loads(output[start:end])
-
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(_executor, _run_claude, prompt, "haiku", 90)
+        return data
     except subprocess.TimeoutExpired:
-        print("claude enrich timeout", file=sys.stderr)
         raise HTTPException(504, "Timeout Claude")
-    except json.JSONDecodeError as e:
-        print(f"Enrich JSON error: {e} | output: {output[:300]}", file=sys.stderr)
-        raise HTTPException(500, "Erreur parsing reponse Claude")
     except Exception as e:
         print(f"enrich error: {e}", file=sys.stderr)
         raise HTTPException(500, str(e))
@@ -448,13 +438,11 @@ Both versions MUST contain all 6 blocs L1-L6 in order."""
 async def cover_letter(req: CoverLetterRequest):
     if not req.title.strip():
         raise HTTPException(400, "Titre vide")
-
     context = f"""JOB TITLE: {req.title}
 DESCRIPTION: {req.description or 'Non disponible'}
 SKILLS: {', '.join(req.skills) if req.skills else 'Non specifies'}
 BUDGET: {req.budget_min or '?'} - {req.budget_max or '?'} ({req.budget_type})
 COUNTRY: {req.country or 'Non specifie'}"""
-
     if req.enrichment:
         if req.enrichment.get("why_for_you"):
             context += f"\n\nWHY FOR PAUL (context): {req.enrichment['why_for_you']}"
@@ -465,33 +453,14 @@ COUNTRY: {req.country or 'Non specifie'}"""
                 for i, s in enumerate(steps)
             )
             context += f"\n\nEXECUTION PLAN:\n{plan_str}"
-
     prompt = COVER_SYSTEM + "\n\n" + context
-
     try:
-        result = subprocess.run(
-            ["claude", "-p", prompt],
-            capture_output=True, text=True, timeout=180,
-        )
-        output = result.stdout.strip()
-
-        if result.returncode != 0:
-            print(f"claude cover stderr: {result.stderr[:500]}", file=sys.stderr)
-            raise ValueError(f"claude exit {result.returncode}")
-
-        start = output.find("{")
-        end = output.rfind("}") + 1
-        if start == -1 or end == 0:
-            raise ValueError("No JSON in cover response")
-
-        return json.loads(output[start:end])
-
+        loop = asyncio.get_event_loop()
+        # Sonnet for cover letter — nuanced writing quality
+        data = await loop.run_in_executor(_executor, _run_claude, prompt, "sonnet", 180)
+        return data
     except subprocess.TimeoutExpired:
-        print("claude cover timeout", file=sys.stderr)
         raise HTTPException(504, "Timeout Claude")
-    except json.JSONDecodeError as e:
-        print(f"Cover JSON error: {e} | output: {output[:300]}", file=sys.stderr)
-        raise HTTPException(500, "Erreur parsing reponse Claude")
     except Exception as e:
         print(f"cover error: {e}", file=sys.stderr)
         raise HTTPException(500, str(e))
@@ -524,33 +493,151 @@ COVER LETTER RULES (apply to cover_letter_a and cover_letter_b):
 async def quick_eval(req: QuickEvalRequest):
     if not req.description.strip():
         raise HTTPException(400, "Description vide")
-
     prompt = QUICK_EVAL_SYSTEM + "\n\nJOB DESCRIPTION:\n" + req.description.strip()
-
     try:
-        result = subprocess.run(
-            ["claude", "-p", prompt],
-            capture_output=True, text=True, timeout=120,
-        )
-        output = result.stdout.strip()
-
-        if result.returncode != 0:
-            print(f"claude quick-eval stderr: {result.stderr[:500]}", file=sys.stderr)
-            raise ValueError(f"claude exit {result.returncode}")
-
-        start = output.find("{")
-        end = output.rfind("}") + 1
-        if start == -1 or end == 0:
-            raise ValueError("No JSON in quick-eval response")
-
-        return json.loads(output[start:end])
-
+        loop = asyncio.get_event_loop()
+        # Sonnet for quick-eval (includes cover letters — needs writing quality)
+        data = await loop.run_in_executor(_executor, _run_claude, prompt, "sonnet", 120)
+        return data
     except subprocess.TimeoutExpired:
-        print("claude quick-eval timeout", file=sys.stderr)
         raise HTTPException(504, "Timeout Claude")
-    except json.JSONDecodeError as e:
-        print(f"Quick-eval JSON error: {e} | output: {output[:300]}", file=sys.stderr)
-        raise HTTPException(500, "Erreur parsing reponse Claude")
     except Exception as e:
         print(f"quick-eval error: {e}", file=sys.stderr)
+        raise HTTPException(500, str(e))
+
+
+# ══════════════════════════════════════════════════════════════
+# FULL PIPELINE — Phase 1+2: analyze+enrich (Haiku) → cover (Sonnet)
+# 2 calls instead of 3, first call merged, proper model routing
+# ══════════════════════════════════════════════════════════════
+
+class FullPipelineRequest(BaseModel):
+    title: str
+    description: str = ""
+    skills: list = []
+    budget_min: Optional[Any] = None
+    budget_max: Optional[Any] = None
+    budget_type: str = "fixed"
+    country: str = ""
+
+
+ANALYZE_ENRICH_SYSTEM = SYSTEM.rstrip().rstrip('}').rstrip() + """,
+  "enrichment": {
+    "why_for_you": "<3-4 phrases FR: pourquoi CE job est fait pour Paul. Specifique, mentionne les skills qui matchent, l'avantage competitif>",
+    "battle_card": {
+      "strengths": ["<3-4 points forts de Paul pour CE job>"],
+      "risks": ["<2-3 risques ou points d'attention>"],
+      "differentiators": ["<2-3 choses qui differencient Paul>"]
+    },
+    "execution_plan": [
+      {"step": 1, "title": "<titre>", "description": "<1-2 phrases>", "hours": "<~Xh avec IA>", "tools": ["<outil>"], "deliverable": "<livrable>"}
+    ],
+    "description_fr": "<traduction fidele FR de la description du job>"
+  }
+}
+
+ENRICHMENT RULES (for the "enrichment" object):
+- why_for_you: 3-4 phrases en francais, SPECIFIQUES au job, pas generiques
+- battle_card: points forts/risques/differenciateurs concrets
+- execution_plan: 4-6 etapes, heures = temps reel AVEC l'IA (pas temps humain)
+- description_fr: traduction fidele, pas de resume"""
+
+
+@app.post("/api/full-pipeline")
+async def full_pipeline(req: FullPipelineRequest):
+    """Phase 1+2+4: 1 Haiku call (analyze+enrich) → 1 Sonnet call (cover letter).
+    Returns combined result with analysis, enrichment, AND cover letters."""
+    if not req.description.strip() and not req.title.strip():
+        raise HTTPException(400, "Description et titre vides")
+
+    job_context = f"""JOB TITLE: {req.title}
+DESCRIPTION: {req.description or 'Non disponible'}
+SKILLS: {', '.join(req.skills) if req.skills else 'Non specifies'}
+BUDGET: {req.budget_min or '?'} - {req.budget_max or '?'} ({req.budget_type})
+COUNTRY: {req.country or 'Non specifie'}"""
+
+    loop = asyncio.get_event_loop()
+
+    # Step 1: Haiku — analyze + enrich in 1 call
+    try:
+        prompt_ae = ANALYZE_ENRICH_SYSTEM + "\n\n" + job_context
+        analysis = await loop.run_in_executor(_executor, _run_claude, prompt_ae, "haiku", 90)
+    except subprocess.TimeoutExpired:
+        raise HTTPException(504, "Timeout Claude (analyze+enrich)")
+    except Exception as e:
+        print(f"full-pipeline analyze+enrich error: {e}", file=sys.stderr)
+        raise HTTPException(500, f"Analyze+enrich failed: {e}")
+
+    # If SKIP verdict, no cover letter needed
+    if analysis.get("verdict") == "SKIP":
+        analysis["cover_letter_a"] = None
+        analysis["cover_letter_b"] = None
+        return analysis
+
+    # Step 2: Sonnet — cover letter with enrichment context
+    enrichment = analysis.get("enrichment", {})
+    cover_context = job_context
+    if enrichment.get("why_for_you"):
+        cover_context += f"\n\nWHY FOR PAUL (context): {enrichment['why_for_you']}"
+    if enrichment.get("execution_plan"):
+        steps = enrichment["execution_plan"]
+        plan_str = "\n".join(
+            f"  Step {s.get('step', i+1)}: {s.get('title', '')} ({s.get('hours', '')})"
+            for i, s in enumerate(steps)
+        )
+        cover_context += f"\n\nEXECUTION PLAN:\n{plan_str}"
+
+    try:
+        prompt_cover = COVER_SYSTEM + "\n\n" + cover_context
+        covers = await loop.run_in_executor(_executor, _run_claude, prompt_cover, "sonnet", 180)
+        analysis["cover_letter_a"] = covers.get("version_a")
+        analysis["cover_letter_b"] = covers.get("version_b")
+    except Exception as e:
+        print(f"full-pipeline cover error: {e}", file=sys.stderr)
+        # Return analysis even if cover fails
+        analysis["cover_letter_a"] = None
+        analysis["cover_letter_b"] = None
+        analysis["cover_error"] = str(e)
+
+    return analysis
+
+
+# ══════════════════════════════════════════════════════════════
+# PRE-ENRICH — Phase 5: called at scan time for pre-computation
+# analyze+enrich only (no cover letter), cached in Supabase
+# ══════════════════════════════════════════════════════════════
+
+class PreEnrichRequest(BaseModel):
+    title: str
+    description: str = ""
+    skills: list = []
+    budget_min: Optional[Any] = None
+    budget_max: Optional[Any] = None
+    budget_type: str = "fixed"
+    country: str = ""
+
+
+@app.post("/api/pre-enrich")
+async def pre_enrich(req: PreEnrichRequest):
+    """Phase 5: Pre-compute analyze+enrich at scan time (Haiku, fast).
+    Called by extension after scan, result cached in Supabase.
+    No cover letter — that's generated on-demand when user clicks."""
+    if not req.description.strip() and not req.title.strip():
+        raise HTTPException(400, "Description et titre vides")
+
+    job_context = f"""JOB TITLE: {req.title}
+DESCRIPTION: {req.description or 'Non disponible'}
+SKILLS: {', '.join(req.skills) if req.skills else 'Non specifies'}
+BUDGET: {req.budget_min or '?'} - {req.budget_max or '?'} ({req.budget_type})
+COUNTRY: {req.country or 'Non specifie'}"""
+
+    try:
+        loop = asyncio.get_event_loop()
+        prompt = ANALYZE_ENRICH_SYSTEM + "\n\n" + job_context
+        data = await loop.run_in_executor(_executor, _run_claude, prompt, "haiku", 90)
+        return data
+    except subprocess.TimeoutExpired:
+        raise HTTPException(504, "Timeout Claude")
+    except Exception as e:
+        print(f"pre-enrich error: {e}", file=sys.stderr)
         raise HTTPException(500, str(e))

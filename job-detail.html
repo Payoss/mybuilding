@@ -607,39 +607,74 @@ async function generateCoverLetter() {
   btn.style.display = 'none';
   startGenProgress();
 
+  var skills = (_job.skills || []).filter(function(s) { return s && !/^(Location|Unverified|Payment|\$\d)/.test(s); });
+
   try {
-    var res = await fetch('/api/cover-letter', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: _job.title,
-        description: _job.description,
-        skills: (_job.skills || []).filter(function(s) { return s && !/^(Location|Unverified|Payment|\$\d)/.test(s); }),
-        budget_min: _job.budget_min,
-        budget_max: _job.budget_max,
-        budget_type: _job.budget_type,
-        country: _job.country,
-        enrichment: _enrichment
-      })
-    });
+    var versionA, versionB;
 
-    if (!res.ok) throw new Error('API error ' + res.status);
-    var data = await res.json();
+    if (!_enrichment) {
+      // No enrichment cached — use full-pipeline (1 Haiku call + 1 Sonnet call, faster than 3 sequential)
+      var res = await fetch('/api/full-pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: _job.title,
+          description: _job.description,
+          skills: skills,
+          budget_min: _job.budget_min,
+          budget_max: _job.budget_max,
+          budget_type: _job.budget_type,
+          country: _job.country
+        })
+      });
+      if (!res.ok) throw new Error('API error ' + res.status);
+      var fullData = await res.json();
+      versionA = fullData.cover_letter_a;
+      versionB = fullData.cover_letter_b;
 
-    // Save to Supabase
+      // Cache enrichment from full-pipeline result
+      if (fullData.enrichment) {
+        _enrichment = fullData.enrichment;
+        var updatedAnalysis = Object.assign({}, _job.analysis || {}, fullData, { enrichment: fullData.enrichment });
+        await sb.from('upwork_jobs').update({ analysis: updatedAnalysis }).eq('id', _job.id);
+        _job.analysis = updatedAnalysis;
+        renderEnrichment(_enrichment);
+      }
+    } else {
+      // Enrichment already cached — just generate cover letter (Sonnet)
+      var res = await fetch('/api/cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: _job.title,
+          description: _job.description,
+          skills: skills,
+          budget_min: _job.budget_min,
+          budget_max: _job.budget_max,
+          budget_type: _job.budget_type,
+          country: _job.country,
+          enrichment: _enrichment
+        })
+      });
+      if (!res.ok) throw new Error('API error ' + res.status);
+      var data = await res.json();
+      versionA = data.version_a;
+      versionB = data.version_b;
+    }
+
+    // Save covers to Supabase
     await sb.from('upwork_jobs').update({
-      cover_letter: data.version_a,
-      cover_letter_b: data.version_b
+      cover_letter: versionA,
+      cover_letter_b: versionB
     }).eq('id', _job.id);
 
-    _job.cover_letter = data.version_a;
-    _job.cover_letter_b = data.version_b;
+    _job.cover_letter = versionA;
+    _job.cover_letter_b = versionB;
 
     stopGenProgress(true);
-    // Brief pause to show 100% then show results
     setTimeout(function() {
       document.getElementById('genProgress').classList.remove('visible');
-      showCovers(data.version_a, data.version_b);
+      showCovers(versionA, versionB);
       toast('Candidatures generees ✓');
     }, 800);
 

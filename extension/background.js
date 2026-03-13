@@ -374,9 +374,75 @@ async function checkForNewJobs() {
         mb_last_snipers: sniperJobs.length,
         mb_last_golds: goldJobs.length
       });
+
+      // Phase 5: Pre-enrich top jobs in background (async, non-blocking)
+      const topJobs = supabaseRows.filter(j => j.worth_score >= 7 || j.sniper_mode);
+      if (topJobs.length > 0 && result.data) {
+        preEnrichJobs(topJobs, result.data).catch(e =>
+          console.warn('[mybuilding BG] Pre-enrich error (non-critical):', e.message)
+        );
+      }
     }
   } catch (e) {
     console.error('[mybuilding BG] Error:', e);
+  }
+}
+
+// ── Phase 5: Pre-enrich top jobs at scan time ──
+async function preEnrichJobs(topJobs, insertedRows) {
+  const settings = await getSettings();
+  const apiBase = settings.apiUrl || 'https://mybuilding.dev';
+
+  // Match inserted rows to get Supabase IDs
+  const idMap = {};
+  for (const row of insertedRows) {
+    if (row.url) idMap[row.url] = row.id;
+  }
+
+  // Pre-enrich up to 3 jobs (avoid overloading)
+  const batch = topJobs.slice(0, 3);
+  for (const job of batch) {
+    try {
+      const res = await fetch(`${apiBase}/api/pre-enrich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: job.title,
+          description: job.description,
+          skills: job.skills || [],
+          budget_min: job.budget_min,
+          budget_max: job.budget_max,
+          budget_type: job.budget_type,
+          country: job.country
+        })
+      });
+      if (!res.ok) continue;
+      const enrichData = await res.json();
+
+      // Cache enrichment in Supabase
+      const jobId = idMap[job.url];
+      if (jobId && enrichData) {
+        const { url: sbUrl, key: sbKey } = await getSupabase();
+        if (sbUrl && sbKey) {
+          await fetch(`${sbUrl}/rest/v1/upwork_jobs?id=eq.${jobId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': sbKey,
+              'Authorization': `Bearer ${sbKey}`,
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              analysis: enrichData,
+              status: enrichData.verdict === 'SKIP' ? 'skipped' : 'enriched'
+            })
+          });
+        }
+      }
+      console.log(`[mybuilding BG] Pre-enriched: ${job.title.slice(0, 50)}`);
+    } catch (e) {
+      console.warn(`[mybuilding BG] Pre-enrich failed for ${job.title.slice(0, 30)}:`, e.message);
+    }
   }
 }
 
