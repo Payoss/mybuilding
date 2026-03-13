@@ -74,7 +74,12 @@ def _run_claude(prompt: str, model: str = "haiku", timeout: int = 120) -> dict:
     end = output.rfind("}") + 1
     if start == -1 or end == 0:
         raise ValueError(f"No JSON in claude [{model}] response")
-    return json.loads(output[start:end])
+    data = json.loads(output[start:end])
+    # Strip em-dashes from cover letter fields (Claude sometimes ignores the "no em dashes" rule)
+    for key in ("cover_letter_a", "cover_letter_b", "version_a", "version_b", "proposal"):
+        if key in data and isinstance(data[key], str):
+            data[key] = data[key].replace("—", "-").replace("–", "-")
+    return data
 
 
 SYSTEM = """Tu es GUS, analyste Upwork expert ET rédacteur de propositions. Tu travailles pour Paul Annes.

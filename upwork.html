@@ -194,7 +194,7 @@
               <button class="qe-cover-tab" onclick="switchQeCover('b',this)">Version B</button>
             </div>
           </div>
-          <div class="qe-cover-text" id="qe-cover-text">—</div>
+          <div class="qe-cover-text" id="qe-cover-text"></div>
         </div>
         <div class="qe-actions">
           <button class="btn btn-teal" onclick="copyQeCover()">📋 Copier la cover letter</button>
@@ -1093,7 +1093,7 @@ async function runQuickEval() {
 
 function switchQeCover(version, btn) {
   qeCurrentVersion = version;
-  var text = version === 'a' ? (qeData.cover_letter_a || qeData.proposal || '—') : (qeData.cover_letter_b || '—');
+  var text = version === 'a' ? (qeData.cover_letter_a || qeData.proposal || 'Aucune cover letter générée.') : (qeData.cover_letter_b || 'Aucune version B disponible.');
   document.getElementById('qe-cover-text').textContent = text;
   document.querySelectorAll('.qe-cover-tab').forEach(function(t) { t.classList.remove('active'); });
   btn.classList.add('active');
@@ -1101,7 +1101,7 @@ function switchQeCover(version, btn) {
 
 function copyQeCover() {
   var text = document.getElementById('qe-cover-text').textContent;
-  if (!text || text === '—') return;
+  if (!text || text.startsWith('Aucune')) return;
   navigator.clipboard.writeText(text).then(function() {
     toast('Cover letter copiée ✓');
   });

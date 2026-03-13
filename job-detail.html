@@ -725,9 +725,9 @@ function switchCoverTab(tab) {
 
 function copyCover(version) {
   var ta = document.getElementById('cover-text-' + version);
-  if (!ta) return;
+  if (!ta || !ta.value.trim()) { toast('Aucune cover letter à copier', 'error'); return; }
   navigator.clipboard.writeText(ta.value).then(function() {
-    toast('Cover letter copiee ✓');
+    toast('Cover letter copiée ✓');
   });
 }
 
