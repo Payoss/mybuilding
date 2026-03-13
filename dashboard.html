@@ -304,7 +304,7 @@ function openPanel(jobId) {
   document.getElementById('sp-score').innerHTML = scoreHtml;
 
   // Budget
-  var budgetStr = '—';
+  var budgetStr = 'À négocier';
   if (job.budget_min || job.budget_max) {
     var bmin = job.budget_min || 0, bmax = job.budget_max || bmin;
     budgetStr = '$' + (bmin >= 1000 ? (bmin/1000).toFixed(1)+'K' : bmin);
