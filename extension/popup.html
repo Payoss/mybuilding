@@ -40,7 +40,7 @@ body { width: 340px; background: #0e0e1a; color: #f1f5f9; font-family: 'Segoe UI
   <div class="logo">🏠</div>
   <div>
     <div class="title">mybuilding</div>
-    <div class="subtitle">Upwork Scraper · v1.0</div>
+    <div class="subtitle">Upwork Assistant · v1.1 · TOS-safe</div>
   </div>
 </div>
 
@@ -72,7 +72,8 @@ body { width: 340px; background: #0e0e1a; color: #f1f5f9; font-family: 'Segoe UI
       <span class="stat-label">⭐ Gold (≥8/10)</span>
       <span class="stat-val" id="last-golds" style="color:#34d399">0</span>
     </div>
-    <button class="btn btn-teal" id="scanBtn">⚡ Scan Now</button>
+    <button class="btn btn-teal" id="scanBtn">⚡ Scan This Page</button>
+    <div style="font-size:10px;color:#475569;margin:6px 0 8px;text-align:center">Scans the current Upwork search page you're viewing — manual only, no auto-refresh</div>
     <button class="btn btn-glass" id="openBtn">↗ Ouvrir mybuilding.dev</button>
   </div>
 
@@ -81,8 +82,6 @@ body { width: 340px; background: #0e0e1a; color: #f1f5f9; font-family: 'Segoe UI
     <div class="label">Supabase</div>
     <input class="input" id="inp-url" placeholder="https://xxxxx.supabase.co">
     <input class="input" id="inp-key" placeholder="sb_publishable_xxxxx" type="password">
-    <div class="label" style="margin-top:8px">Scan</div>
-    <input class="input" id="inp-interval" type="number" min="1" max="60" placeholder="Intervalle (minutes)" value="5">
     <button class="btn btn-teal" id="saveBtn">Sauvegarder</button>
   </div>
 </div>

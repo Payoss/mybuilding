@@ -1,6 +1,8 @@
-// mybuilding.dev — Content Script (Safe Mode)
-// Inspiré UpEarth content.js — DOM read only, zéro injection risquée
-// Lit les jobs affichés + auto-fill cover letter + badge messages
+// mybuilding.dev — Content Script (TOS-Safe Mode)
+// Human-initiated only: reads visible DOM when user clicks "Scan This Page"
+// Cover letter auto-fill: assists human writing on proposal pages
+// Badge messages: reads unread count for notification badge
+// NO auto-refresh, NO polling for new jobs, NO DOM manipulation on search pages
 
 (function() {
   console.log('[mybuilding] Content script actif sur', window.location.href);
@@ -91,13 +93,14 @@
     if (_isProposalPage()) setTimeout(_startProposalWatcher, 600);
   });
 
+  // SPA navigation detection — only for cover letter fill on proposal pages
   let _pollHref = location.href;
   setInterval(() => {
     if (location.href !== _pollHref) {
       _pollHref = location.href;
       if (_isProposalPage()) _startProposalWatcher();
     }
-  }, 1000);
+  }, 3000);
 
   // ── Badge messages Upwork ──
   let _lastMsgCount = 0;
@@ -115,26 +118,6 @@
   }
   new MutationObserver(_readMsgBadge).observe(document.body, { childList: true, subtree: true, characterData: true });
   setTimeout(_readMsgBadge, 3000);
-
-  // ── Parse relative dates ("26 minutes ago" → ISO string) ──
-  function _parseRelativeDate(text) {
-    if (!text) return new Date().toISOString();
-    // Already ISO or absolute date
-    if (/^\d{4}-\d{2}/.test(text)) return text;
-    const t = text.toLowerCase().trim();
-    const now = Date.now();
-    let m;
-    if ((m = t.match(/(\d+)\s*seconds?\s*ago/))) return new Date(now - m[1] * 1000).toISOString();
-    if ((m = t.match(/(\d+)\s*minutes?\s*ago/))) return new Date(now - m[1] * 60000).toISOString();
-    if ((m = t.match(/(\d+)\s*hours?\s*ago/))) return new Date(now - m[1] * 3600000).toISOString();
-    if ((m = t.match(/(\d+)\s*days?\s*ago/))) return new Date(now - m[1] * 86400000).toISOString();
-    if ((m = t.match(/(\d+)\s*weeks?\s*ago/))) return new Date(now - m[1] * 604800000).toISOString();
-    if (t.includes('just now') || t.includes('moment')) return new Date(now).toISOString();
-    if (t.includes('yesterday')) return new Date(now - 86400000).toISOString();
-    // Fallback: try native parse, else now
-    const parsed = Date.parse(text);
-    return isNaN(parsed) ? new Date().toISOString() : new Date(parsed).toISOString();
-  }
 
   // ── DOM Job Extraction ──
   function _extractJobsFromDOM() {
@@ -181,16 +164,12 @@
         );
         const country = locEl?.textContent?.trim() || '';
 
-        const dateEl = card.querySelector('time, [datetime], [data-test="posted-on"]');
-        const rawDate = dateEl?.getAttribute('datetime') || dateEl?.textContent?.trim() || '';
-        const posted_at = _parseRelativeDate(rawDate);
-
         const skillEls = card.querySelectorAll(
           '[data-test="token"], [class*="skill-tag"], a[data-test="attr-item"], [class*="tag"]'
         );
         const skills = Array.from(skillEls).map(s => s.textContent.trim()).filter(Boolean);
 
-        jobs.push({ id, title, url, description, budget, country, posted_at, skills, scraped_at: new Date().toISOString() });
+        jobs.push({ id, title, url, description, budget, country, skills, scraped_at: new Date().toISOString() });
       } catch (e) {}
     });
     return jobs;

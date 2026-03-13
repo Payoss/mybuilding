@@ -19,7 +19,7 @@ function scanNow() {
   btn.textContent = '⏳ Scanning...';
   btn.disabled = true;
   chrome.runtime.sendMessage({ type: 'CHECK_NOW' }, () => {
-    btn.textContent = '⚡ Scan Now';
+    btn.textContent = '⚡ Scan This Page';
     btn.disabled = false;
     toast('Scan terminé ✓');
     loadStatus();
@@ -33,8 +33,7 @@ function openMybuilding() {
 function saveSettings() {
   const settings = {
     supabaseUrl: document.getElementById('inp-url').value.trim(),
-    supabaseKey: document.getElementById('inp-key').value.trim(),
-    intervalMinutes: parseInt(document.getElementById('inp-interval').value) || 5
+    supabaseKey: document.getElementById('inp-key').value.trim()
   };
   chrome.runtime.sendMessage({ type: 'UPDATE_SETTINGS', settings }, () => {
     toast('Settings sauvés ✓');
@@ -59,7 +58,6 @@ function loadStatus() {
     document.getElementById('last-golds').textContent = data.mb_last_golds || 0;
     if (s.supabaseUrl) document.getElementById('inp-url').value = s.supabaseUrl;
     if (s.supabaseKey) document.getElementById('inp-key').value = s.supabaseKey;
-    if (s.intervalMinutes) document.getElementById('inp-interval').value = s.intervalMinutes;
   });
 }
 

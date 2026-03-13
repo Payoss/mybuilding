@@ -74,11 +74,7 @@
 /* Gold highlight */
 .hbody-row.row-gold { border-left: 2px solid var(--teal); background: rgba(13,148,136,0.03); }
 .hbody-row.row-gold:hover { background: rgba(13,148,136,0.06); }
-/* Sortable headers */
-.hc-sort { cursor: pointer; user-select: none; transition: color 0.12s; display: flex; align-items: center; gap: 3px; }
-.hc-sort:hover { color: var(--teal); }
-.hc-sort .sort-arrow { font-size: 8px; opacity: 0.4; }
-.hc-sort.sort-active .sort-arrow { opacity: 1; color: var(--teal); }
+/* Column headers (no sort) */
 /* Search bar */
 .search-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .search-input { flex: 1; padding: 7px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; color: var(--t1); font-family: inherit; font-size: 12px; outline: none; transition: border-color 0.15s; }
@@ -197,10 +193,10 @@
       <div class="htable-wrap">
         <div class="hrow hhead" style="grid-template-columns:30px 3fr 1fr 1fr 1.5fr 1fr 1fr 1fr">
           <div class="hc hc-check"></div>
-          <div class="hc hc-sort" onclick="sortScraped('title')">Job <span class="sort-arrow">▼</span></div>
-          <div class="hc hc-sort sort-active" onclick="sortScraped('date')">Publié <span class="sort-arrow">▼</span></div>
-          <div class="hc hc-sort" onclick="sortScraped('budget')">Budget <span class="sort-arrow">▼</span></div>
-          <div class="hc hc-sort" onclick="sortScraped('score')">Score <span class="sort-arrow">▼</span></div>
+          <div class="hc">Job</div>
+          <div class="hc">Ajouté</div>
+          <div class="hc">Budget</div>
+          <div class="hc">Score</div>
           <div class="hc">Pays</div>
           <div class="hc">Statut</div>
           <div class="hc">Action</div>
@@ -329,7 +325,7 @@ function renderHistory(jobs) {
   document.getElementById('history-rows').innerHTML = jobs.map(j => {
     var sniperTag = j.sniper_mode ? '<span style="color:var(--amber);font-size:10px;font-weight:700">🎯</span> ' : '';
     var frTag = j.is_french ? ' <span style="font-size:10px">🇫🇷</span>' : '';
-    var ago = timeAgo(j.posted_at || j.scraped_at || j.analyzed_at);
+    var ago = timeAgo(j.scraped_at || j.analyzed_at);
     return `<div class="hrow hbody-row" style="grid-template-columns:3fr 1fr 1fr 1.5fr 1fr 1fr 1fr" onclick="openJobDetail('${j.id}')">
       <div>
         <div class="hc-title">${sniperTag}${j.title}${frTag}</div>
@@ -584,7 +580,7 @@ function showKeywords() {
 var allScraped = [];
 var allHistory = [];
 var scrapedFilter = 'all';
-var scrapedSort = { key: 'composite', dir: 'desc' };
+var scrapedSort = { key: 'scraped', dir: 'desc' };
 var scrapedPage = 0;
 var SCRAPED_PER_PAGE = 30;
 var scrapedSearch = '';
@@ -646,7 +642,7 @@ function budgetNum(j) {
 
 function compositeScore(j) {
   // Fresh + high worth = top. Recency weight decays over hours.
-  var hoursAgo = (Date.now() - new Date(j.posted_at || j.scraped_at || 0).getTime()) / 3600000;
+  var hoursAgo = (Date.now() - new Date(j.scraped_at || 0).getTime()) / 3600000;
   var recency = Math.max(0, 1 - hoursAgo / 168); // decays to 0 over 7 days
   var worth = (j.worth_score || 0) / 10;
   return recency * 0.4 + worth * 0.6;
@@ -657,7 +653,7 @@ function sortJobs(jobs, key, dir) {
   sorted.sort(function(a, b) {
     var va, vb;
     if (key === 'title') { va = (a.title || '').toLowerCase(); vb = (b.title || '').toLowerCase(); return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
-    if (key === 'date') { va = new Date(a.posted_at || a.scraped_at || 0).getTime(); vb = new Date(b.posted_at || b.scraped_at || 0).getTime(); }
+    if (key === 'scraped' || key === 'date') { va = new Date(a.scraped_at || 0).getTime(); vb = new Date(b.scraped_at || 0).getTime(); }
     else if (key === 'budget') { va = budgetNum(a); vb = budgetNum(b); }
     else if (key === 'score') { va = (a.worth_score || 0); vb = (b.worth_score || 0); }
     else if (key === 'composite') { va = compositeScore(a); vb = compositeScore(b); }
@@ -667,23 +663,7 @@ function sortJobs(jobs, key, dir) {
   return sorted;
 }
 
-function sortScraped(key) {
-  if (scrapedSort.key === key) {
-    scrapedSort.dir = scrapedSort.dir === 'desc' ? 'asc' : 'desc';
-  } else {
-    scrapedSort.key = key;
-    scrapedSort.dir = 'desc';
-  }
-  scrapedPage = 0;
-  // Update header visuals
-  document.querySelectorAll('#scraped-tile .hc-sort').forEach(function(el) {
-    el.classList.remove('sort-active');
-    el.querySelector('.sort-arrow').textContent = '▼';
-  });
-  event.currentTarget.classList.add('sort-active');
-  event.currentTarget.querySelector('.sort-arrow').textContent = scrapedSort.dir === 'desc' ? '▼' : '▲';
-  renderScraped();
-}
+// Sort is fixed: newest scraped first (scraped_at DESC). No user-toggleable sort.
 
 function getFilteredScraped() {
   var filtered = allScraped;
@@ -727,7 +707,7 @@ function renderScraped() {
     }
     var sniperTag = j.sniper_mode ? '<span style="color:var(--amber);font-size:10px;font-weight:700">🎯</span> ' : '';
     var frTag = j.is_french ? ' <span style="font-size:10px">🇫🇷</span>' : '';
-    var ago = timeAgo(j.posted_at || j.scraped_at);
+    var ago = timeAgo(j.scraped_at);
     var goldClass = j.worth_score >= 8 ? ' row-gold' : '';
     var checked = selectedJobs.has(j.id) ? ' checked' : '';
     return '<div class="hrow hbody-row' + goldClass + '" style="grid-template-columns:30px 3fr 1fr 1fr 1.5fr 1fr 1fr 1fr" onclick="openJobDetail(\'' + j.id + '\')">'
@@ -874,7 +854,7 @@ async function loadProposalBank() {
     } else {
       // Fallback: compute from upwork_jobs this month
       var startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      var { data: jobs } = await sb.from('upwork_jobs').select('status,feasibility,worth_score,skills,posted_at').gte('scraped_at', startOfMonth);
+      var { data: jobs } = await sb.from('upwork_jobs').select('status,feasibility,worth_score,skills,scraped_at').gte('scraped_at', startOfMonth);
       jobs = jobs || [];
 
       var computed = {
@@ -908,8 +888,8 @@ function computeBestNiche(jobs) {
 function computeBestHour(jobs) {
   var hours = {};
   jobs.forEach(function(j) {
-    if (j.posted_at) {
-      var h = new Date(j.posted_at).getHours();
+    if (j.scraped_at) {
+      var h = new Date(j.scraped_at).getHours();
       hours[h] = (hours[h] || 0) + 1;
     }
   });

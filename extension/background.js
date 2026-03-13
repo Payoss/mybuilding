@@ -1,9 +1,9 @@
-// mybuilding.dev — Background Service Worker
-// Scrape Upwork jobs → Score locally → POST to Supabase
-// Scoring ported from UpEarth FEAS_B/FEAS_P + worth + sniper
+// mybuilding.dev — Background Service Worker (TOS-Safe Mode)
+// Manual-only scan: user clicks "Scan Now" while on Upwork search page
+// NO automatic polling, NO alarms — compliant with Upwork TOS
+// Scoring engine runs locally (instant, no network)
 
 const CONFIG = {
-  CHECK_INTERVAL_MINUTES: 5,
   SUPABASE_URL: '',   // Set in popup settings
   SUPABASE_KEY: '',   // Set in popup settings
   MAX_JOBS_PER_CYCLE: 50
@@ -74,7 +74,7 @@ function computeFeasibility(title, description) {
   return Math.min(99, Math.max(5, Math.round(score)));
 }
 
-function computeWorthScore(title, description, feasibility, budgetMin, budgetMax, budgetType, country, postedAt, isFrench) {
+function computeWorthScore(title, description, feasibility, budgetMin, budgetMax, budgetType, country, scrapedAt, isFrench) {
   const text = ((title || '') + ' ' + (description || '')).toLowerCase();
   let score = 3.5;
 
@@ -102,9 +102,9 @@ function computeWorthScore(title, description, feasibility, budgetMin, budgetMax
   if (text.includes('long term') || text.includes('long-term')) score += 1;
   if (text.includes('urgent') || text.includes('asap')) score += 0.5;
 
-  if (postedAt) {
+  if (scrapedAt) {
     try {
-      const ageMin = (Date.now() - new Date(postedAt).getTime()) / 60000;
+      const ageMin = (Date.now() - new Date(scrapedAt).getTime()) / 60000;
       if (ageMin < 60) score += 1.5;
       else if (ageMin < 120) score += 0.8;
     } catch (e) {}
@@ -129,7 +129,7 @@ function detectFrench(title, description, country) {
   return false;
 }
 
-function computeSniperMode(feasibility, worthScore, postedAt, budgetMin, budgetMax, budgetType) {
+function computeSniperMode(feasibility, worthScore, scrapedAt, budgetMin, budgetMax, budgetType) {
   let budget = 0;
   if (budgetMin && budgetMax) budget = (budgetMin + budgetMax) / 2;
   else if (budgetMin) budget = budgetMin;
@@ -137,8 +137,8 @@ function computeSniperMode(feasibility, worthScore, postedAt, budgetMin, budgetM
   if (budgetType === 'hourly' && budget) budget *= 40;
 
   let ageMin = 999;
-  if (postedAt) {
-    try { ageMin = (Date.now() - new Date(postedAt).getTime()) / 60000; } catch (e) {}
+  if (scrapedAt) {
+    try { ageMin = (Date.now() - new Date(scrapedAt).getTime()) / 60000; } catch (e) {}
   }
   return feasibility >= 85 && worthScore >= 8.5 && ageMin < 120 && budget >= 500;
 }
@@ -157,11 +157,11 @@ function computeTimeEstimate(title, description, feasibility) {
 }
 
 function scoreJob(job) {
-  const { title, description, country, posted_at, budget_min, budget_max, budget_type } = job;
+  const { title, description, country, scraped_at, budget_min, budget_max, budget_type } = job;
   const isFrench = detectFrench(title, description, country);
   const feasibility = computeFeasibility(title, description);
-  let worthScore = computeWorthScore(title, description, feasibility, budget_min, budget_max, budget_type, country, posted_at, isFrench);
-  const sniperMode = computeSniperMode(feasibility, worthScore, posted_at, budget_min, budget_max, budget_type);
+  let worthScore = computeWorthScore(title, description, feasibility, budget_min, budget_max, budget_type, country, scraped_at, isFrench);
+  const sniperMode = computeSniperMode(feasibility, worthScore, scraped_at, budget_min, budget_max, budget_type);
   if (sniperMode) worthScore = Math.min(10, worthScore + 2.5);
   const timeEstimate = computeTimeEstimate(title, description, feasibility);
   return { feasibility, worth_score: worthScore, sniper_mode: sniperMode, is_french: isFrench, time_estimate: timeEstimate };
@@ -169,14 +169,10 @@ function scoreJob(job) {
 
 // ── Init ──
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.alarms.create('checkJobs', { periodInMinutes: CONFIG.CHECK_INTERVAL_MINUTES });
-  console.log('[mybuilding BG] Extension installée, alarm créée');
-});
-
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === 'checkJobs') {
-    await checkForNewJobs();
-  }
+  // TOS-Safe: no auto-polling alarm. Scan is manual only (user clicks "Scan Now")
+  // Clear any leftover alarm from previous versions
+  chrome.alarms.clearAll();
+  console.log('[mybuilding BG] Extension installée (TOS-safe mode — scan manuel uniquement)');
 });
 
 // ── Load settings from storage ──
@@ -322,7 +318,6 @@ async function checkForNewJobs() {
         description: j.description,
         url: j.url,
         country: j.country,
-        posted_at: j.posted_at,
         scraped_at: j.scraped_at,
         budget_min: budgetParsed.min,
         budget_max: budgetParsed.max,
@@ -408,12 +403,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   if (msg.type === 'UPDATE_SETTINGS') {
     chrome.storage.local.set({ mb_settings: msg.settings }, () => {
-      // Reset alarm with new interval
-      if (msg.settings.intervalMinutes) {
-        chrome.alarms.clear('checkJobs', () => {
-          chrome.alarms.create('checkJobs', { periodInMinutes: msg.settings.intervalMinutes });
-        });
-      }
       sendResponse({ ok: true });
     });
     return true;

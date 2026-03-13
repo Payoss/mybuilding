@@ -1,13 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "mybuilding — Upwork Scraper",
-  "version": "1.0",
-  "description": "Scrape les jobs Upwork en safe-mode et les envoie vers mybuilding.dev CRM",
+  "name": "mybuilding — Upwork Assistant",
+  "version": "1.1",
+  "description": "Personal Upwork productivity assistant — manual job scanning, cover letter helper, CRM integration",
   "permissions": [
     "tabs",
     "storage",
     "notifications",
-    "alarms",
     "scripting"
   ],
   "host_permissions": [
