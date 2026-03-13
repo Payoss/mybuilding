@@ -23,6 +23,36 @@
 .metric-trend { display: flex; align-items: center; gap: 4px; font-size: 11px; margin-top: 5px; }
 .skeleton { background: rgba(255,255,255,0.05); border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
+/* Candidature rows */
+.cand-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.1s; border-radius: 4px; }
+.cand-row:last-child { border-bottom: none; }
+.cand-row:hover { background: rgba(255,255,255,0.03); }
+.cand-title { flex: 1; font-size: 12px; font-weight: 500; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cand-date { font-size: 10px; color: var(--t3); flex-shrink: 0; }
+/* Side panel */
+.side-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 50; display: none; }
+.side-panel-backdrop.open { display: block; }
+.side-panel { position: fixed; top: 0; right: -420px; width: 420px; max-width: 100vw; height: 100vh; background: #12121e; border-left: 1px solid var(--border); z-index: 51; display: flex; flex-direction: column; transition: right 0.25s cubic-bezier(0.16,1,0.3,1); overflow-y: auto; }
+.side-panel.open { right: 0; }
+.sp-header { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.sp-title { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-close { background: none; border: none; color: var(--t3); cursor: pointer; font-size: 18px; padding: 2px 6px; border-radius: 4px; }
+.sp-close:hover { color: var(--t1); }
+.sp-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; flex: 1; }
+.sp-field { display: flex; flex-direction: column; gap: 4px; }
+.sp-label { font-size: 10px; font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: 0.07em; }
+.sp-value { font-size: 12px; color: var(--t2); }
+.sp-status-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.sp-status-btn { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--t2); font-family: inherit; transition: all 0.15s; }
+.sp-status-btn:hover { border-color: var(--teal); color: var(--teal); }
+.sp-status-btn.active { background: var(--teal-dim); color: var(--teal); border-color: var(--teal); font-weight: 600; }
+.sp-notes { width: 100%; min-height: 80px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 7px; padding: 8px 11px; color: var(--t1); font-size: 12px; font-family: inherit; outline: none; resize: vertical; transition: border-color 0.15s; }
+.sp-notes:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.12); }
+.sp-save-btn { padding: 8px 16px; background: var(--teal); color: white; border: none; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.sp-save-btn:hover { opacity: 0.9; }
+@media (max-width: 768px) {
+  .side-panel { width: 100vw; right: -100vw; }
+}
 </style>
 </head>
 <body>
@@ -62,13 +92,16 @@
         <a href="/crm.html" class="btn btn-glass" style="margin-top:12px;font-size:11px">Voir tout le pipeline →</a>
       </div>
 
-      <!-- Upwork -->
+      <!-- Mes Candidatures Upwork -->
       <div class="tile fade-up fade-up-2">
-        <div class="tile-title">Upwork <span class="teal-chip" style="font-size:9px">✦ Claude-powered</span> <span class="tile-title-sub" id="upwork-count">—</span></div>
-        <div id="upwork-list">
-          <div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-text">Chargement...</div></div>
+        <div class="tile-title">Mes Candidatures <span class="teal-chip" style="font-size:9px">Upwork</span> <span class="tile-title-sub" id="cand-count">—</span></div>
+        <div id="cand-list">
+          <div class="empty-state"><div class="empty-icon">📨</div><div class="empty-text">Chargement...</div></div>
         </div>
-        <a href="/upwork.html" class="btn btn-glass" style="margin-top:12px;font-size:11px">Analyser un job →</a>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <a href="/upwork.html" class="btn btn-glass" style="font-size:11px">Rechercher des jobs →</a>
+          <button class="btn btn-glass" style="font-size:11px" id="cand-see-all" onclick="loadCandidatures(true)">Voir tout</button>
+        </div>
       </div>
 
       <!-- Factures en attente -->
@@ -91,21 +124,67 @@
   </div>
 </main>
 
+<!-- Side Panel — Job Detail -->
+<div class="side-panel-backdrop" id="sp-backdrop" onclick="closePanel()"></div>
+<div class="side-panel" id="sp-panel">
+  <div class="sp-header">
+    <div class="sp-title" id="sp-title">—</div>
+    <button class="sp-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="sp-body">
+    <div class="sp-field">
+      <div class="sp-label">Score</div>
+      <div class="sp-value" id="sp-score">—</div>
+    </div>
+    <div class="sp-field">
+      <div class="sp-label">Budget</div>
+      <div class="sp-value" id="sp-budget">—</div>
+    </div>
+    <div class="sp-field">
+      <div class="sp-label">Skills</div>
+      <div class="sp-value" id="sp-skills">—</div>
+    </div>
+    <div class="sp-field">
+      <div class="sp-label">Pays</div>
+      <div class="sp-value" id="sp-country">—</div>
+    </div>
+    <div class="sp-field">
+      <div class="sp-label">Postulé le</div>
+      <div class="sp-value" id="sp-applied-at">—</div>
+    </div>
+    <div class="sp-field">
+      <div class="sp-label">Lien Upwork</div>
+      <div class="sp-value"><a id="sp-link" href="#" target="_blank" style="color:var(--teal);font-size:12px">Ouvrir sur Upwork →</a></div>
+    </div>
+    <div class="sp-field">
+      <div class="sp-label">Statut</div>
+      <div class="sp-status-row" id="sp-statuses"></div>
+    </div>
+    <div class="sp-field">
+      <div class="sp-label">Notes</div>
+      <textarea class="sp-notes" id="sp-notes" placeholder="Ajouter des notes..."></textarea>
+    </div>
+    <button class="sp-save-btn" onclick="savePanel()">Sauvegarder</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/js/config.js"></script>
 <script src="/js/app.js"></script>
 <script>
 document.getElementById('sidebar-mount').innerHTML = renderSidebar('dashboard');
 
+var allCandidatures = [];
+var currentPanelJob = null;
+
 async function loadDashboard() {
   try {
-    const [mrrRes, pipeRes, recvRes, revRes, dealsRes, upworkRes, invRes, actRes] = await Promise.all([
+    const [mrrRes, pipeRes, recvRes, revRes, dealsRes, invRes, actRes] = await Promise.all([
       sb.from('v_mrr').select('mrr').single(),
       sb.from('v_pipeline').select('*').single(),
       sb.from('v_receivables').select('*').single(),
       sb.from('v_revenue_month').select('revenue').single(),
       sb.from('deals').select('id, title, value, value_type, stage, contacts(name)').in('stage', ['prospect','proposal','negotiation','active']).order('created_at', { ascending: false }).limit(5),
-      sb.from('upwork_jobs').select('id, title, score, status, analyzed_at').order('analyzed_at', { ascending: false }).limit(4),
       sb.from('invoices').select('id, invoice_number, total, due_date, contacts(name)').in('status', ['sent','overdue']).order('due_date', { ascending: true }).limit(4),
       sb.from('interactions').select('id, type, title, created_at, contacts(name)').order('created_at', { ascending: false }).limit(5),
     ]);
@@ -149,16 +228,6 @@ async function loadDashboard() {
         <div class="deal-val">${fmtEur(d.value)}</div>
       </div>`).join('') : '<div class="empty-state"><div class="empty-text">Aucun deal en cours</div></div>';
 
-    // Upwork
-    const jobs = upworkRes.data || [];
-    document.getElementById('upwork-count').textContent = jobs.length + ' récents';
-    document.getElementById('upwork-list').innerHTML = jobs.length ? jobs.map(j => `
-      <div class="deal-row">
-        <div class="deal-name">${j.title}</div>
-        ${scorePill(j.score)}
-        <div class="activity-time">${fmtRelative(j.analyzed_at)}</div>
-      </div>`).join('') : '<div class="empty-state"><div class="empty-text">Aucun job analysé</div></div>';
-
     // Factures
     const invs = invRes.data || [];
     document.getElementById('inv-total').textContent = invs.length > 0 ? fmtEur(invs.reduce((s,i)=>s+parseFloat(i.total||0),0)) : '—';
@@ -191,7 +260,113 @@ async function loadDashboard() {
   }
 }
 
+// ---- Mes Candidatures ----
+async function loadCandidatures(showAll) {
+  try {
+    var limit = showAll ? 50 : 10;
+    var { data } = await sb.from('upwork_jobs').select('*').in('status', ['applied','interviewing','won','lost']).order('applied_at', { ascending: false }).limit(limit);
+    allCandidatures = data || [];
+    var count = allCandidatures.length;
+    document.getElementById('cand-count').textContent = count + ' candidature' + (count !== 1 ? 's' : '');
+    document.getElementById('cand-list').innerHTML = count ? allCandidatures.map(function(j) {
+      var statusMap = { applied:'sc-blue', interviewing:'sc-purple', won:'sc-green', lost:'sc-red' };
+      var labelMap = { applied:'Postulé', interviewing:'Entretien', won:'Won', lost:'Lost' };
+      return '<div class="cand-row" onclick="openPanel(\'' + j.id + '\')">'
+        + '<div class="cand-title">' + (j.title || '—') + '</div>'
+        + scorePill(j.score)
+        + '<span class="status-chip ' + (statusMap[j.status]||'sc-blue') + '" style="font-size:9px;margin-left:4px">' + (labelMap[j.status]||j.status) + '</span>'
+        + '<div class="cand-date">' + fmtRelative(j.applied_at || j.scraped_at) + '</div>'
+        + '</div>';
+    }).join('') : '<div class="empty-state"><div class="empty-icon">📨</div><div class="empty-text">Aucune candidature envoyée</div></div>';
+  } catch(e) {
+    console.error('loadCandidatures', e);
+  }
+}
+
+// ---- Side Panel ----
+function openPanel(jobId) {
+  var job = allCandidatures.find(function(j) { return j.id === jobId; });
+  if (!job) return;
+  currentPanelJob = job;
+
+  document.getElementById('sp-title').textContent = job.title || '—';
+  document.getElementById('sp-score').innerHTML = job.score != null ? scorePill(job.score) : '—';
+
+  var budgetStr = '—';
+  if (job.budget_min || job.budget_max) {
+    var bmin = job.budget_min || 0, bmax = job.budget_max || bmin;
+    budgetStr = '$' + (bmin >= 1000 ? (bmin/1000).toFixed(1)+'K' : bmin);
+    if (bmax !== bmin) budgetStr += ' – $' + (bmax >= 1000 ? (bmax/1000).toFixed(1)+'K' : bmax);
+  }
+  document.getElementById('sp-budget').textContent = budgetStr;
+  document.getElementById('sp-skills').textContent = (job.skills || []).join(', ') || '—';
+  document.getElementById('sp-country').textContent = job.country || '—';
+  document.getElementById('sp-applied-at').textContent = job.applied_at ? new Date(job.applied_at).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+
+  if (job.url) {
+    document.getElementById('sp-link').href = job.url;
+    document.getElementById('sp-link').style.display = '';
+  } else {
+    document.getElementById('sp-link').style.display = 'none';
+  }
+
+  // Status buttons
+  var statuses = ['applied','interviewing','won','lost'];
+  var labels = { applied:'Postulé', interviewing:'Entretien', won:'Won', lost:'Lost' };
+  document.getElementById('sp-statuses').innerHTML = statuses.map(function(s) {
+    return '<button class="sp-status-btn' + (job.status === s ? ' active' : '') + '" onclick="setPanelStatus(\'' + s + '\')">' + labels[s] + '</button>';
+  }).join('');
+
+  document.getElementById('sp-notes').value = job.notes || '';
+
+  document.getElementById('sp-backdrop').classList.add('open');
+  document.getElementById('sp-panel').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('sp-backdrop').classList.remove('open');
+  document.getElementById('sp-panel').classList.remove('open');
+  currentPanelJob = null;
+}
+
+function setPanelStatus(status) {
+  if (!currentPanelJob) return;
+  currentPanelJob.status = status;
+  var btns = document.querySelectorAll('#sp-statuses .sp-status-btn');
+  var statuses = ['applied','interviewing','won','lost'];
+  btns.forEach(function(btn, i) {
+    btn.classList.toggle('active', statuses[i] === status);
+  });
+}
+
+async function savePanel() {
+  if (!currentPanelJob) return;
+  var notes = document.getElementById('sp-notes').value;
+  var updateData = {
+    status: currentPanelJob.status,
+    applied_at: currentPanelJob.status === 'applied' ? (currentPanelJob.applied_at || new Date().toISOString()) : currentPanelJob.applied_at
+  };
+  // Try saving notes — column may not exist yet
+  var { error } = await sb.from('upwork_jobs').update({ ...updateData, notes: notes }).eq('id', currentPanelJob.id);
+  if (error && error.message && error.message.includes('notes')) {
+    // Fallback: save without notes
+    var res2 = await sb.from('upwork_jobs').update(updateData).eq('id', currentPanelJob.id);
+    if (res2.error) { toast('Erreur sauvegarde', 'error'); return; }
+    toast('Statut mis à jour ✓ (notes: ajouter colonne dans Supabase)');
+  } else if (error) {
+    toast('Erreur sauvegarde', 'error'); return;
+  } else {
+    toast('Candidature mise à jour ✓');
+  }
+  closePanel();
+  loadCandidatures();
+}
+
+// Keyboard: Escape to close panel
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closePanel(); });
+
 loadDashboard();
+loadCandidatures();
 </script>
 </body>
 </html>

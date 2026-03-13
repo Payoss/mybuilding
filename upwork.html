@@ -111,6 +111,36 @@
 .sp-low { background: rgba(248,113,113,0.15); color: #f87171; }
 
 /* Job Detail — redirects to job-detail.html */
+
+/* Quick Eval (mobile-first) */
+.qe-tile { display: none; }
+.qe-textarea { width: 100%; min-height: 200px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 14px; color: var(--t1); font-size: 13px; font-family: inherit; resize: none; outline: none; line-height: 1.6; transition: border-color 0.15s; }
+.qe-textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.12); }
+.qe-textarea::placeholder { color: var(--t3); }
+.qe-go-btn { width: 100%; margin-top: 12px; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 0 24px rgba(13,148,136,0.3); }
+.qe-go-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 0 32px rgba(13,148,136,0.5); }
+.qe-go-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.qe-go-btn .spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+.qe-go-btn.loading .spinner { display: block; }
+.qe-go-btn.loading .qe-go-label { display: none; }
+.qe-result { display: none; flex-direction: column; gap: 14px; margin-top: 16px; }
+.qe-result.visible { display: flex; }
+.qe-score-row { display: flex; align-items: center; gap: 14px; padding: 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; }
+.qe-score-big { font-size: 28px; font-weight: 800; font-family: 'DM Mono', monospace; letter-spacing: -1px; }
+.qe-score-info { flex: 1; }
+.qe-cover-block { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.qe-cover-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.qe-cover-tabs { display: flex; gap: 4px; }
+.qe-cover-tab { padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--t2); font-family: inherit; transition: all 0.15s; }
+.qe-cover-tab.active { background: var(--teal-dim); color: var(--teal); border-color: var(--teal); }
+.qe-cover-text { font-size: 12px; color: var(--t2); line-height: 1.65; white-space: pre-wrap; }
+.qe-actions { display: flex; gap: 8px; margin-top: 12px; }
+.qe-actions .btn { flex: 1; justify-content: center; padding: 10px; font-size: 13px; }
+/* Show Quick Eval on mobile by default, desktop via toggle */
+@media (max-width: 768px) {
+  .qe-tile { display: block; }
+  .desktop-only { display: none !important; }
+}
 </style>
 </head>
 <body>
@@ -125,6 +155,7 @@
       <span class="teal-chip">✦ Claude-powered</span>
     </div>
     <div class="topbar-right">
+      <button class="btn btn-teal desktop-only" onclick="toggleQuickEval()" id="qe-toggle-btn">📱 Quick Eval</button>
       <button class="btn btn-glass" onclick="showKeywords()">⚙ Keywords</button>
     </div>
   </div>
@@ -139,8 +170,41 @@
       <div class="metric"><div class="metric-label">Réponses</div><div class="metric-val" id="m-response">—</div></div>
     </div>
 
-    <!-- ANALYZER + RESULT -->
-    <div class="analyzer-row fade-up fade-up-2">
+    <!-- QUICK EVAL (mobile-first, also desktop toggle) -->
+    <div class="tile fade-up fade-up-1 qe-tile" id="qe-tile">
+      <div class="tile-title">Quick Eval <span class="teal-chip" style="font-size:9px">Mobile</span></div>
+      <textarea class="qe-textarea" id="qe-input" placeholder="Colle le texte de l'annonce Upwork ici..."></textarea>
+      <button class="qe-go-btn" id="qe-go" onclick="runQuickEval()">
+        <div class="spinner"></div>
+        <span class="qe-go-label">✦ Évaluer + Cover Letter</span>
+      </button>
+      <div class="qe-result" id="qe-result">
+        <div class="qe-score-row">
+          <div class="qe-score-big" id="qe-score">—</div>
+          <div class="qe-score-info">
+            <div style="font-size:14px;font-weight:600;margin-bottom:2px" id="qe-title">—</div>
+            <div id="qe-verdict"></div>
+          </div>
+        </div>
+        <div class="qe-cover-block">
+          <div class="qe-cover-header">
+            <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.07em">Cover Letter</div>
+            <div class="qe-cover-tabs">
+              <button class="qe-cover-tab active" onclick="switchQeCover('a',this)">Version A</button>
+              <button class="qe-cover-tab" onclick="switchQeCover('b',this)">Version B</button>
+            </div>
+          </div>
+          <div class="qe-cover-text" id="qe-cover-text">—</div>
+        </div>
+        <div class="qe-actions">
+          <button class="btn btn-teal" onclick="copyQeCover()">📋 Copier la cover letter</button>
+          <button class="btn btn-glass" onclick="qeMarkApplied()">✓ Postulé</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYZER + RESULT (desktop) -->
+    <div class="analyzer-row fade-up fade-up-2 desktop-only">
 
       <!-- PASTE -->
       <div class="tile">
@@ -169,7 +233,7 @@
     </div>
 
     <!-- SCRAPED JOBS (from extension) -->
-    <div class="tile fade-up fade-up-3" id="scraped-tile">
+    <div class="tile fade-up fade-up-3 desktop-only" id="scraped-tile">
       <div class="tile-title">Jobs scrapés
         <span class="tile-title-sub" id="scraped-count">—</span>
         <div style="margin-left:auto;display:flex;gap:4px">
@@ -934,6 +998,124 @@ function renderProposalBank(s) {
     else insights.push('⚠ View rate faible — revoir les proposals');
   }
   document.getElementById('pb-insights').innerHTML = insights.length ? insights.join('<br>') : 'Pas encore de données ce mois.';
+}
+
+// ---- Quick Eval ----
+var qeData = null;
+var qeCurrentVersion = 'a';
+
+function toggleQuickEval() {
+  var tile = document.getElementById('qe-tile');
+  var btn = document.getElementById('qe-toggle-btn');
+  if (tile.style.display === 'block') {
+    tile.style.display = 'none';
+    btn.textContent = '📱 Quick Eval';
+  } else {
+    tile.style.display = 'block';
+    btn.textContent = '✕ Fermer Quick Eval';
+    document.getElementById('qe-input').focus();
+  }
+}
+
+async function runQuickEval() {
+  var input = document.getElementById('qe-input');
+  var btn = document.getElementById('qe-go');
+  if (!input.value.trim()) {
+    input.style.borderColor = 'var(--red)';
+    setTimeout(function() { input.style.borderColor = ''; }, 1000);
+    return;
+  }
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    var res = await fetch('/api/quick-eval', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: input.value.trim() })
+    });
+    if (!res.ok) throw new Error('API error ' + res.status);
+    qeData = await res.json();
+
+    // Score display
+    var scoreEl = document.getElementById('qe-score');
+    var color = qeData.score >= 75 ? 'var(--green)' : qeData.score >= 55 ? 'var(--amber)' : 'var(--red)';
+    scoreEl.textContent = qeData.score;
+    scoreEl.style.color = color;
+    document.getElementById('qe-title').textContent = qeData.title || '—';
+    var verdictCls = 'verdict-' + (qeData.verdict || 'MAYBE');
+    document.getElementById('qe-verdict').innerHTML = '<span class="score-verdict ' + verdictCls + '">' + (qeData.verdict || 'MAYBE') + '</span>';
+
+    // Cover letter
+    qeCurrentVersion = 'a';
+    document.getElementById('qe-cover-text').textContent = qeData.cover_letter_a || qeData.proposal || 'Aucune cover letter générée.';
+
+    // Save to Supabase as new job
+    var jobRow = {
+      title: qeData.title || 'Quick Eval Job',
+      description: input.value.trim().slice(0, 5000),
+      score: qeData.score,
+      budget_min: qeData.budget_min,
+      budget_max: qeData.budget_max,
+      budget_type: qeData.budget_type || 'fixed',
+      budget_is_placeholder: qeData.budget_is_placeholder || false,
+      feasibility: qeData.score,
+      worth_score: qeData.margin_ratio ? Math.min(10, Math.round(qeData.margin_ratio)) : null,
+      margin_ratio: qeData.margin_ratio,
+      real_time_hours: qeData.real_time_hours,
+      billable_days: qeData.billable_days,
+      pricing_rule: qeData.pricing_rule,
+      client_info: qeData.client_info,
+      analysis: { ...qeData.analysis, verdict: qeData.verdict, proposal: qeData.proposal || qeData.cover_letter_a },
+      keywords_hit: qeData.keywords_hit || [],
+      cover_letter: qeData.cover_letter_a || qeData.proposal,
+      cover_letter_b: qeData.cover_letter_b,
+      source: 'quick_eval',
+      status: 'new',
+      scraped_at: new Date().toISOString(),
+      analyzed_at: new Date().toISOString()
+    };
+
+    var { error } = await sb.from('upwork_jobs').insert(jobRow);
+    if (error) console.error('QE save error', error);
+    else loadScraped();
+
+    document.getElementById('qe-result').classList.add('visible');
+
+  } catch(e) {
+    console.error('Quick eval error:', e);
+    toast('Erreur évaluation : ' + e.message, 'error');
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+function switchQeCover(version, btn) {
+  qeCurrentVersion = version;
+  var text = version === 'a' ? (qeData.cover_letter_a || qeData.proposal || '—') : (qeData.cover_letter_b || '—');
+  document.getElementById('qe-cover-text').textContent = text;
+  document.querySelectorAll('.qe-cover-tab').forEach(function(t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+function copyQeCover() {
+  var text = document.getElementById('qe-cover-text').textContent;
+  if (!text || text === '—') return;
+  navigator.clipboard.writeText(text).then(function() {
+    toast('Cover letter copiée ✓');
+  });
+}
+
+async function qeMarkApplied() {
+  if (!qeData) return;
+  // Find the job we just inserted and mark it applied
+  var { data } = await sb.from('upwork_jobs').select('id').eq('source', 'quick_eval').order('analyzed_at', { ascending: false }).limit(1);
+  if (data && data.length) {
+    await sb.from('upwork_jobs').update({ status: 'applied', applied_at: new Date().toISOString() }).eq('id', data[0].id);
+    toast('Marqué comme postulé ✓');
+    loadScraped();
+  }
 }
 
 loadUpwork();
