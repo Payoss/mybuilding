@@ -343,7 +343,7 @@ var currentJobData = null;
 async function loadUpwork() {
   try {
     var startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
-    var { data: all } = await sb.from('upwork_jobs').select('*').order('scraped_at', { ascending: false });
+    var { data: all } = await sb.from('upwork_jobs').select('*').order('created_at', { ascending: false });
     all = all || [];
     var month = all.filter(j => new Date(j.scraped_at || j.created_at) >= startOfMonth);
     var applied = all.filter(j => ['applied','interviewing','won'].includes(j.status));
@@ -398,7 +398,7 @@ function renderHistory(jobs) {
       <div class="hc ${ago.cls}" style="font-size:11px;font-weight:600">${ago.text}</div>
       <div class="hc mono">${budget_str(j)}</div>
       <div class="hc">${dualScorePill(j.feasibility, j.worth_score)}</div>
-      <div class="hc">${j.country || '—'}</div>
+      <div class="hc">${(j.country || '—').replace(/^Location\s+/i, '')}</div>
       <div class="hc">${STATUS_CHIPS[j.status] || j.status || ''}</div>
       <div class="hc hc-actions">
         <span class="action-tiny">Voir →</span>
@@ -652,7 +652,7 @@ var selectedJobs = new Set();
 
 async function loadScraped() {
   try {
-    var { data } = await sb.from('upwork_jobs').select('*').eq('source', 'extension').order('scraped_at', { ascending: false }).limit(200);
+    var { data } = await sb.from('upwork_jobs').select('*').eq('source', 'extension').order('created_at', { ascending: false }).limit(200);
     allScraped = data || [];
     document.getElementById('scraped-count').textContent = allScraped.length + ' jobs';
     renderScraped();
@@ -717,7 +717,7 @@ function sortJobs(jobs, key, dir) {
   sorted.sort(function(a, b) {
     var va, vb;
     if (key === 'title') { va = (a.title || '').toLowerCase(); vb = (b.title || '').toLowerCase(); return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
-    if (key === 'scraped' || key === 'date') { va = new Date(a.scraped_at || 0).getTime(); vb = new Date(b.scraped_at || 0).getTime(); }
+    if (key === 'scraped' || key === 'date') { va = new Date(a.created_at || a.scraped_at || 0).getTime(); vb = new Date(b.created_at || b.scraped_at || 0).getTime(); }
     else if (key === 'budget') { va = budgetNum(a); vb = budgetNum(b); }
     else if (key === 'score') { va = (a.worth_score || 0); vb = (b.worth_score || 0); }
     else if (key === 'composite') { va = compositeScore(a); vb = compositeScore(b); }
@@ -771,7 +771,7 @@ function renderScraped() {
     }
     var sniperTag = j.sniper_mode ? '<span style="color:var(--amber);font-size:10px;font-weight:700">🎯</span> ' : '';
     var frTag = j.is_french ? ' <span style="font-size:10px">🇫🇷</span>' : '';
-    var ago = timeAgo(j.scraped_at);
+    var ago = timeAgo(j.created_at || j.scraped_at);
     var goldClass = j.worth_score >= 8 ? ' row-gold' : '';
     var checked = selectedJobs.has(j.id) ? ' checked' : '';
     return '<div class="hrow hbody-row' + goldClass + '" style="grid-template-columns:30px 3fr 1fr 1fr 1.5fr 1fr 1fr 1fr" onclick="openJobDetail(\'' + j.id + '\')">'
@@ -781,7 +781,7 @@ function renderScraped() {
       + '<div class="hc ' + ago.cls + '" style="font-size:11px;font-weight:600">' + ago.text + '</div>'
       + '<div class="hc mono">' + budgetStr + '</div>'
       + '<div class="hc">' + dualScorePill(j.feasibility, j.worth_score) + '</div>'
-      + '<div class="hc">' + (j.country || '—') + '</div>'
+      + '<div class="hc">' + (j.country || '—').replace(/^Location\s+/i, '') + '</div>'
       + '<div class="hc">' + (STATUS_CHIPS[j.status] || j.status || '') + '</div>'
       + '<div class="hc hc-actions">'
       + '<span class="action-tiny" onclick="event.stopPropagation();markApplied(\'' + j.id + '\')">Postulé</span>'
