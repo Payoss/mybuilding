@@ -864,7 +864,7 @@ async function bulkAction(action) {
 }
 
 async function markApplied(id) {
-  await sb.from('upwork_jobs').update({ status: 'applied' }).eq('id', id);
+  await sb.from('upwork_jobs').update({ status: 'applied', applied_at: new Date().toISOString() }).eq('id', id);
   toast('Marqué postulé ✓');
   loadScraped();
 }
