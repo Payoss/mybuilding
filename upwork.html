@@ -71,6 +71,34 @@
 .time-stale { color: var(--amber) !important; }
 .time-dead { color: var(--red) !important; opacity: 0.7; }
 .hc-actions { display: flex; gap: 6px; align-items: center; }
+/* Gold highlight */
+.hbody-row.row-gold { border-left: 2px solid var(--teal); background: rgba(13,148,136,0.03); }
+.hbody-row.row-gold:hover { background: rgba(13,148,136,0.06); }
+/* Sortable headers */
+.hc-sort { cursor: pointer; user-select: none; transition: color 0.12s; display: flex; align-items: center; gap: 3px; }
+.hc-sort:hover { color: var(--teal); }
+.hc-sort .sort-arrow { font-size: 8px; opacity: 0.4; }
+.hc-sort.sort-active .sort-arrow { opacity: 1; color: var(--teal); }
+/* Search bar */
+.search-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.search-input { flex: 1; padding: 7px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; color: var(--t1); font-family: inherit; font-size: 12px; outline: none; transition: border-color 0.15s; }
+.search-input:focus { border-color: var(--teal); }
+.search-input::placeholder { color: var(--t3); }
+/* Bulk actions */
+.bulk-bar { display: none; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.15); border-radius: 8px; margin-bottom: 8px; font-size: 12px; color: var(--t2); }
+.bulk-bar.visible { display: flex; }
+.bulk-btn { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
+.bulk-btn-del { background: var(--red-bg); color: var(--red); }
+.bulk-btn-del:hover { background: rgba(248,113,113,0.25); }
+.bulk-btn-skip { background: var(--glass-h); color: var(--t2); }
+.bulk-btn-skip:hover { color: var(--amber); }
+.hc-check { width: 30px; display: flex; align-items: center; justify-content: center; }
+.row-check { width: 14px; height: 14px; accent-color: var(--teal); cursor: pointer; }
+/* Pagination */
+.pagination { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 10px; }
+.page-btn { padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--t2); font-family: inherit; transition: all 0.15s; }
+.page-btn:hover { border-color: var(--teal); color: var(--teal); }
+.page-btn.active { background: var(--teal-dim); color: var(--t1); border-color: var(--teal); font-weight: 600; }
 .paste-hint { font-size: 11px; color: var(--t3); display: flex; align-items: center; gap: 5px; margin-top: 10px; }
 @keyframes scoreIn { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
 .result-content.visible .score-circle { animation: scoreIn 0.4s 0.1s cubic-bezier(0.16,1,0.3,1) both; }
@@ -155,12 +183,24 @@
           <button class="filter-chip" onclick="filterScraped('fr',this)">🇫🇷 FR</button>
         </div>
       </div>
+      <div class="search-bar">
+        <input class="search-input" id="scraped-search" placeholder="Rechercher par titre ou skill..." oninput="onScrapedSearch()">
+      </div>
+      <div class="bulk-bar" id="scraped-bulk">
+        <input type="checkbox" class="row-check" id="scraped-select-all" onchange="toggleSelectAll(this.checked)">
+        <span id="scraped-bulk-count">0 sélectionnés</span>
+        <div style="margin-left:auto;display:flex;gap:4px">
+          <button class="bulk-btn bulk-btn-skip" onclick="bulkAction('skipped')">Passer</button>
+          <button class="bulk-btn bulk-btn-del" onclick="bulkAction('delete')">Supprimer</button>
+        </div>
+      </div>
       <div class="htable-wrap">
-        <div class="hrow hhead" style="grid-template-columns:3fr 1fr 1fr 1.5fr 1fr 1fr 1fr">
-          <div class="hc">Job</div>
-          <div class="hc">Publié</div>
-          <div class="hc">Budget</div>
-          <div class="hc">Score</div>
+        <div class="hrow hhead" style="grid-template-columns:30px 3fr 1fr 1fr 1.5fr 1fr 1fr 1fr">
+          <div class="hc hc-check"></div>
+          <div class="hc hc-sort" onclick="sortScraped('title')">Job <span class="sort-arrow">▼</span></div>
+          <div class="hc hc-sort sort-active" onclick="sortScraped('date')">Publié <span class="sort-arrow">▼</span></div>
+          <div class="hc hc-sort" onclick="sortScraped('budget')">Budget <span class="sort-arrow">▼</span></div>
+          <div class="hc hc-sort" onclick="sortScraped('score')">Score <span class="sort-arrow">▼</span></div>
           <div class="hc">Pays</div>
           <div class="hc">Statut</div>
           <div class="hc">Action</div>
@@ -168,6 +208,7 @@
         <div id="scraped-rows">
           <div class="empty-state"><div class="empty-text">Chargement...</div></div>
         </div>
+        <div class="pagination" id="scraped-pagination"></div>
       </div>
     </div>
 
@@ -543,10 +584,15 @@ function showKeywords() {
 var allScraped = [];
 var allHistory = [];
 var scrapedFilter = 'all';
+var scrapedSort = { key: 'composite', dir: 'desc' };
+var scrapedPage = 0;
+var SCRAPED_PER_PAGE = 30;
+var scrapedSearch = '';
+var selectedJobs = new Set();
 
 async function loadScraped() {
   try {
-    var { data } = await sb.from('upwork_jobs').select('*').eq('source', 'extension').order('scraped_at', { ascending: false }).limit(100);
+    var { data } = await sb.from('upwork_jobs').select('*').eq('source', 'extension').order('scraped_at', { ascending: false }).limit(200);
     allScraped = data || [];
     document.getElementById('scraped-count').textContent = allScraped.length + ' jobs';
     renderScraped();
@@ -558,8 +604,15 @@ async function loadScraped() {
 
 function filterScraped(filter, el) {
   scrapedFilter = filter;
+  scrapedPage = 0;
   document.querySelectorAll('#scraped-tile .filter-chip').forEach(function(c) { c.classList.remove('active'); });
   if (el) el.classList.add('active');
+  renderScraped();
+}
+
+function onScrapedSearch() {
+  scrapedSearch = document.getElementById('scraped-search').value.toLowerCase().trim();
+  scrapedPage = 0;
   renderScraped();
 }
 
@@ -587,19 +640,85 @@ function timeAgo(dateStr) {
   return { text: text, cls: cls };
 }
 
-function renderScraped() {
+function budgetNum(j) {
+  return j.budget_max || j.budget_min || 0;
+}
+
+function compositeScore(j) {
+  // Fresh + high worth = top. Recency weight decays over hours.
+  var hoursAgo = (Date.now() - new Date(j.posted_at || j.scraped_at || 0).getTime()) / 3600000;
+  var recency = Math.max(0, 1 - hoursAgo / 168); // decays to 0 over 7 days
+  var worth = (j.worth_score || 0) / 10;
+  return recency * 0.4 + worth * 0.6;
+}
+
+function sortJobs(jobs, key, dir) {
+  var sorted = jobs.slice();
+  sorted.sort(function(a, b) {
+    var va, vb;
+    if (key === 'title') { va = (a.title || '').toLowerCase(); vb = (b.title || '').toLowerCase(); return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
+    if (key === 'date') { va = new Date(a.posted_at || a.scraped_at || 0).getTime(); vb = new Date(b.posted_at || b.scraped_at || 0).getTime(); }
+    else if (key === 'budget') { va = budgetNum(a); vb = budgetNum(b); }
+    else if (key === 'score') { va = (a.worth_score || 0); vb = (b.worth_score || 0); }
+    else if (key === 'composite') { va = compositeScore(a); vb = compositeScore(b); }
+    else { va = 0; vb = 0; }
+    return dir === 'asc' ? va - vb : vb - va;
+  });
+  return sorted;
+}
+
+function sortScraped(key) {
+  if (scrapedSort.key === key) {
+    scrapedSort.dir = scrapedSort.dir === 'desc' ? 'asc' : 'desc';
+  } else {
+    scrapedSort.key = key;
+    scrapedSort.dir = 'desc';
+  }
+  scrapedPage = 0;
+  // Update header visuals
+  document.querySelectorAll('#scraped-tile .hc-sort').forEach(function(el) {
+    el.classList.remove('sort-active');
+    el.querySelector('.sort-arrow').textContent = '▼';
+  });
+  event.currentTarget.classList.add('sort-active');
+  event.currentTarget.querySelector('.sort-arrow').textContent = scrapedSort.dir === 'desc' ? '▼' : '▲';
+  renderScraped();
+}
+
+function getFilteredScraped() {
   var filtered = allScraped;
-  if (scrapedFilter === 'sniper') filtered = allScraped.filter(function(j) { return j.sniper_mode; });
-  else if (scrapedFilter === 'gold') filtered = allScraped.filter(function(j) { return j.worth_score >= 8 && !j.sniper_mode; });
-  else if (scrapedFilter === 'fr') filtered = allScraped.filter(function(j) { return j.is_french; });
+  if (scrapedFilter === 'sniper') filtered = filtered.filter(function(j) { return j.sniper_mode; });
+  else if (scrapedFilter === 'gold') filtered = filtered.filter(function(j) { return j.worth_score >= 8 && !j.sniper_mode; });
+  else if (scrapedFilter === 'fr') filtered = filtered.filter(function(j) { return j.is_french; });
+
+  if (scrapedSearch) {
+    filtered = filtered.filter(function(j) {
+      var title = (j.title || '').toLowerCase();
+      var skills = (j.skills || []).join(' ').toLowerCase();
+      return title.indexOf(scrapedSearch) !== -1 || skills.indexOf(scrapedSearch) !== -1;
+    });
+  }
+
+  return sortJobs(filtered, scrapedSort.key, scrapedSort.dir);
+}
+
+function renderScraped() {
+  var filtered = getFilteredScraped();
 
   if (!filtered.length) {
     document.getElementById('scraped-rows').innerHTML = '<div class="empty-state"><div class="empty-text">' +
-      (scrapedFilter === 'all' ? 'Aucun job scrapé. Installe l\'extension Chrome.' : 'Aucun job dans ce filtre.') + '</div></div>';
+      (scrapedSearch ? 'Aucun résultat pour "' + scrapedSearch + '"' : scrapedFilter === 'all' ? 'Aucun job scrapé. Installe l\'extension Chrome.' : 'Aucun job dans ce filtre.') + '</div></div>';
+    document.getElementById('scraped-pagination').innerHTML = '';
     return;
   }
 
-  document.getElementById('scraped-rows').innerHTML = filtered.map(function(j) {
+  // Pagination
+  var totalPages = Math.ceil(filtered.length / SCRAPED_PER_PAGE);
+  if (scrapedPage >= totalPages) scrapedPage = totalPages - 1;
+  var start = scrapedPage * SCRAPED_PER_PAGE;
+  var pageJobs = filtered.slice(start, start + SCRAPED_PER_PAGE);
+
+  document.getElementById('scraped-rows').innerHTML = pageJobs.map(function(j) {
     var budgetStr = '—';
     if (j.budget_min || j.budget_max) {
       var bmin = j.budget_min || 0, bmax = j.budget_max || bmin;
@@ -609,7 +728,10 @@ function renderScraped() {
     var sniperTag = j.sniper_mode ? '<span style="color:var(--amber);font-size:10px;font-weight:700">🎯</span> ' : '';
     var frTag = j.is_french ? ' <span style="font-size:10px">🇫🇷</span>' : '';
     var ago = timeAgo(j.posted_at || j.scraped_at);
-    return '<div class="hrow hbody-row" style="grid-template-columns:3fr 1fr 1fr 1.5fr 1fr 1fr 1fr" onclick="openJobDetail(\'' + j.id + '\')">'
+    var goldClass = j.worth_score >= 8 ? ' row-gold' : '';
+    var checked = selectedJobs.has(j.id) ? ' checked' : '';
+    return '<div class="hrow hbody-row' + goldClass + '" style="grid-template-columns:30px 3fr 1fr 1fr 1.5fr 1fr 1fr 1fr" onclick="openJobDetail(\'' + j.id + '\')">'
+      + '<div class="hc hc-check" onclick="event.stopPropagation()"><input type="checkbox" class="row-check" data-id="' + j.id + '"' + checked + ' onchange="toggleSelect(\'' + j.id + '\',this.checked)"></div>'
       + '<div><div class="hc-title">' + sniperTag + (j.title || '—') + frTag + '</div>'
       + '<div class="hc-kw">' + (j.skills || []).slice(0,3).join(' · ') + '</div></div>'
       + '<div class="hc ' + ago.cls + '" style="font-size:11px;font-weight:600">' + ago.text + '</div>'
@@ -623,6 +745,78 @@ function renderScraped() {
       + '</div>'
       + '</div>';
   }).join('');
+
+  // Pagination controls
+  if (totalPages > 1) {
+    var pHtml = '';
+    if (scrapedPage > 0) pHtml += '<button class="page-btn" onclick="scrapedPage=0;renderScraped()">«</button><button class="page-btn" onclick="scrapedPage--;renderScraped()">‹</button>';
+    for (var p = 0; p < totalPages; p++) {
+      if (totalPages > 7 && Math.abs(p - scrapedPage) > 2 && p !== 0 && p !== totalPages - 1) {
+        if (p === 1 || p === totalPages - 2) pHtml += '<span style="color:var(--t3);font-size:11px">…</span>';
+        continue;
+      }
+      pHtml += '<button class="page-btn' + (p === scrapedPage ? ' active' : '') + '" onclick="scrapedPage=' + p + ';renderScraped()">' + (p+1) + '</button>';
+    }
+    if (scrapedPage < totalPages - 1) pHtml += '<button class="page-btn" onclick="scrapedPage++;renderScraped()">›</button><button class="page-btn" onclick="scrapedPage=' + (totalPages-1) + ';renderScraped()">»</button>';
+    document.getElementById('scraped-pagination').innerHTML = pHtml;
+  } else {
+    document.getElementById('scraped-pagination').innerHTML = '';
+  }
+
+  updateBulkBar();
+}
+
+// ---- Selection & Bulk ----
+function toggleSelect(id, checked) {
+  if (checked) selectedJobs.add(id);
+  else selectedJobs.delete(id);
+  updateBulkBar();
+}
+
+function toggleSelectAll(checked) {
+  var filtered = getFilteredScraped();
+  var start = scrapedPage * SCRAPED_PER_PAGE;
+  var pageJobs = filtered.slice(start, start + SCRAPED_PER_PAGE);
+  pageJobs.forEach(function(j) {
+    if (checked) selectedJobs.add(j.id);
+    else selectedJobs.delete(j.id);
+  });
+  document.querySelectorAll('#scraped-rows .row-check').forEach(function(cb) { cb.checked = checked; });
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  var bar = document.getElementById('scraped-bulk');
+  var count = selectedJobs.size;
+  if (count > 0) {
+    bar.classList.add('visible');
+    document.getElementById('scraped-bulk-count').textContent = count + ' sélectionné' + (count > 1 ? 's' : '');
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+async function bulkAction(action) {
+  var ids = Array.from(selectedJobs);
+  if (!ids.length) return;
+  if (action === 'delete') {
+    for (var i = 0; i < ids.length; i++) {
+      await sb.from('upwork_jobs').delete().eq('id', ids[i]);
+    }
+    allScraped = allScraped.filter(function(j) { return !selectedJobs.has(j.id); });
+    toast(ids.length + ' jobs supprimés');
+  } else {
+    for (var i = 0; i < ids.length; i++) {
+      await sb.from('upwork_jobs').update({ status: action }).eq('id', ids[i]);
+    }
+    allScraped.forEach(function(j) { if (selectedJobs.has(j.id)) j.status = action; });
+    toast(ids.length + ' jobs marqués ' + action);
+  }
+  selectedJobs.clear();
+  document.getElementById('scraped-count').textContent = allScraped.length + ' jobs';
+  renderScraped();
+  renderFunnel();
+  loadUpwork();
 }
 
 async function markApplied(id) {
@@ -636,6 +830,7 @@ async function deleteJob(id) {
   if (error) { toast('Erreur suppression', 'error'); return; }
   toast('Job supprimé');
   allScraped = allScraped.filter(function(j) { return j.id !== id; });
+  selectedJobs.delete(id);
   document.getElementById('scraped-count').textContent = allScraped.length + ' jobs';
   renderScraped();
   renderFunnel();
