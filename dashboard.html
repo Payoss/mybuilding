@@ -294,18 +294,31 @@ function openPanel(jobId) {
   currentPanelJob = job;
 
   document.getElementById('sp-title').textContent = job.title || '—';
-  document.getElementById('sp-score').innerHTML = job.score != null ? scorePill(job.score) : '—';
 
+  // Score: worth_score + feasibility
+  var scoreHtml = '—';
+  if (job.worth_score != null) {
+    scoreHtml = scorePill(job.worth_score);
+    if (job.feasibility != null) scoreHtml += ' <span style="font-size:11px;color:var(--t3);margin-left:6px">Faisabilité: ' + job.feasibility + '%</span>';
+  }
+  document.getElementById('sp-score').innerHTML = scoreHtml;
+
+  // Budget
   var budgetStr = '—';
   if (job.budget_min || job.budget_max) {
     var bmin = job.budget_min || 0, bmax = job.budget_max || bmin;
     budgetStr = '$' + (bmin >= 1000 ? (bmin/1000).toFixed(1)+'K' : bmin);
     if (bmax !== bmin) budgetStr += ' – $' + (bmax >= 1000 ? (bmax/1000).toFixed(1)+'K' : bmax);
+    if (job.budget_type) budgetStr += ' (' + job.budget_type + ')';
   }
   document.getElementById('sp-budget').textContent = budgetStr;
   document.getElementById('sp-skills').textContent = (job.skills || []).join(', ') || '—';
   document.getElementById('sp-country').textContent = job.country || '—';
   document.getElementById('sp-applied-at').textContent = job.applied_at ? new Date(job.applied_at).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+
+  // Description
+  var desc = job.description || '';
+  document.getElementById('sp-description').textContent = desc ? (desc.length > 800 ? desc.substring(0, 800) + '...' : desc) : '—';
 
   if (job.url) {
     document.getElementById('sp-link').href = job.url;
