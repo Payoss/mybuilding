@@ -312,8 +312,15 @@ function openPanel(jobId) {
     if (job.budget_type) budgetStr += ' (' + job.budget_type + ')';
   }
   document.getElementById('sp-budget').textContent = budgetStr;
-  document.getElementById('sp-skills').textContent = (job.skills || []).join(', ') || '—';
-  document.getElementById('sp-country').textContent = job.country || '—';
+  // Skills: filter out metadata noise (Unverified, $0 spent, Location X)
+  var cleanSkills = (job.skills || []).filter(function(s) {
+    return !/^(Unverified|Location |Verified|\$0 spent)/i.test(s);
+  });
+  document.getElementById('sp-skills').textContent = cleanSkills.join(', ') || '—';
+
+  // Country: strip "Location " prefix if present
+  var country = (job.country || '').replace(/^Location\s+/i, '');
+  document.getElementById('sp-country').textContent = country || '—';
   document.getElementById('sp-applied-at').textContent = job.applied_at ? new Date(job.applied_at).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) : '—';
 
   // Description

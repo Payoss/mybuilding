@@ -54,7 +54,14 @@ function stageBadge(stage) {
 
 function scorePill(score) {
   if (score == null) return '<span class="muted">—</span>';
-  var cls = score >= 75 ? 'sp-high' : score >= 55 ? 'sp-med' : 'sp-low';
+  var cls;
+  if (score <= 10) {
+    // Scale /10 (worth_score)
+    cls = score >= 8 ? 'sp-high' : score >= 6 ? 'sp-med' : 'sp-low';
+  } else {
+    // Scale /100 (feasibility)
+    cls = score >= 75 ? 'sp-high' : score >= 55 ? 'sp-med' : 'sp-low';
+  }
   return '<span class="score-pill ' + cls + '">' + score + '</span>';
 }
 
