@@ -203,35 +203,6 @@
       </div>
     </div>
 
-    <!-- ANALYZER + RESULT (desktop) -->
-    <div class="analyzer-row fade-up fade-up-2 desktop-only">
-
-      <!-- PASTE -->
-      <div class="tile">
-        <div class="tile-title">Analyser un job <span class="tile-title-sub">Colle la description</span></div>
-        <textarea class="paste-area" id="jobInput" placeholder="Colle ici la description du job Upwork..."></textarea>
-        <div class="keywords-row" id="kw-chips"></div>
-        <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">
-          <div class="spinner"></div>
-          <span class="btn-label">✦ Analyser avec Claude</span>
-        </button>
-        <div class="paste-hint">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a1 1 0 110 2 1 1 0 010-2zm-1 4h2v4H7V8z"/></svg>
-          Profil actif : Paul Annes · React / Claude API / n8n / Full-stack
-        </div>
-      </div>
-
-      <!-- RESULT -->
-      <div class="tile" id="result-tile">
-        <div class="tile-title">Résultat d'analyse</div>
-        <div class="result-empty" id="resultEmpty">
-          <div class="result-empty-icon">✦</div>
-          <div style="font-size:12px;color:var(--t3);text-align:center">Colle une description<br>et clique sur Analyser</div>
-        </div>
-        <div class="result-content" id="resultContent"></div>
-      </div>
-    </div>
-
     <!-- SCRAPED JOBS (from extension) -->
     <div class="tile fade-up fade-up-3 desktop-only" id="scraped-tile">
       <div class="tile-title">Jobs scrapés
@@ -272,8 +243,37 @@
       </div>
     </div>
 
+    <!-- ANALYZER + RESULT (desktop) -->
+    <div class="analyzer-row fade-up fade-up-3 desktop-only">
+
+      <!-- PASTE -->
+      <div class="tile">
+        <div class="tile-title">Analyser un job <span class="tile-title-sub">Colle la description</span></div>
+        <textarea class="paste-area" id="jobInput" placeholder="Colle ici la description du job Upwork..."></textarea>
+        <div class="keywords-row" id="kw-chips"></div>
+        <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">
+          <div class="spinner"></div>
+          <span class="btn-label">✦ Analyser avec Claude</span>
+        </button>
+        <div class="paste-hint">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a1 1 0 110 2 1 1 0 010-2zm-1 4h2v4H7V8z"/></svg>
+          Profil actif : Paul Annes · React / Claude API / n8n / Full-stack
+        </div>
+      </div>
+
+      <!-- RESULT -->
+      <div class="tile" id="result-tile">
+        <div class="tile-title">Résultat d'analyse</div>
+        <div class="result-empty" id="resultEmpty">
+          <div class="result-empty-icon">✦</div>
+          <div style="font-size:12px;color:var(--t3);text-align:center">Colle une description<br>et clique sur Analyser</div>
+        </div>
+        <div class="result-content" id="resultContent"></div>
+      </div>
+    </div>
+
     <!-- PROPOSAL FUNNEL -->
-    <div class="tile fade-up fade-up-3" id="funnel-tile">
+    <div class="tile fade-up fade-up-4" id="funnel-tile">
       <div class="tile-title">Funnel <span class="tile-title-sub">Conversion pipeline</span></div>
       <div id="funnel-container" style="display:flex;gap:12px;align-items:flex-end;height:80px"></div>
     </div>
@@ -652,7 +652,7 @@ var selectedJobs = new Set();
 
 async function loadScraped() {
   try {
-    var { data } = await sb.from('upwork_jobs').select('*').eq('source', 'extension').order('scraped_at', { ascending: false }).order('id', { ascending: false }).limit(200);
+    var { data } = await sb.from('upwork_jobs').select('*').eq('source', 'extension').order('scraped_at', { ascending: false }).order('id', { ascending: true }).limit(200);
     allScraped = data || [];
     document.getElementById('scraped-count').textContent = allScraped.length + ' jobs';
     renderScraped();
