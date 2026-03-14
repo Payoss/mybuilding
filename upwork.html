@@ -74,7 +74,10 @@
 /* Gold highlight */
 .hbody-row.row-gold { border-left: 2px solid var(--teal); background: rgba(13,148,136,0.03); }
 .hbody-row.row-gold:hover { background: rgba(13,148,136,0.06); }
-/* Column headers (no sort) */
+/* Filter chips */
+.filter-chip { padding: 4px 10px; border-radius: 20px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); color: var(--t2); transition: all 0.15s; background: none; font-family: inherit; }
+.filter-chip.active { border-color: var(--teal); color: var(--teal); background: var(--teal-glow); }
+.filter-chip:hover:not(.active) { border-color: rgba(255,255,255,0.15); color: var(--t1); }
 /* Search bar */
 .search-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .search-input { flex: 1; padding: 7px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; color: var(--t1); font-family: inherit; font-size: 12px; outline: none; transition: border-color 0.15s; }
