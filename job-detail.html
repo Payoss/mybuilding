@@ -593,16 +593,13 @@ async function maybePregenCovers() {
   })();
 }
 
-// Read a streaming response, optionally writing tokens live into two textareas
+// Read a streaming response, optionally writing tokens live into a textarea
+// Protocol: server streams raw text chunks, ends with "\n__RESULT__:{full json}"
 async function _readStream(response, liveTargets) {
   var reader = response.body.getReader();
   var decoder = new TextDecoder();
   var full = '';
-
-  // liveTargets: {a: textarea_el, b: textarea_el} for live display
-  // Protocol: stream is raw JSON text. We display live then parse at end.
-  var displayBuf = '';
-  var inCoverSection = false; // for full-pipeline stream (COVER: prefix)
+  var liveDisplay = '';
 
   while (true) {
     var _ref = await reader.read();
@@ -611,23 +608,19 @@ async function _readStream(response, liveTargets) {
     var chunk = decoder.decode(value, { stream: true });
     full += chunk;
 
-    if (liveTargets) {
-      displayBuf += chunk;
-      // Find version_a content and stream into textarea A live
-      // Simple heuristic: display all text after "version_a": "
-      var vaIdx = displayBuf.indexOf('"version_a"');
-      if (vaIdx !== -1) {
-        var afterKey = displayBuf.indexOf('"', vaIdx + 11);
-        if (afterKey !== -1) {
-          var liveText = displayBuf.slice(afterKey + 1);
-          // Strip trailing JSON (version_b onwards)
-          var vbIdx = liveText.indexOf('"version_b"');
-          if (vbIdx !== -1) liveText = liveText.slice(0, vbIdx - 3); // trim ,\n"
-          liveText = liveText.replace(/\\n/g, '\n').replace(/\\"/g, '"');
-          if (liveTargets.a) liveTargets.a.value = liveText;
-        }
-      }
+    // Live display — show streaming text in textarea A (strip __RESULT__ suffix)
+    if (liveTargets && liveTargets.a) {
+      liveDisplay += chunk;
+      var resultIdx = liveDisplay.indexOf('\n__RESULT__:');
+      var displayText = resultIdx !== -1 ? liveDisplay.slice(0, resultIdx) : liveDisplay;
+      liveTargets.a.value = displayText;
     }
+  }
+
+  // Extract final JSON from __RESULT__ marker (most reliable)
+  var resultMarker = full.indexOf('\n__RESULT__:');
+  if (resultMarker !== -1) {
+    return full.slice(resultMarker + '\n__RESULT__:'.length);
   }
   return full;
 }

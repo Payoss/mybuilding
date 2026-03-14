@@ -109,9 +109,9 @@ def _run_claude(prompt: str, model: str = "haiku", timeout: int = 120) -> dict:
 
 
 def _stream_sonnet(prompt: str, timeout: int = 180):
-    """Generator: streams Sonnet tokens via claude -p --output-format stream-json.
+    """Generator: streams Sonnet tokens via claude -p --output-format stream-json --verbose.
     Yields raw text chunks for StreamingResponse."""
-    cmd = ["claude", "-p", "--model", "sonnet", "--output-format", "stream-json"]
+    cmd = ["claude", "-p", "--model", "sonnet", "--output-format", "stream-json", "--verbose"]
     proc = subprocess.Popen(
         cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         stderr=subprocess.PIPE, text=True, encoding="utf-8"
@@ -119,27 +119,31 @@ def _stream_sonnet(prompt: str, timeout: int = 180):
     proc.stdin.write(prompt)
     proc.stdin.close()
 
-    full_text = []
     for line in proc.stdout:
         line = line.strip()
         if not line:
             continue
         try:
             event = json.loads(line)
-            # stream-json events: {"type":"text","text":"..."} or {"type":"result","result":"..."}
-            if event.get("type") == "text":
-                chunk = event.get("text", "")
-                if chunk:
-                    full_text.append(chunk)
-                    yield chunk
+            # stream-json --verbose events:
+            # {"type":"assistant","message":{"content":[{"type":"text","text":"..."}],...}}
+            # {"type":"result","result":"<full text>"}
+            if event.get("type") == "assistant":
+                msg = event.get("message", {})
+                for block in msg.get("content", []):
+                    if block.get("type") == "text":
+                        chunk = block.get("text", "")
+                        if chunk:
+                            yield chunk
             elif event.get("type") == "result":
-                # Final result event — not used for streaming but captures full output
-                pass
+                # result event has the full accumulated text — use as final flush
+                result_text = event.get("result", "")
+                if result_text:
+                    yield "\n__RESULT__:" + result_text
         except (json.JSONDecodeError, KeyError):
             continue
 
     proc.wait()
-    return "".join(full_text)
 
 
 SYSTEM = """Tu es GUS, analyste Upwork expert ET rédacteur de propositions. Tu travailles pour Paul Annes.
