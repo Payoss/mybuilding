@@ -1,21 +1,30 @@
 """
 mybuilding.dev — Upwork Analyzer API
-FastAPI + claude -p (Claude Max OAuth, zero cost)
+FastAPI + Groq (enrich/analyze) + claude -p Sonnet streaming (cover letters)
 Port : 3002 (localhost only, nginx proxie /api/)
 
 Performance:
-  - /api/full-pipeline : analyze+enrich in 1 Haiku call, then cover in 1 Sonnet call (2 calls vs 3)
-  - /api/pre-enrich : analyze+enrich only (called at scan time for pre-computation)
-  - Haiku = scoring/enrich (fast, structured), Sonnet = cover letter (nuanced writing)
+  - /api/job-enrich, /api/pre-enrich, /api/analyze → Groq Llama 70B (~1s, was ~20s)
+  - /api/cover-letter → Sonnet streaming (tokens live, perceived instant)
+  - /api/full-pipeline → Groq (step1, ~1s) + Sonnet streaming (step2, ~25s perceived fast)
+  - worth_score >= 8 → pre-generation triggered by frontend at job open
 """
-import subprocess, json, sys, asyncio
+import subprocess, json, sys, asyncio, os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Any
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from groq import Groq as GroqClient
 from pydantic import BaseModel
 
 _executor = ThreadPoolExecutor(max_workers=4)
+
+# ── Groq client (enrich/analyze — fast structured JSON)
+_groq = GroqClient(api_key=os.environ.get("GROQ_API_KEY", ""))
+
+# haiku routes → Groq Llama 70B (~1s). sonnet routes → Claude subprocess (streaming).
+GROQ_MODEL = "llama-3.3-70b-versatile"
 
 app = FastAPI(title="mybuilding-api", docs_url=None, redoc_url=None)
 
@@ -60,26 +69,77 @@ class CoverLetterRequest(BaseModel):
 # CLAUDE RUNNER — centralized subprocess with model selection
 # ══════════════════════════════════════════════════════════════
 
+def _parse_json_from_output(output: str) -> dict:
+    """Extract and parse JSON from LLM output. Strips em-dashes from cover fields."""
+    output = output.strip()
+    start = output.find("{")
+    end = output.rfind("}") + 1
+    if start == -1 or end == 0:
+        raise ValueError(f"No JSON in LLM response: {output[:200]}")
+    data = json.loads(output[start:end])
+    for key in ("cover_letter_a", "cover_letter_b", "version_a", "version_b", "proposal"):
+        if key in data and isinstance(data[key], str):
+            data[key] = data[key].replace("—", ",").replace("–", ",")
+    return data
+
+
+def _run_groq(prompt: str, timeout: int = 30) -> dict:
+    """Groq Llama 70B — structured JSON tasks (enrich, analyze, pre-enrich). ~1s."""
+    response = _groq.chat.completions.create(
+        model=GROQ_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"},
+        timeout=timeout,
+    )
+    raw = response.choices[0].message.content
+    return _parse_json_from_output(raw)
+
+
 def _run_claude(prompt: str, model: str = "haiku", timeout: int = 120) -> dict:
-    """Run claude -p with model selection. Returns parsed JSON dict.
-    model: 'haiku' (fast/cheap) or 'sonnet' (nuanced writing).
-    Prompt passed via stdin to avoid shell argument size limits."""
+    """Route: haiku → Groq (~1s). sonnet → Claude subprocess (~25s, use streaming when possible)."""
+    if model == "haiku":
+        return _run_groq(prompt, timeout=30)
+    # sonnet → Claude subprocess (cover letters — quality writing)
     cmd = ["claude", "-p", "--model", model]
     result = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         print(f"claude [{model}] stderr: {result.stderr[:500]}", file=sys.stderr)
         raise ValueError(f"claude [{model}] exit {result.returncode}")
-    output = result.stdout.strip()
-    start = output.find("{")
-    end = output.rfind("}") + 1
-    if start == -1 or end == 0:
-        raise ValueError(f"No JSON in claude [{model}] response")
-    data = json.loads(output[start:end])
-    # Strip em-dashes from cover letter fields (Claude sometimes ignores the "no em dashes" rule)
-    for key in ("cover_letter_a", "cover_letter_b", "version_a", "version_b", "proposal"):
-        if key in data and isinstance(data[key], str):
-            data[key] = data[key].replace("—", ",").replace("–", ",")
-    return data
+    return _parse_json_from_output(result.stdout)
+
+
+def _stream_sonnet(prompt: str, timeout: int = 180):
+    """Generator: streams Sonnet tokens via claude -p --output-format stream-json.
+    Yields raw text chunks for StreamingResponse."""
+    cmd = ["claude", "-p", "--model", "sonnet", "--output-format", "stream-json"]
+    proc = subprocess.Popen(
+        cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, text=True, encoding="utf-8"
+    )
+    proc.stdin.write(prompt)
+    proc.stdin.close()
+
+    full_text = []
+    for line in proc.stdout:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+            # stream-json events: {"type":"text","text":"..."} or {"type":"result","result":"..."}
+            if event.get("type") == "text":
+                chunk = event.get("text", "")
+                if chunk:
+                    full_text.append(chunk)
+                    yield chunk
+            elif event.get("type") == "result":
+                # Final result event — not used for streaming but captures full output
+                pass
+        except (json.JSONDecodeError, KeyError):
+            continue
+
+    proc.wait()
+    return "".join(full_text)
 
 
 SYSTEM = """Tu es GUS, analyste Upwork expert ET rédacteur de propositions. Tu travailles pour Paul Annes.
@@ -440,10 +500,8 @@ Return ONLY valid JSON:
 Both versions MUST contain all 6 blocs L1-L6 in order."""
 
 
-@app.post("/api/cover-letter")
-async def cover_letter(req: CoverLetterRequest):
-    if not req.title.strip():
-        raise HTTPException(400, "Titre vide")
+def _build_cover_context(req) -> str:
+    """Build cover letter prompt context from request."""
     context = f"""JOB TITLE: {req.title}
 DESCRIPTION: {req.description or 'Non disponible'}
 SKILLS: {', '.join(req.skills) if req.skills else 'Non specifies'}
@@ -459,17 +517,27 @@ COUNTRY: {req.country or 'Non specifie'}"""
                 for i, s in enumerate(steps)
             )
             context += f"\n\nEXECUTION PLAN:\n{plan_str}"
+    return context
+
+
+@app.post("/api/cover-letter")
+async def cover_letter(req: CoverLetterRequest):
+    """Sonnet streaming — tokens arrive live, perceived as instant."""
+    if not req.title.strip():
+        raise HTTPException(400, "Titre vide")
+    context = _build_cover_context(req)
     prompt = COVER_SYSTEM + "\n\n" + context
-    try:
-        loop = asyncio.get_event_loop()
-        # Sonnet for cover letter — nuanced writing quality
-        data = await loop.run_in_executor(_executor, _run_claude, prompt, "sonnet", 180)
-        return data
-    except subprocess.TimeoutExpired:
-        raise HTTPException(504, "Timeout Claude")
-    except Exception as e:
-        print(f"cover error: {e}", file=sys.stderr)
-        raise HTTPException(500, str(e))
+
+    def stream_gen():
+        accumulated = []
+        for chunk in _stream_sonnet(prompt):
+            accumulated.append(chunk)
+            # Stream raw text chunks — frontend reassembles JSON
+            yield chunk
+        # After stream ends, ensure em-dashes stripped (best-effort on full text)
+        # Frontend handles JSON parsing from accumulated stream
+
+    return StreamingResponse(stream_gen(), media_type="text/plain; charset=utf-8")
 
 
 # ══════════════════════════════════════════════════════════════
@@ -580,7 +648,7 @@ COUNTRY: {req.country or 'Non specifie'}"""
         analysis["cover_letter_b"] = None
         return analysis
 
-    # Step 2: Sonnet — cover letter with enrichment context
+    # Step 2: Sonnet streaming — cover letter with enrichment context
     enrichment = analysis.get("enrichment", {})
     cover_context = job_context
     if enrichment.get("why_for_you"):
@@ -593,19 +661,18 @@ COUNTRY: {req.country or 'Non specifie'}"""
         )
         cover_context += f"\n\nEXECUTION PLAN:\n{plan_str}"
 
-    try:
-        prompt_cover = COVER_SYSTEM + "\n\n" + cover_context
-        covers = await loop.run_in_executor(_executor, _run_claude, prompt_cover, "sonnet", 180)
-        analysis["cover_letter_a"] = covers.get("version_a")
-        analysis["cover_letter_b"] = covers.get("version_b")
-    except Exception as e:
-        print(f"full-pipeline cover error: {e}", file=sys.stderr)
-        # Return analysis even if cover fails
-        analysis["cover_letter_a"] = None
-        analysis["cover_letter_b"] = None
-        analysis["cover_error"] = str(e)
+    prompt_cover = COVER_SYSTEM + "\n\n" + cover_context
 
-    return analysis
+    # Stream: send analysis JSON first, then stream cover tokens
+    def full_pipeline_stream():
+        # First chunk: analysis JSON (enrich data for frontend to cache)
+        yield "ANALYSIS:" + json.dumps(analysis) + "\n"
+        # Then stream cover letter tokens live
+        yield "COVER:"
+        for chunk in _stream_sonnet(prompt_cover):
+            yield chunk
+
+    return StreamingResponse(full_pipeline_stream(), media_type="text/plain; charset=utf-8")
 
 
 # ══════════════════════════════════════════════════════════════

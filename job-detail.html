@@ -480,6 +480,8 @@ async function loadEnrichment() {
 
     stopEnrichProgress(true);
     renderEnrichment(_enrichment);
+    // worth >= 8 → pre-generate cover letter silently in background
+    maybePregenCovers();
   } catch(e) {
     console.error('Enrichment error:', e);
     stopEnrichProgress(false);
@@ -549,6 +551,87 @@ var _genTimer = null;
 var _genElapsedTimer = null;
 var _genStart = 0;
 
+// Pre-generation cache for worth >= 8 jobs
+var _pregenCovers = null;  // {version_a, version_b} if pre-generated
+var _pregenPromise = null; // Promise in flight
+
+// Triggered automatically after enrichment if worth_score >= 8
+async function maybePregenCovers() {
+  if ((_job.worth_score || 0) < 8) return;
+  if (_job.cover_letter || _job.cover_letter_b) return; // already in DB
+  if (_pregenCovers || _pregenPromise) return; // already running
+
+  var skills = (_job.skills || []).filter(function(s) { return s && !/^(Location|Unverified|Payment|\$\d)/.test(s); });
+
+  _pregenPromise = (async function() {
+    try {
+      var res = await fetch('/api/cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: _job.title,
+          description: _job.description,
+          skills: skills,
+          budget_min: _job.budget_min,
+          budget_max: _job.budget_max,
+          budget_type: _job.budget_type,
+          country: _job.country,
+          enrichment: _enrichment
+        })
+      });
+      if (!res.ok) return;
+      // Stream response — accumulate full text then parse JSON
+      var text = await _readStream(res, null); // no live display for pregen
+      text = text.replace(/\u2014/g, ',').replace(/\u2013/g, ',');
+      var start = text.indexOf('{'), end = text.lastIndexOf('}') + 1;
+      if (start === -1 || end === 0) return;
+      var data = JSON.parse(text.slice(start, end));
+      _pregenCovers = { version_a: data.version_a, version_b: data.version_b };
+    } catch(e) {
+      console.warn('[pregen] failed silently:', e.message);
+    }
+  })();
+}
+
+// Read a streaming response, optionally writing tokens live into two textareas
+async function _readStream(response, liveTargets) {
+  var reader = response.body.getReader();
+  var decoder = new TextDecoder();
+  var full = '';
+
+  // liveTargets: {a: textarea_el, b: textarea_el} for live display
+  // Protocol: stream is raw JSON text. We display live then parse at end.
+  var displayBuf = '';
+  var inCoverSection = false; // for full-pipeline stream (COVER: prefix)
+
+  while (true) {
+    var _ref = await reader.read();
+    var done = _ref.done, value = _ref.value;
+    if (done) break;
+    var chunk = decoder.decode(value, { stream: true });
+    full += chunk;
+
+    if (liveTargets) {
+      displayBuf += chunk;
+      // Find version_a content and stream into textarea A live
+      // Simple heuristic: display all text after "version_a": "
+      var vaIdx = displayBuf.indexOf('"version_a"');
+      if (vaIdx !== -1) {
+        var afterKey = displayBuf.indexOf('"', vaIdx + 11);
+        if (afterKey !== -1) {
+          var liveText = displayBuf.slice(afterKey + 1);
+          // Strip trailing JSON (version_b onwards)
+          var vbIdx = liveText.indexOf('"version_b"');
+          if (vbIdx !== -1) liveText = liveText.slice(0, vbIdx - 3); // trim ,\n"
+          liveText = liveText.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+          if (liveTargets.a) liveTargets.a.value = liveText;
+        }
+      }
+    }
+  }
+  return full;
+}
+
 function startGenProgress() {
   var progress = document.getElementById('genProgress');
   progress.classList.add('visible');
@@ -612,62 +695,114 @@ async function generateCoverLetter() {
   try {
     var versionA, versionB;
 
+    // ── CASE 1: Pre-generated (worth >= 8, already done in background) ──
+    if (_pregenCovers) {
+      versionA = _pregenCovers.version_a;
+      versionB = _pregenCovers.version_b;
+      stopGenProgress(true);
+      setTimeout(function() {
+        document.getElementById('genProgress').classList.remove('visible');
+        showCovers(versionA, versionB);
+        toast('Candidatures pretes instantanement ⚡');
+      }, 200);
+      // Save to Supabase async (don't await)
+      sb.from('upwork_jobs').update({ cover_letter: versionA, cover_letter_b: versionB }).eq('id', _job.id);
+      _job.cover_letter = versionA;
+      _job.cover_letter_b = versionB;
+      return;
+    }
+
+    // ── CASE 2: Pre-gen in flight — wait for it ──
+    if (_pregenPromise) {
+      await _pregenPromise;
+      if (_pregenCovers) {
+        versionA = _pregenCovers.version_a;
+        versionB = _pregenCovers.version_b;
+        stopGenProgress(true);
+        setTimeout(function() {
+          document.getElementById('genProgress').classList.remove('visible');
+          showCovers(versionA, versionB);
+          toast('Candidatures pretes ⚡');
+        }, 200);
+        sb.from('upwork_jobs').update({ cover_letter: versionA, cover_letter_b: versionB }).eq('id', _job.id);
+        _job.cover_letter = versionA;
+        _job.cover_letter_b = versionB;
+        return;
+      }
+    }
+
+    // ── CASE 3: No enrichment — full-pipeline (Groq enrich ~1s + Sonnet stream) ──
     if (!_enrichment) {
-      // No enrichment cached — use full-pipeline (1 Haiku call + 1 Sonnet call, faster than 3 sequential)
       var res = await fetch('/api/full-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: _job.title,
-          description: _job.description,
-          skills: skills,
-          budget_min: _job.budget_min,
-          budget_max: _job.budget_max,
-          budget_type: _job.budget_type,
-          country: _job.country
+          title: _job.title, description: _job.description, skills: skills,
+          budget_min: _job.budget_min, budget_max: _job.budget_max,
+          budget_type: _job.budget_type, country: _job.country
         })
       });
       if (!res.ok) throw new Error('API error ' + res.status);
-      var fullData = await res.json();
-      versionA = fullData.cover_letter_a;
-      versionB = fullData.cover_letter_b;
 
-      // Cache enrichment from full-pipeline result
-      if (fullData.enrichment) {
-        _enrichment = fullData.enrichment;
-        var updatedAnalysis = Object.assign({}, _job.analysis || {}, fullData, { enrichment: fullData.enrichment });
-        await sb.from('upwork_jobs').update({ analysis: updatedAnalysis }).eq('id', _job.id);
-        _job.analysis = updatedAnalysis;
-        renderEnrichment(_enrichment);
+      // Full-pipeline streams: "ANALYSIS:{...}\nCOVER:{tokens...}"
+      var rawText = await _readStream(res, null);
+      var analysisMatch = rawText.match(/^ANALYSIS:(\{[\s\S]*?\})\n/);
+      var coverText = rawText.replace(/^ANALYSIS:\{[\s\S]*?\}\n/, '').replace(/^COVER:/, '');
+
+      if (analysisMatch) {
+        try {
+          var fullData = JSON.parse(analysisMatch[1]);
+          if (fullData.enrichment) {
+            _enrichment = fullData.enrichment;
+            var updatedAnalysis = Object.assign({}, _job.analysis || {}, { enrichment: fullData.enrichment });
+            sb.from('upwork_jobs').update({ analysis: updatedAnalysis }).eq('id', _job.id);
+            _job.analysis = updatedAnalysis;
+            renderEnrichment(_enrichment);
+          }
+        } catch(e) { console.warn('analysis parse error', e); }
       }
+
+      coverText = coverText.replace(/\u2014/g, ',').replace(/\u2013/g, ',');
+      var start = coverText.indexOf('{'), end = coverText.lastIndexOf('}') + 1;
+      if (start !== -1 && end > 0) {
+        var covers = JSON.parse(coverText.slice(start, end));
+        versionA = covers.version_a;
+        versionB = covers.version_b;
+      }
+
     } else {
-      // Enrichment already cached — just generate cover letter (Sonnet)
+      // ── CASE 4: Enrichment cached — stream cover letter (Sonnet) ──
+      // Show live streaming textareas immediately
+      showStreamingCovers();
+      setGenStep(2);
+
       var res = await fetch('/api/cover-letter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: _job.title,
-          description: _job.description,
-          skills: skills,
-          budget_min: _job.budget_min,
-          budget_max: _job.budget_max,
-          budget_type: _job.budget_type,
-          country: _job.country,
+          title: _job.title, description: _job.description, skills: skills,
+          budget_min: _job.budget_min, budget_max: _job.budget_max,
+          budget_type: _job.budget_type, country: _job.country,
           enrichment: _enrichment
         })
       });
       if (!res.ok) throw new Error('API error ' + res.status);
-      var data = await res.json();
-      versionA = data.version_a;
-      versionB = data.version_b;
+
+      var taA = document.getElementById('stream-cover-a');
+      var rawText = await _readStream(res, { a: taA });
+      rawText = rawText.replace(/\u2014/g, ',').replace(/\u2013/g, ',');
+      var start = rawText.indexOf('{'), end = rawText.lastIndexOf('}') + 1;
+      if (start !== -1 && end > 0) {
+        var data = JSON.parse(rawText.slice(start, end));
+        versionA = data.version_a;
+        versionB = data.version_b;
+      }
     }
 
-    // Save covers to Supabase
-    await sb.from('upwork_jobs').update({
-      cover_letter: versionA,
-      cover_letter_b: versionB
-    }).eq('id', _job.id);
+    if (!versionA) throw new Error('Pas de cover letter generee');
 
+    // Save to Supabase
+    sb.from('upwork_jobs').update({ cover_letter: versionA, cover_letter_b: versionB }).eq('id', _job.id);
     _job.cover_letter = versionA;
     _job.cover_letter_b = versionB;
 
@@ -676,7 +811,7 @@ async function generateCoverLetter() {
       document.getElementById('genProgress').classList.remove('visible');
       showCovers(versionA, versionB);
       toast('Candidatures generees ✓');
-    }, 800);
+    }, 400);
 
   } catch(e) {
     stopGenProgress(false);
@@ -684,6 +819,16 @@ async function generateCoverLetter() {
     document.getElementById('genProgress').classList.remove('visible');
     btn.style.display = '';
   }
+}
+
+// Show placeholder textareas immediately for streaming effect
+function showStreamingCovers() {
+  var container = document.getElementById('coverResults');
+  container.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px">'
+    + '<div style="font-size:11px;color:var(--teal);font-weight:600">⚡ Generation en cours...</div>'
+    + '<textarea id="stream-cover-a" class="jd-cover-text" placeholder="Version A en cours de generation..." readonly></textarea>'
+    + '</div>';
+  container.classList.add('visible');
 }
 
 function showExistingCovers(a, b) {
