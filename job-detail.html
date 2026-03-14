@@ -608,12 +608,32 @@ async function _readStream(response, liveTargets) {
     var chunk = decoder.decode(value, { stream: true });
     full += chunk;
 
-    // Live display — show streaming text in textarea A (strip __RESULT__ suffix)
+    // Live display — extract version_a text from partial JSON stream
     if (liveTargets && liveTargets.a) {
       liveDisplay += chunk;
+      // Stop at __RESULT__ marker
       var resultIdx = liveDisplay.indexOf('\n__RESULT__:');
-      var displayText = resultIdx !== -1 ? liveDisplay.slice(0, resultIdx) : liveDisplay;
-      liveTargets.a.value = displayText;
+      var raw = resultIdx !== -1 ? liveDisplay.slice(0, resultIdx) : liveDisplay;
+      // Extract text inside "version_a": "..." from partial JSON
+      var vaIdx = raw.indexOf('"version_a"');
+      if (vaIdx !== -1) {
+        var colonIdx = raw.indexOf('"', vaIdx + 12); // skip : "
+        if (colonIdx !== -1) {
+          var textStart = colonIdx + 1;
+          // Find end: next unescaped " or end of buffer
+          var extractedText = '';
+          for (var ci = textStart; ci < raw.length; ci++) {
+            if (raw[ci] === '\\' && ci + 1 < raw.length) { ci++; continue; }
+            if (raw[ci] === '"') break;
+            extractedText += raw[ci];
+          }
+          // Unescape \n
+          extractedText = extractedText.replace(/\\n/g, '\n');
+          if (extractedText.length > 0) {
+            liveTargets.a.value = extractedText;
+          }
+        }
+      }
     }
   }
 
