@@ -146,7 +146,8 @@
 
   // ── Job Detail Page Extraction ──
   function _isJobDetailPage() {
-    return /\/jobs\/~[a-zA-Z0-9]+/.test(window.location.href);
+    return /\/jobs\/~[a-zA-Z0-9]+/.test(window.location.href) ||
+           /\/nx\/search\/jobs\/details\/~[a-zA-Z0-9]+/.test(window.location.href);
   }
 
   function _extractJobDetail() {
@@ -157,12 +158,13 @@
       document.querySelector('h1');
     const title = titleEl?.textContent?.trim() || '';
 
-    // Full description — multiple selectors for robustness
+    // Full description — selector confirmed via DevTools 2026-03-17
     const descEl =
+      document.querySelector('p[data-test="Description"]') ||
+      document.querySelector('p.text-body-sm.multiline-text') ||
+      document.querySelector('[data-test="Description"]') ||
       document.querySelector('[data-test="description"]') ||
-      document.querySelector('[data-test="job-description"]') ||
       document.querySelector('.air3-rich-text') ||
-      document.querySelector('[class*="Description"] p') ||
       document.querySelector('[data-cy="job-description"]');
     const description = descEl?.innerText?.trim() || descEl?.textContent?.trim() || '';
 
