@@ -80,45 +80,6 @@
     setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 5000);
   }
 
-  // Démarrer si page proposal
-  if (_isProposalPage()) setTimeout(_startProposalWatcher, 500);
-
-  // SPA navigation detection
-  const _origPush = history.pushState.bind(history);
-  history.pushState = function(...args) {
-    _origPush(...args);
-    setTimeout(() => { if (_isProposalPage()) _startProposalWatcher(); }, 600);
-  };
-  window.addEventListener('popstate', () => {
-    if (_isProposalPage()) setTimeout(_startProposalWatcher, 600);
-  });
-
-  // SPA navigation detection — only for cover letter fill on proposal pages
-  let _pollHref = location.href;
-  setInterval(() => {
-    if (location.href !== _pollHref) {
-      _pollHref = location.href;
-      if (_isProposalPage()) _startProposalWatcher();
-    }
-  }, 3000);
-
-  // ── Badge messages Upwork ──
-  let _lastMsgCount = 0;
-  function _readMsgBadge() {
-    const el =
-      document.querySelector('[data-test="unread-messages-count"]') ||
-      document.querySelector('[aria-label*="message" i] [class*="badge" i]') ||
-      document.querySelector('a[href*="/messages"] [class*="badge"]') ||
-      document.querySelector('a[href*="/messages"] sup');
-    const count = el ? parseInt(el.textContent.trim()) || 0 : 0;
-    if (count !== _lastMsgCount) {
-      chrome.runtime.sendMessage({ type: 'UNREAD_MESSAGES', count }).catch(() => {});
-    }
-    _lastMsgCount = count;
-  }
-  new MutationObserver(_readMsgBadge).observe(document.body, { childList: true, subtree: true, characterData: true });
-  setTimeout(_readMsgBadge, 3000);
-
   // ── DOM Job Extraction ──
   function _extractJobsFromDOM() {
     const jobs = [];
@@ -146,10 +107,14 @@
         const idMatch = url.match(/~([a-zA-Z0-9]+)/) || url.match(/jobs\/([a-zA-Z0-9]+)/);
         const id = idMatch ? idMatch[1] : btoa(title).slice(0, 16);
 
-        const descEl = card.querySelector(
-          '[data-test="job-description-text"], [data-test="UpCLineClamp"], ' +
-          '[class*="description"], p, span.text-body'
-        );
+        // Description — ordered from most specific to least, never fall back to bare `p`
+        const descEl =
+          card.querySelector('[data-test="job-description-text"]') ||
+          card.querySelector('[data-test="UpCLineClamp"]') ||
+          card.querySelector('[data-test="job-description"]') ||
+          card.querySelector('.air3-line-clamp') ||
+          card.querySelector('[class*="JobDescription"]') ||
+          card.querySelector('[class*="job-description"]');
         const description = descEl?.textContent?.trim()?.slice(0, 2000) || '';
 
         const budgetEl = card.querySelector(
@@ -164,16 +129,122 @@
         );
         const country = locEl?.textContent?.trim() || '';
 
+        // Skills — filter out client badges (Verified, Payment verified, etc.)
+        const SKILL_NOISE = /^(verified|payment verified|payment unverified|unverified|rising talent|top rated|expert-vetted|enterprise|location|united states|france|\$\d)/i;
         const skillEls = card.querySelectorAll(
-          '[data-test="token"], [class*="skill-tag"], a[data-test="attr-item"], [class*="tag"]'
+          '[data-test="token"], [class*="skill-tag"], a[data-test="attr-item"]'
         );
-        const skills = Array.from(skillEls).map(s => s.textContent.trim()).filter(Boolean);
+        const skills = Array.from(skillEls)
+          .map(s => s.textContent.trim())
+          .filter(s => s && !SKILL_NOISE.test(s));
 
         jobs.push({ id, title, url, description, budget, country, skills, scraped_at: new Date().toISOString() });
       } catch (e) {}
     });
     return jobs;
   }
+
+  // ── Job Detail Page Extraction ──
+  function _isJobDetailPage() {
+    return /\/jobs\/~[a-zA-Z0-9]+/.test(window.location.href);
+  }
+
+  function _extractJobDetail() {
+    // Title
+    const titleEl =
+      document.querySelector('h1[data-test="job-title"]') ||
+      document.querySelector('h1.m-0') ||
+      document.querySelector('h1');
+    const title = titleEl?.textContent?.trim() || '';
+
+    // Full description — multiple selectors for robustness
+    const descEl =
+      document.querySelector('[data-test="description"]') ||
+      document.querySelector('[data-test="job-description"]') ||
+      document.querySelector('.air3-rich-text') ||
+      document.querySelector('[class*="Description"] p') ||
+      document.querySelector('[data-cy="job-description"]');
+    const description = descEl?.innerText?.trim() || descEl?.textContent?.trim() || '';
+
+    // Skills — filter out client badges
+    const SKILL_NOISE_DETAIL = /^(verified|payment verified|payment unverified|unverified|rising talent|top rated|expert-vetted|enterprise|location|united states|france|\$\d)/i;
+    const skillEls = document.querySelectorAll(
+      '[data-test="attr-item"], [data-test="token"], ' +
+      '[class*="skill-tag"], a[href*="/o/jobs/browse/"] .air3-token'
+    );
+    const skills = Array.from(skillEls)
+      .map(s => s.textContent.trim())
+      .filter(s => s && !SKILL_NOISE_DETAIL.test(s));
+
+    // Budget
+    const budgetEl =
+      document.querySelector('[data-test="budget"]') ||
+      document.querySelector('[data-test="is-fixed-price"]') ||
+      document.querySelector('[data-test="hourly-rate"]') ||
+      document.querySelector('[class*="BudgetAmount"]');
+    const budget = budgetEl?.textContent?.trim() || '';
+
+    // Country
+    const countryEl =
+      document.querySelector('[data-test="client-location"] strong') ||
+      document.querySelector('[data-qa="client-location"]') ||
+      document.querySelector('[class*="ClientLocation"]');
+    const country = countryEl?.textContent?.trim() || '';
+
+    // Job ID from URL
+    const idMatch = window.location.href.match(/~([a-zA-Z0-9]+)/);
+    const id = idMatch ? idMatch[1] : null;
+    const url = window.location.href.split('?')[0];
+
+    return { id, title, url, description, skills, budget, country };
+  }
+
+  function _sendDetailUpdate() {
+    if (!_isJobDetailPage()) return;
+    const detail = _extractJobDetail();
+    if (!detail.id || !detail.description) return;
+    chrome.runtime.sendMessage({ type: 'JOB_DETAIL_UPDATE', detail }).catch(() => {});
+  }
+
+  // ── Initialisation ──
+
+  // Proposal page
+  if (_isProposalPage()) setTimeout(_startProposalWatcher, 500);
+
+  // Detail page
+  if (_isJobDetailPage()) setTimeout(_sendDetailUpdate, 1500);
+
+  // Badge messages
+  let _lastMsgCount = 0;
+  function _readMsgBadge() {
+    const el =
+      document.querySelector('[data-test="unread-messages-count"]') ||
+      document.querySelector('[aria-label*="message" i] [class*="badge" i]') ||
+      document.querySelector('a[href*="/messages"] [class*="badge"]') ||
+      document.querySelector('a[href*="/messages"] sup');
+    const count = el ? parseInt(el.textContent.trim()) || 0 : 0;
+    if (count !== _lastMsgCount) {
+      chrome.runtime.sendMessage({ type: 'UNREAD_MESSAGES', count }).catch(() => {});
+    }
+    _lastMsgCount = count;
+  }
+  new MutationObserver(_readMsgBadge).observe(document.body, { childList: true, subtree: true, characterData: true });
+  setTimeout(_readMsgBadge, 3000);
+
+  // SPA navigation (unified — proposal + detail + badge)
+  let _pollHref = location.href;
+  setInterval(() => {
+    if (location.href !== _pollHref) {
+      _pollHref = location.href;
+      if (_isProposalPage()) _startProposalWatcher();
+      else if (_isJobDetailPage()) setTimeout(_sendDetailUpdate, 800);
+    }
+  }, 1000);
+
+  window.addEventListener('popstate', () => {
+    if (_isProposalPage()) setTimeout(_startProposalWatcher, 600);
+    else if (_isJobDetailPage()) setTimeout(_sendDetailUpdate, 800);
+  });
 
   // ── Message Handler ──
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -184,6 +255,10 @@
         return true;
       }
       sendResponse({ jobs: _extractJobsFromDOM() });
+      return true;
+    }
+    if (msg.type === 'GET_JOB_DETAIL') {
+      sendResponse(_isJobDetailPage() ? _extractJobDetail() : null);
       return true;
     }
     return true;

@@ -298,13 +298,45 @@ async function checkForNewJobs() {
 
     // Dedup by URL within the same batch (PostgREST rejects duplicate keys in one request)
     const urlSeen = new Set();
-    const uniqueJobs = newJobs.filter(j => {
+    const batchDeduped = newJobs.filter(j => {
       if (!j.url || urlSeen.has(j.url)) return false;
       urlSeen.add(j.url);
       return true;
     });
-    if (!uniqueJobs.length) {
+    if (!batchDeduped.length) {
       console.log('[mybuilding BG] No unique new jobs');
+      return;
+    }
+
+    // Dedup against Supabase — filter URLs already in DB (not deleted)
+    const { url: sbUrl, key: sbKey } = await getSupabase();
+    let uniqueJobs = batchDeduped;
+    if (sbUrl && sbKey) {
+      const urlList = batchDeduped.map(j => j.url).filter(Boolean);
+      try {
+        const res = await fetch(
+          `${sbUrl}/rest/v1/upwork_jobs?select=url&url=in.(${urlList.map(u => `"${u}"`).join(',')})`,
+          { headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` } }
+        );
+        if (res.ok) {
+          const existing = await res.json();
+          const existingUrls = new Set(existing.map(r => r.url));
+          uniqueJobs = batchDeduped.filter(j => !existingUrls.has(j.url));
+          if (existingUrls.size) {
+            // Re-sync local cache with whatever Supabase knows
+            await addSeenIds(existing.map(r => {
+              const m = r.url.match(/~([a-zA-Z0-9]+)/);
+              return m ? m[1] : null;
+            }).filter(Boolean));
+          }
+        }
+      } catch (e) {
+        console.warn('[mybuilding BG] Supabase dedup check failed, proceeding:', e.message);
+      }
+    }
+
+    if (!uniqueJobs.length) {
+      console.log('[mybuilding BG] All jobs already in Supabase');
       return;
     }
 
@@ -478,6 +510,31 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse(data);
     });
     return true;
+  }
+  if (msg.type === 'JOB_DETAIL_UPDATE') {
+    const { detail } = msg;
+    if (!detail?.url || !detail?.description) return false;
+    getSupabase().then(({ url: sbUrl, key: sbKey }) => {
+      if (!sbUrl || !sbKey) return;
+      // PATCH by URL — update description + skills if richer than what we have
+      const patch = { description_full: detail.description };
+      if (detail.skills?.length) patch.skills = detail.skills;
+      if (detail.country) patch.country = detail.country;
+      fetch(`${sbUrl}/rest/v1/upwork_jobs?url=eq.${encodeURIComponent(detail.url)}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': sbKey,
+          'Authorization': `Bearer ${sbKey}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(patch)
+      }).then(r => {
+        if (r.ok) console.log('[mybuilding BG] Detail updated:', detail.url.slice(-30));
+        else r.text().then(t => console.warn('[mybuilding BG] Detail PATCH failed:', t));
+      }).catch(e => console.warn('[mybuilding BG] Detail PATCH error:', e.message));
+    });
+    return false;
   }
   if (msg.type === 'UNREAD_MESSAGES') {
     chrome.storage.local.set({ mb_unread: msg.count });

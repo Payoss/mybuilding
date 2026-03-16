@@ -9,9 +9,47 @@ Performance:
   - /api/full-pipeline → Groq (step1, ~1s) + Sonnet streaming (step2, ~25s perceived fast)
   - worth_score >= 8 → pre-generation triggered by frontend at job open
 """
-import subprocess, json, sys, asyncio, os
+import subprocess, json, sys, asyncio, os, pathlib, re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Any
+
+# ── Proof points (static — loaded once at startup)
+_PROOF_POINTS_PATH = pathlib.Path(__file__).parent / "proof_points.json"
+_PROOF_POINTS = json.loads(_PROOF_POINTS_PATH.read_text())["facts"] if _PROOF_POINTS_PATH.exists() else []
+
+def _select_proof_points(text: str, n: int = 2) -> list[str]:
+    """Pick top-n proof points whose keywords appear in the job text."""
+    text_lower = text.lower()
+    scored = []
+    for p in _PROOF_POINTS:
+        score = sum(1 for kw in p["keywords"] if kw.lower() in text_lower)
+        scored.append((score, p["fact"]))
+    scored.sort(key=lambda x: -x[0])
+    return [fact for _, fact in scored[:n]]
+
+def _extract_client_signals(title: str, description: str) -> dict:
+    """Heuristic extraction of human signals from job posting."""
+    text = f"{title} {description}".lower()
+    # Tone
+    formal_signals = ["we are looking for", "requirements:", "must have", "responsibilities"]
+    casual_signals = ["hey", "looking for someone", "quick", "asap", "love", "awesome", "great fit"]
+    tone = "casual" if any(s in text for s in casual_signals) else "formal" if any(s in text for s in formal_signals) else "neutral"
+    # Urgency
+    urgency_signals = ["asap", "urgent", "immediately", "right away", "today", "quickly", "fast"]
+    urgency = "high" if any(s in text for s in urgency_signals) else "normal"
+    # Emotion
+    stress_signals = ["struggling", "stuck", "frustrated", "overwhelmed", "drowning", "behind", "failing", "broken"]
+    excited_signals = ["excited", "thrilled", "can't wait", "dream", "vision", "opportunity", "launch"]
+    tired_signals = ["tired of", "sick of", "wasting time", "manually", "hours", "tedious", "repetitive"]
+    if any(s in text for s in stress_signals):
+        emotion = "stressed"
+    elif any(s in text for s in excited_signals):
+        emotion = "excited"
+    elif any(s in text for s in tired_signals):
+        emotion = "tired_of_manual_work"
+    else:
+        emotion = "neutral"
+    return {"tone": tone, "urgency": urgency, "emotion": emotion}
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -340,7 +378,12 @@ A partir de la description du job, genere un JSON avec :
 }
 Le plan doit etre SPECIFIQUE au job (pas generique). Les heures = temps reel avec Morpheus (pas temps humain).
 
-4. "description_fr" : traduction fidele de la description du job en francais. Pas de resume, traduction complete.
+4. "description_fr" : traduction fidele et COMPLETE de la description du job en francais.
+   REGLES STRICTES :
+   - Traduire UNIQUEMENT ce qui est present dans DESCRIPTION. Jamais inventer, jamais completer.
+   - Si DESCRIPTION est vide ou < 50 chars : description_fr = "<Description non disponible — ouvrir le job sur Upwork pour l'extraire>"
+   - Ne JAMAIS utiliser les champs SKILLS pour construire la description. Ce sont des metadata, pas du contenu.
+   - Traduction mot-a-mot. Pas de resume. Pas de paraphrase.
 
 Reponds UNIQUEMENT en JSON valide, sans texte avant ou apres."""
 
@@ -387,12 +430,20 @@ Paul sounds like a real human, 27 years old, direct, confident but not arrogant.
 
 ## 6-BLOC STRUCTURE (MANDATORY ORDER)
 
-L1 — HOOK (2 lines max):
-  Always start with "Hi, I'm Paul." then IMMEDIATELY address the client's SPECIFIC problem or need. The second sentence must contain at least 2 details pulled directly from the job description.
-  RULE: The hook is about THEIR problem, not about you. Mirror their words, name the underlying challenge.
-  - Version A: confident, factual. "Hi, I'm Paul. You need [specific thing from job] that [consequence/goal they mentioned]."
-  - Version B: warmer, conversational. "Hi, I'm Paul. [Specific thing from job] caught my eye because [reason tied to their description]."
-  NEVER use generic openers like "I've done this exact type of work" or "this is right in my wheelhouse".
+L1 — HOOK (2 sentences MAX — no exceptions):
+  Sentence 1: ALWAYS "Hi, I'm Paul." — no variation.
+  Sentence 2: a CONFIDENT DECLARATION calibrated to the job. Pick the pattern that fits best:
+  - Quick/simple job → "This is a quick one for me — [specific task from job] is something I've shipped before."
+  - Complex/multi-step job → "I've built exactly this kind of system — [specific element from job] end-to-end."
+  - Urgent job → "I can have [specific deliverable] ready by [tomorrow/next day] — this is my exact stack."
+  - Vague job → "You need [what they actually need, inferred from description] — I've done this multiple times."
+
+  RULES:
+  - Sentence 2 MUST contain at least 1 detail pulled directly from the job (their words, their stack, their goal).
+  - NEVER generic: "this caught my eye", "I'm excited", "I'd love to", "this is right in my wheelhouse", "I've done this exact type of work"
+  - NEVER a question in L1. Declarations only.
+  - If CLIENT_SIGNALS.urgency = high → lean toward the urgent pattern.
+  - If CLIENT_SIGNALS.tone = casual → slightly more direct/informal sentence 2.
 
 L2 — LOOM (always present):
   Place the Loom link EARLY so the client clicks before reading the rest.
@@ -461,6 +512,7 @@ If the job's industry matches one of Paul's projects, weave in a natural 1-sente
 L4 — UNDERSTANDING (THE KEY BLOC — spend the most effort here):
   This bloc must be 100% custom to the job. Zero generic content. Zero filler.
   RULES:
+  - FIRST: read CLIENT_SIGNALS below. Acknowledge their emotional state in 1 sentence BEFORE the technical breakdown. If they sound stressed → be calm and reassuring. If they sound excited → match the energy. If they sound tired/overwhelmed → be direct and solution-first.
   - Break down their project into 2-3 concrete phases/layers (use their own words)
   - Pick 1 portfolio item that directly relates and mention it naturally (not as a sales pitch)
   - Ask 1 SMART question that proves deep understanding (not "what's your timeline?" — something only someone who understood the project would ask)
@@ -481,18 +533,31 @@ L6 — CTA (adaptive — pick the best fit):
 | | Version A | Version B |
 |---|-----------|-----------|
 | Tone | Direct, confident, factual | Conversational, warmer, more narrative |
-| L1 | States the problem + confidence | "caught my eye" + curiosity |
+| L1 | Confident declaration, factual ("This is a quick one for me — X") | Confident declaration, warmer ("I've built exactly this — X for Y") |
 | L3 | Technical proof, numbers | Same proof but framed as a story |
 | L4 | Technical breakdown, pointed question | Same breakdown but more exploratory, open question |
 | Length | ~150 words | ~180 words |
 | Best for | Tech clients, well-specified jobs | Non-tech clients, vague jobs, relationship-focused |
 
+## CLIENT SIGNALS (injected dynamically — read before generating)
+If CLIENT_SIGNALS are provided in the context, use them to calibrate L1 and L4:
+- client_tone: mirror it (casual → casual, formal → slightly more structured)
+- client_pain: name it explicitly in L1 second sentence
+- client_urgency: if high → "I can start today" in L6. If low → "Happy to jump on a call"
+- client_emotion: acknowledge it once, briefly, in L4 before the technical breakdown
+
+## SELECTED PROOF POINTS (injected dynamically — use in L3)
+If SELECTED_PROOF_POINTS are provided in the context, use THOSE SPECIFIC FACTS in L3.
+Do NOT invent other proof points. Rephrase them naturally — don't copy verbatim.
+If no proof points injected → fall back to PAUL'S PORTFOLIO above.
+
 ## ANTI-REPETITION RULES
-- L1: NEVER use "I've done this exact type of work", "right in my wheelhouse", "this is what I do"
-- L3: NEVER copy-paste the same credibility sentence. Always rephrase with different portfolio items.
+- L1: NEVER use "I've done this exact type of work", "right in my wheelhouse", "this is what I do", "caught my eye", "this is exciting", "I'd love to", "I'm excited about"
+- L3: NEVER copy-paste the same credibility sentence. Always rephrase SELECTED_PROOF_POINTS with different phrasing.
 - L4: NEVER use "Looking at what you've described" as opener. Vary transitions.
 - L6: NEVER use the exact same CTA. Adapt to the job's urgency and size.
 - General: if a phrase could appear unchanged in another proposal for a different job, REWRITE IT.
+- ABSOLUTE: any sentence that could be copy-pasted to 3+ different jobs = DELETE AND REWRITE.
 
 ## OUTPUT
 Return ONLY valid JSON:
@@ -521,6 +586,14 @@ COUNTRY: {req.country or 'Non specifie'}"""
                 for i, s in enumerate(steps)
             )
             context += f"\n\nEXECUTION PLAN:\n{plan_str}"
+    # Inject human signals + selected proof points
+    full_text = f"{req.title} {req.description or ''}"
+    signals = _extract_client_signals(req.title, req.description or "")
+    context += f"\n\nCLIENT_SIGNALS:\n- tone: {signals['tone']}\n- urgency: {signals['urgency']}\n- emotion: {signals['emotion']}"
+    proof_points = _select_proof_points(full_text)
+    if proof_points:
+        context += "\n\nSELECTED_PROOF_POINTS (use these in L3, rephrase naturally):\n"
+        context += "\n".join(f"- {p}" for p in proof_points)
     return context
 
 
@@ -618,7 +691,7 @@ ENRICHMENT RULES (for the "enrichment" object):
 - why_for_you: 3-4 phrases en francais, SPECIFIQUES au job, pas generiques
 - battle_card: points forts/risques/differenciateurs concrets
 - execution_plan: 4-6 etapes, heures = temps reel AVEC l'IA (pas temps humain)
-- description_fr: traduction fidele, pas de resume"""
+- description_fr: traduction fidele mot-a-mot. Si DESCRIPTION < 50 chars ou absente → "<Description non disponible — ouvrir le job sur Upwork>". JAMAIS utiliser les SKILLS pour construire la description."""
 
 
 @app.post("/api/full-pipeline")

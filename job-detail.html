@@ -323,8 +323,8 @@ function renderPage() {
     + '<div style="display:flex;flex-direction:column;gap:14px">'
     // Description
     + '<div class="jd-card">'
-    + '<div class="jd-card-title">📄 Description originale</div>'
-    + '<div class="jd-desc" id="desc-original">' + (j.description ? escHtml(j.description).replace(/\n/g, '<br>') : '<span class="muted">Pas de description</span>') + '</div>'
+    + '<div class="jd-card-title">📄 Description originale' + (j.description_full ? ' <span style="font-size:11px;color:#0d9488;font-weight:400">✓ complète</span>' : ' <span style="font-size:11px;color:#888;font-weight:400">snippet</span>') + '</div>'
+    + '<div class="jd-desc" id="desc-original">' + ((j.description_full || j.description) ? escHtml(j.description_full || j.description).replace(/\n/g, '<br>') : '<span class="muted">Pas de description — ouvre le job sur Upwork pour l\'extraire automatiquement</span>') + '</div>'
     + '</div>'
     // Description FR
     + '<div class="jd-card" id="card-desc-fr">'
@@ -458,7 +458,7 @@ async function loadEnrichment() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: _job.title,
-        description: _job.description,
+        description: _job.description_full || _job.description,
         skills: (_job.skills || []).filter(function(s) { return s && !/^(Location|Unverified|Payment|\$\d)/.test(s); }),
         budget_min: _job.budget_min,
         budget_max: _job.budget_max,
@@ -570,7 +570,7 @@ async function maybePregenCovers() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: _job.title,
-          description: _job.description,
+          description: _job.description_full || _job.description,
           skills: skills,
           budget_min: _job.budget_min,
           budget_max: _job.budget_max,
@@ -750,7 +750,7 @@ async function generateCoverLetter() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: _job.title, description: _job.description, skills: skills,
+          title: _job.title, description: _job.description_full || _job.description, skills: skills,
           budget_min: _job.budget_min, budget_max: _job.budget_max,
           budget_type: _job.budget_type, country: _job.country
         })
@@ -793,7 +793,7 @@ async function generateCoverLetter() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: _job.title, description: _job.description, skills: skills,
+          title: _job.title, description: _job.description_full || _job.description, skills: skills,
           budget_min: _job.budget_min, budget_max: _job.budget_max,
           budget_type: _job.budget_type, country: _job.country,
           enrichment: _enrichment

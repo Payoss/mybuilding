@@ -67,5 +67,9 @@ document.getElementById('tab-btn-settings').addEventListener('click', function()
 document.getElementById('scanBtn').addEventListener('click', scanNow);
 document.getElementById('openBtn').addEventListener('click', openMybuilding);
 document.getElementById('saveBtn').addEventListener('click', saveSettings);
+document.getElementById('reloadBtn').addEventListener('click', () => chrome.runtime.reload());
+document.getElementById('clearCacheBtn').addEventListener('click', () => {
+  chrome.storage.local.remove('mb_seen_ids', () => toast('Cache vidé ✓'));
+});
 
 loadStatus();

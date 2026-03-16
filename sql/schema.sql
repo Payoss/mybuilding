@@ -124,7 +124,8 @@ CREATE TABLE interactions (
 CREATE TABLE upwork_jobs (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title         text NOT NULL,
-  description   text,
+  description      text,        -- snippet extrait de la liste (300-500 chars)
+  description_full text,        -- description complète extraite de la page détail
   client_info   jsonb DEFAULT '{}',
   -- {name, rating, reviews, location, payment_verified, spent_total}
   budget_min    numeric,
