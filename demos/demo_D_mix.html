@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Engineer — Job Detail | mybuilding · Upwork CRM</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* Background */
+    --bg: #e8ecf1;
+
+    /* Glass cards */
+    --card-bg: rgba(255, 255, 255, 0.75);
+    --card-border: rgba(255, 255, 255, 0.6);
+    --card-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    --card-shadow-hover: 0 6px 24px rgba(0, 0, 0, 0.10);
+
+    /* Accent colors */
+    --teal: #0d9488;
+    --teal-dark: #0f766e;
+    --teal-light: rgba(13, 148, 136, 0.08);
+    --teal-medium: rgba(13, 148, 136, 0.15);
+    --indigo: #7c5cfc;
+    --indigo-light: rgba(124, 92, 252, 0.08);
+    --amber: #f59e0b;
+    --amber-light: rgba(245, 158, 11, 0.10);
+    --green: #10b981;
+    --green-light: rgba(16, 185, 129, 0.10);
+    --red-light: rgba(239, 68, 68, 0.08);
+
+    /* Text */
+    --text: #0f172a;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+
+    /* Borders & misc */
+    --border: #e5e7eb;
+    --border-light: #f3f4f6;
+
+    /* Verdict */
+    --go-bg: #dcfce7;
+    --go-text: #166534;
+    --go-border: #86efac;
+
+    /* Warning */
+    --warn-bg: rgba(245, 158, 11, 0.08);
+    --warn-text: #854d0e;
+    --warn-border: rgba(245, 158, 11, 0.25);
+
+    /* Sniper */
+    --sniper-bg: linear-gradient(135deg, var(--amber-light), rgba(245, 158, 11, 0.18));
+    --sniper-text: #b45309;
+
+    /* Radius */
+    --radius: 14px;
+    --radius-sm: 8px;
+    --radius-badge: 22px;
+
+    /* Easing */
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --transition: 0.2s var(--ease);
+  }
+
+  html {
+    font-family: system-ui, -apple-system, 'Inter', 'Segoe UI', sans-serif;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100vh;
+    padding-bottom: 90px;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ═══════════════════════════════════════════
+     ANIMATED GRADIENT BLOBS (from C)
+     ═══════════════════════════════════════════ */
+  .blob-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    will-change: transform;
+  }
+
+  .blob--teal {
+    width: 600px;
+    height: 600px;
+    background: rgba(13, 148, 136, 0.10);
+    top: -10%;
+    left: -5%;
+    animation: blobMove1 18s ease-in-out infinite;
+  }
+
+  .blob--purple {
+    width: 500px;
+    height: 500px;
+    background: rgba(124, 92, 252, 0.08);
+    top: 30%;
+    right: -8%;
+    animation: blobMove2 22s ease-in-out infinite;
+  }
+
+  .blob--amber {
+    width: 450px;
+    height: 450px;
+    background: rgba(245, 158, 11, 0.06);
+    bottom: -5%;
+    left: 30%;
+    animation: blobMove3 20s ease-in-out infinite;
+  }
+
+  @keyframes blobMove1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(80px, 60px) scale(1.05); }
+    50% { transform: translate(40px, 120px) scale(0.95); }
+    75% { transform: translate(-30px, 80px) scale(1.08); }
+  }
+
+  @keyframes blobMove2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(-60px, 40px) scale(1.08); }
+    50% { transform: translate(-100px, -30px) scale(0.96); }
+    75% { transform: translate(-40px, -60px) scale(1.04); }
+  }
+
+  @keyframes blobMove3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(50px, -40px) scale(1.06); }
+    50% { transform: translate(-30px, -80px) scale(0.97); }
+    75% { transform: translate(70px, -20px) scale(1.03); }
+  }
+
+  /* ═══════════════════════════════════════════
+     ENTRANCE ANIMATIONS (from C)
+     ═══════════════════════════════════════════ */
+  .animate-in {
+    opacity: 0;
+    transform: translateY(16px);
+    animation: slideUp 0.6s var(--ease) forwards;
+  }
+
+  .animate-in--d1 { animation-delay: 0.05s; }
+  .animate-in--d2 { animation-delay: 0.12s; }
+  .animate-in--d3 { animation-delay: 0.20s; }
+  .animate-in--d4 { animation-delay: 0.28s; }
+  .animate-in--d5 { animation-delay: 0.36s; }
+  .animate-in--d6 { animation-delay: 0.44s; }
+  .animate-in--d7 { animation-delay: 0.52s; }
+  .animate-in--d8 { animation-delay: 0.60s; }
+
+  @keyframes slideUp {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ═══════════════════════════════════════════
+     GLASS NAV BAR (from A's structure, C's glass)
+     ═══════════════════════════════════════════ */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--card-border);
+    padding: 0 32px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .topnav-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color var(--transition);
+    text-decoration: none;
+  }
+  .topnav-left:hover { color: var(--teal); }
+  .topnav-left svg { width: 16px; height: 16px; }
+
+  .topnav-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: -0.02em;
+  }
+  .topnav-brand strong {
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+  .topnav-brand-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 8px rgba(13, 148, 136, 0.4);
+    animation: pulseDot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulseDot {
+    0%, 100% { box-shadow: 0 0 8px rgba(13, 148, 136, 0.4); }
+    50% { box-shadow: 0 0 16px rgba(13, 148, 136, 0.6); }
+  }
+
+  /* ═══════════════════════════════════════════
+     CONTAINER (from A)
+     ═══════════════════════════════════════════ */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 32px;
+  }
+
+  /* ═══════════════════════════════════════════
+     GLASS CARD BASE (from C, with A's spacing)
+     ═══════════════════════════════════════════ */
+  .glass {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    box-shadow: var(--card-shadow);
+    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
+
+  .glass:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--card-shadow-hover);
+  }
+
+  /* ═══════════════════════════════════════════
+     HERO CARD (C's style hero + gradient border)
+     ═══════════════════════════════════════════ */
+  .hero {
+    padding: 32px 36px 28px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero:hover {
+    transform: none; /* hero stays put */
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--teal), var(--indigo), var(--amber));
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  /* Sniper badge (C's pulsing style) */
+  .sniper-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    background: var(--sniper-bg);
+    border: 1px solid var(--warn-border);
+    border-radius: var(--radius-badge);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--sniper-text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 16px;
+    animation: sniperGlow 3s ease-in-out infinite;
+  }
+
+  @keyframes sniperGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.15); }
+  }
+
+  .hero-title {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.25;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    font-weight: 500;
+  }
+
+  .hero-meta .budget {
+    color: var(--teal);
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .meta-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  /* Score boxes (from C) */
+  .hero-scores {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .score-box {
+    flex: 1;
+    min-width: 110px;
+    max-width: 160px;
+    padding: 16px 18px;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 12px;
+    text-align: center;
+    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
+
+  .score-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  }
+
+  .score-box-value {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .score-box-value--teal { color: var(--teal); }
+  .score-box-value--indigo { color: var(--indigo); }
+  .score-box-value--green { color: var(--green); }
+  .score-box-value--amber { color: var(--amber); }
+
+  .score-box-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  /* Verdict badge (C style, green) */
+  .verdict {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, var(--green-light), rgba(16, 185, 129, 0.05));
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #047857;
+  }
+
+  .verdict-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--green);
+    color: #fff;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* ═══════════════════════════════════════════
+     GENERATE CTA + COVER LETTER AREA
+     ═══════════════════════════════════════════ */
+  .generate-zone {
+    margin-top: 14px;
+  }
+
+  .generate-btn {
+    width: 100%;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 20px rgba(13, 148, 136, 0.3);
+    transition: all 0.2s var(--ease);
+    position: relative;
+    overflow: hidden;
+  }
+  .generate-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(13, 148, 136, 0.4);
+  }
+  .generate-btn:active { transform: translateY(0); }
+  .generate-btn.loading {
+    pointer-events: none;
+    opacity: 0.85;
+  }
+  .generate-btn .gen-spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  .generate-btn.loading .gen-spinner { display: block; }
+  .generate-btn.loading .gen-label { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Cover letter results */
+  .cover-results {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.5s var(--ease), opacity 0.4s ease, margin 0.4s ease;
+    margin-top: 0;
+  }
+  .cover-results.visible {
+    max-height: 2000px;
+    opacity: 1;
+    margin-top: 16px;
+  }
+
+  .cover-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 10px;
+    padding: 3px;
+  }
+  .cover-tab {
+    flex: 1;
+    padding: 8px 14px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border: none;
+    background: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  .cover-tab.active {
+    background: white;
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .cover-tab-hint {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 2px;
+  }
+
+  .cover-panel { display: none; }
+  .cover-panel.active { display: block; }
+
+  .cover-text {
+    background: rgba(255,255,255,0.6);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    font-family: inherit;
+    position: relative;
+  }
+  .cover-text strong { color: var(--teal-dark); }
+  .cover-text .loom-link {
+    color: var(--indigo);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: rgba(124, 92, 252, 0.3);
+  }
+
+  .cover-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .cover-copy {
+    padding: 8px 16px;
+    background: var(--teal-medium);
+    border: 1px solid rgba(13, 148, 136, 0.2);
+    color: var(--teal-dark);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .cover-copy:hover { background: rgba(13, 148, 136, 0.2); }
+  .cover-copy.copied { background: var(--green-light); color: #047857; border-color: rgba(16, 185, 129, 0.3); }
+  .cover-send {
+    padding: 8px 16px;
+    background: var(--indigo-light);
+    border: 1px solid rgba(124, 92, 252, 0.2);
+    color: var(--indigo);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .cover-send:hover { background: rgba(124, 92, 252, 0.15); }
+
+  /* ═══════════════════════════════════════════
+     TWO-COLUMN LAYOUT (from A: 58% / 40%)
+     ═══════════════════════════════════════════ */
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 0.7fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .col-left, .col-right {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ═══════════════════════════════════════════
+     SECTION CARDS (A's structure + C's glass)
+     ═══════════════════════════════════════════ */
+  .card {
+    padding: 24px 28px;
+  }
+
+  .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title .emoji {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  /* ═══════════════════════════════════════════
+     POURQUOI POUR TOI (A's match-list + C's hover)
+     ═══════════════════════════════════════════ */
+  .match-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .match-list li {
+    position: relative;
+    padding: 14px 16px 14px 42px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    background: rgba(13, 148, 136, 0.04);
+    border: 1px solid rgba(13, 148, 136, 0.08);
+    border-radius: 12px;
+    transition: background 0.2s var(--ease);
+  }
+
+  .match-list li:hover {
+    background: rgba(13, 148, 136, 0.07);
+  }
+
+  .match-list li::before {
+    content: '';
+    position: absolute;
+    left: 18px;
+    top: 20px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--teal);
+    opacity: 0.7;
+  }
+
+  .match-list li strong {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ═══════════════════════════════════════════
+     CE QUE LE CLIENT VEUT (A's bullet-list)
+     ═══════════════════════════════════════════ */
+  .bullet-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .bullet-list li {
+    position: relative;
+    padding-left: 20px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  .bullet-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 9px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--indigo);
+    opacity: 0.6;
+  }
+
+  /* ═══════════════════════════════════════════
+     LIVRABLES (A's checklist)
+     ═══════════════════════════════════════════ */
+  .deliverable-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .deliverable-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+
+  .deliverable-list li .check {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--teal-light);
+    border: 1px solid rgba(13, 148, 136, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .deliverable-list li .check svg {
+    width: 10px;
+    height: 10px;
+    color: var(--teal-dark);
+  }
+
+  /* ═══════════════════════════════════════════
+     RED FLAGS / ATTENTION (A's flag-card, amber)
+     ═══════════════════════════════════════════ */
+  .flag-card {
+    border-left: 3px solid var(--warn-border) !important;
+    background: var(--warn-bg) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .flag-card:hover {
+    transform: none;
+  }
+
+  .flag-card .card-title { color: var(--warn-text); }
+
+  .flag-item {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--warn-text);
+  }
+
+  /* ═══════════════════════════════════════════
+     COLLAPSIBLE DESCRIPTION (from A)
+     ═══════════════════════════════════════════ */
+  .collapse-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+  }
+
+  .collapse-toggle .chevron {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s var(--ease);
+    color: var(--text-muted);
+  }
+
+  .collapse-toggle[aria-expanded="true"] .chevron {
+    transform: rotate(180deg);
+  }
+
+  .collapse-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.35s var(--ease);
+  }
+
+  .collapse-body.open {
+    max-height: 600px;
+  }
+
+  .collapse-content {
+    padding-top: 14px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+
+  /* ═══════════════════════════════════════════
+     BATTLE CARD (C's weapon style in A's structure)
+     ═══════════════════════════════════════════ */
+  .battle-card {
+    border: 1px solid rgba(13, 148, 136, 0.2) !important;
+    background: linear-gradient(135deg, rgba(240, 253, 250, 0.8), var(--card-bg)) !important;
+  }
+
+  .battle-card .card-title { color: var(--teal-dark); }
+
+  .battle-section { margin-bottom: 18px; }
+  .battle-section:last-child { margin-bottom: 0; }
+
+  .battle-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  /* Weapon items (from C) */
+  .weapons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .weapon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, var(--teal-light), rgba(13, 148, 136, 0.04));
+    border: 1px solid rgba(13, 148, 136, 0.12);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    transition: transform 0.2s var(--ease);
+  }
+
+  .weapon:hover {
+    transform: translateX(3px);
+  }
+
+  .weapon-icon {
+    color: var(--teal);
+    font-size: 14px;
+  }
+
+  /* Accroche (C's quote style) */
+  .accroche-box {
+    position: relative;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, var(--indigo-light), rgba(124, 92, 252, 0.04));
+    border: 1px solid rgba(124, 92, 252, 0.15);
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    font-style: italic;
+    font-weight: 500;
+  }
+
+  .accroche-box::before {
+    content: '\201C';
+    position: absolute;
+    top: 6px;
+    left: 12px;
+    font-size: 36px;
+    font-family: Georgia, serif;
+    color: var(--indigo);
+    opacity: 0.25;
+    line-height: 1;
+  }
+
+  .accroche-text {
+    padding-left: 16px;
+  }
+
+  /* Differenciateur (C's advantage style) */
+  .differenciateur-box {
+    padding: 16px 18px;
+    background: linear-gradient(135deg, var(--amber-light), rgba(245, 158, 11, 0.04));
+    border: 1px solid rgba(245, 158, 11, 0.18);
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ═══════════════════════════════════════════
+     SKILLS MATCH BARS (from C, animated)
+     ═══════════════════════════════════════════ */
+  .skills-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .skill-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .skill-row-name {
+    flex: 0 0 100px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .skill-row-bar-wrap {
+    flex: 1;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .skill-row-bar {
+    height: 100%;
+    border-radius: 8px;
+    width: 0;
+    transition: width 1.2s var(--ease);
+  }
+
+  .skill-row-bar--expert {
+    background: linear-gradient(90deg, var(--teal), #14b8a6);
+  }
+
+  .skill-row-bar--confirmed {
+    background: linear-gradient(90deg, var(--indigo), #a78bfa);
+  }
+
+  .skill-row-badge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+  }
+
+  .skill-row-badge--expert {
+    background: var(--teal-light);
+    color: var(--teal);
+    border: 1px solid rgba(13, 148, 136, 0.15);
+  }
+
+  .skill-row-badge--confirmed {
+    background: var(--indigo-light);
+    color: var(--indigo);
+    border: 1px solid rgba(124, 92, 252, 0.15);
+  }
+
+  /* ═══════════════════════════════════════════
+     SCORE BREAKDOWN BARS (from C, animated gradient)
+     ═══════════════════════════════════════════ */
+  .score-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .score-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .score-label {
+    flex: 0 0 90px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .score-bar-track {
+    flex: 1;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    width: 0;
+    transition: width 1.4s var(--ease);
+  }
+
+  .fill-green { background: linear-gradient(90deg, #34d399, var(--teal)); }
+  .fill-teal { background: linear-gradient(90deg, #5eead4, var(--teal)); }
+  .fill-indigo { background: linear-gradient(90deg, var(--indigo), #a78bfa); }
+  .fill-amber { background: linear-gradient(90deg, #fcd34d, var(--amber)); }
+
+  .score-value {
+    flex: 0 0 48px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ═══════════════════════════════════════════
+     EXECUTION PLAN — Timeline card
+     ═══════════════════════════════════════════ */
+  .plan-card {
+    border: 1px solid rgba(124, 92, 252, 0.2) !important;
+    background: linear-gradient(135deg, rgba(124, 92, 252, 0.04), var(--card-bg)) !important;
+  }
+  .plan-card .card-title { color: var(--indigo); }
+
+  .plan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .plan-total {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .plan-total-item {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 8px;
+    background: var(--indigo-light);
+    color: var(--indigo);
+  }
+
+  .plan-timeline {
+    position: relative;
+    padding-left: 28px;
+  }
+  .plan-timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--indigo), var(--teal), var(--green));
+    border-radius: 2px;
+  }
+
+  .plan-step {
+    position: relative;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.5);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: all 0.2s var(--ease);
+  }
+  .plan-step:last-child { margin-bottom: 0; }
+  .plan-step:hover {
+    transform: translateX(4px);
+    border-color: rgba(124, 92, 252, 0.25);
+    box-shadow: 0 2px 12px rgba(124, 92, 252, 0.08);
+  }
+
+  .plan-step-dot {
+    position: absolute;
+    left: -24px;
+    top: 18px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2.5px solid var(--indigo);
+    background: white;
+    z-index: 1;
+  }
+  .plan-step:first-child .plan-step-dot { background: var(--indigo); }
+  .plan-step:last-child .plan-step-dot { background: var(--green); border-color: var(--green); }
+
+  .plan-step-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .plan-step-num {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--indigo);
+  }
+  .plan-step-time {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--border-light);
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .plan-step-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .plan-step-desc {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .plan-step-tools {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .plan-tool {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: var(--indigo-light);
+    color: var(--indigo);
+    font-weight: 600;
+  }
+  .plan-step-deliverable {
+    margin-top: 8px;
+    font-size: 11.5px;
+    color: var(--teal-dark);
+    font-weight: 500;
+  }
+  .plan-step-deliverable::before {
+    content: '→ ';
+    font-weight: 700;
+  }
+
+  /* ═══════════════════════════════════════════
+     STICKY BOTTOM BAR (from A, with C's glass)
+     ═══════════════════════════════════════════ */
+  .bottombar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid var(--card-border);
+    box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.06);
+    padding: 0 32px;
+    height: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .bottombar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .status-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: var(--teal-dark);
+  }
+
+  .status-dot::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--teal);
+    animation: pulseDot 2s ease-in-out infinite;
+  }
+
+  .bottombar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ═══════════════════════════════════════════
+     BUTTONS (mix of A structure + C visual)
+     ═══════════════════════════════════════════ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s var(--ease);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn:hover {
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .btn svg { width: 14px; height: 14px; }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    color: #fff;
+    border-color: var(--teal);
+    box-shadow: 0 2px 12px rgba(13, 148, 136, 0.3);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(13, 148, 136, 0.4);
+  }
+
+  .btn-secondary {
+    background: linear-gradient(135deg, var(--indigo), #6d4ce0);
+    color: #fff;
+    border-color: var(--indigo);
+    box-shadow: 0 2px 12px rgba(124, 92, 252, 0.25);
+  }
+
+  .btn-secondary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(124, 92, 252, 0.35);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-secondary);
+  }
+
+  .btn-ghost:hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text);
+  }
+
+  .btn-accept {
+    background: var(--green-light);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    padding: 10px 14px;
+  }
+
+  .btn-accept:hover {
+    background: rgba(16, 185, 129, 0.18);
+  }
+
+  .btn-reject {
+    background: var(--red-light);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.15);
+    padding: 10px 14px;
+  }
+
+  .btn-reject:hover {
+    background: rgba(239, 68, 68, 0.14);
+  }
+
+  /* ═══════════════════════════════════════════
+     RESPONSIVE (from A)
+     ═══════════════════════════════════════════ */
+  @media (max-width: 860px) {
+    .columns { grid-template-columns: 1fr; }
+    .container { padding: 16px; }
+    .hero { padding: 24px 20px 20px; }
+    .hero-title { font-size: 20px; }
+    .hero-scores { flex-wrap: wrap; }
+    .score-box { min-width: 100px; }
+    .topnav, .bottombar { padding: 0 16px; }
+    .card { padding: 20px; }
+  }
+
+  @media (max-width: 540px) {
+    .bottombar-right { flex-wrap: wrap; }
+    .bottombar { height: auto; padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ ANIMATED BLOBS ═══ -->
+<div class="blob-container">
+  <div class="blob blob--teal"></div>
+  <div class="blob blob--purple"></div>
+  <div class="blob blob--amber"></div>
+</div>
+
+<!-- ═══ GLASS TOP NAV ═══ -->
+<nav class="topnav animate-in animate-in--d1">
+  <a class="topnav-left" onclick="history.back()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+    Retour aux jobs
+  </a>
+  <div class="topnav-brand">
+    <div class="topnav-brand-dot"></div>
+    <strong>mybuilding</strong> · CRM
+  </div>
+</nav>
+
+<!-- ═══ MAIN CONTAINER ═══ -->
+<div class="container">
+
+  <!-- ═══ HERO CARD ═══ -->
+  <div class="glass hero animate-in animate-in--d2">
+
+    <!-- Sniper badge (pulsing) -->
+    <div class="sniper-badge">
+      🎯 SNIPER MODE
+    </div>
+
+    <!-- Title -->
+    <h1 class="hero-title">AI Engineer Needed for Conversational AI &amp; n8n Automation Solutions</h1>
+
+    <!-- Meta -->
+    <div class="hero-meta">
+      <span class="budget">$100 Fixed Price</span>
+      <span class="meta-dot"></span>
+      <span>🇺🇸 United States</span>
+      <span class="meta-dot"></span>
+      <span>⏱ 26 min ago</span>
+      <span class="meta-dot"></span>
+      <span style="color: var(--green); font-weight: 600;">● New</span>
+    </div>
+
+    <!-- Score boxes -->
+    <div class="hero-scores">
+      <div class="score-box">
+        <div class="score-box-value score-box-value--teal">99%</div>
+        <div class="score-box-label">Feasibility</div>
+      </div>
+      <div class="score-box">
+        <div class="score-box-value score-box-value--indigo">10/10</div>
+        <div class="score-box-label">Worth</div>
+      </div>
+      <div class="score-box">
+        <div class="score-box-value score-box-value--green">$100</div>
+        <div class="score-box-label">Budget</div>
+      </div>
+      <div class="score-box">
+        <div class="score-box-value score-box-value--amber">🎯</div>
+        <div class="score-box-label">Sniper</div>
+      </div>
+    </div>
+
+    <!-- Verdict -->
+    <div class="verdict">
+      <div class="verdict-icon">✓</div>
+      <span><strong>GO</strong> — Ce job est fait pour toi. Postule maintenant.</span>
+    </div>
+
+    <!-- Generate CTA + Cover Letter area -->
+    <div class="generate-zone">
+      <button class="generate-btn" id="generateBtn" onclick="generateCover()">
+        <div class="gen-spinner"></div>
+        <span class="gen-label">✦ Générer ma candidature</span>
+      </button>
+
+      <div class="cover-results" id="coverResults">
+        <div class="cover-tabs">
+          <button class="cover-tab active" onclick="switchCover('a', this)">
+            Version A
+            <span class="cover-tab-hint">Direct & factuel</span>
+          </button>
+          <button class="cover-tab" onclick="switchCover('b', this)">
+            Version B
+            <span class="cover-tab-hint">Conversationnel</span>
+          </button>
+        </div>
+
+        <div class="cover-panel active" id="cover-a">
+          <div class="cover-text">Hi! I'm Paul, confident I can deliver exactly what you need.
+
+Short Loom so you can see who you'd be working with. <span class="loom-link">[LOOM_LINK]</span>
+
+I've built my own AI system with 38 specialized agents across 4 production applications. It handles everything from workflow automation to data analysis in my daily work, so I don't just use these tools, I live in them.
+
+Looking at what you've described, I see two layers here: first, wiring up an <strong>n8n workflow</strong> that handles the conversational loop (webhook trigger, context memory, Claude API call with a tuned system prompt) and second, making it actually useful by building a <strong>knowledge base</strong> from your existing docs so the bot answers about your business, not generic AI talk. One thing I'd want to clarify: are you looking for a web chat widget, a Slack/Discord integration, or an API endpoint? That changes the front-end layer. Either way, you'll get a working n8n workflow, Claude API integration tested end to end, conversation memory, and clear documentation, <strong>so you're not left guessing what comes next</strong>.
+
+For tools, I work daily with <strong>n8n</strong>, <strong>Claude API</strong>, Supabase, Make, VS Code, Railway, webhook architectures, and Telegram Bot API. I pick whatever solves the problem cleanest.
+
+Send me a message, I'm online now and happy to jump on a quick call.</div>
+          <div class="cover-actions">
+            <button class="cover-copy" onclick="copyCover('a')">📋 Copier</button>
+            <button class="cover-send">🚀 Envoyer à l'extension</button>
+          </div>
+        </div>
+
+        <div class="cover-panel" id="cover-b">
+          <div class="cover-text">Hi! I'm Paul. This one caught my eye because it's right in my wheelhouse.
+
+Short Loom so you can see who you'd be working with. <span class="loom-link">[LOOM_LINK]</span>
+
+I've built my own AI system with 38 specialized agents across 4 production applications. It runs my entire workflow daily, so I genuinely live in these tools every day.
+
+Looking at what you've described, it sounds like you need someone who can take a conversational AI idea and turn it into something that actually runs, not just a prompt in a playground. The way I'd approach it: start with the <strong>n8n workflow backbone</strong> (webhook, Claude API, response with memory), then layer in a <strong>knowledge base</strong> so the bot speaks your language, not just generic AI. I'm curious, what's the main channel for this chatbot? Web widget, messaging app, or internal tool? That'll shape how we handle the UX. What you'll walk away with: a fully working chatbot, tested against real conversations, with documentation clear enough that you could tweak it yourself, <strong>so you're not left guessing what comes next</strong>.
+
+On the tools side, <strong>n8n</strong>, <strong>Claude API</strong>, Supabase, Make, webhook architectures, VS Code. I use these daily, they're not resume keywords.
+
+Drop me a message, I'm available now and happy to jump on a call.</div>
+          <div class="cover-actions">
+            <button class="cover-copy" onclick="copyCover('b')">📋 Copier</button>
+            <button class="cover-send">🚀 Envoyer à l'extension</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TWO COLUMNS ═══ -->
+  <div class="columns">
+
+    <!-- ── LEFT COLUMN (58%) ── -->
+    <div class="col-left">
+
+      <!-- Pourquoi pour toi -->
+      <div class="glass card animate-in animate-in--d3">
+        <div class="card-title">
+          <span class="emoji">💡</span>
+          Pourquoi pour toi
+        </div>
+        <ul class="match-list">
+          <li>Tu matches parfaitement : <strong>n8n automation</strong> est ton core skill, <strong>Claude API</strong> c'est littéralement ton agent IA, et tu as déjà livré 3 chatbots conversationnels.</li>
+          <li>Budget $100 = test/POC → parfait pour démontrer ta vitesse d'exécution et convertir en contrat long terme.</li>
+          <li>Client US vérifié, 0 compétition visible sur la combo n8n + Claude. <strong>Tu es seul sur ce créneau.</strong></li>
+        </ul>
+      </div>
+
+      <!-- Ce que le client veut -->
+      <div class="glass card animate-in animate-in--d4">
+        <div class="card-title">
+          <span class="emoji">🎯</span>
+          Ce que le client veut
+        </div>
+        <ul class="bullet-list">
+          <li><strong>Objectif :</strong> Chatbot IA conversationnel avec automatisation n8n</li>
+          <li><strong>Stack :</strong> n8n workflows, Claude API / LLM, agents IA</li>
+          <li><strong>Livrable :</strong> POC fonctionnel + documentation</li>
+          <li><strong>Potentiel :</strong> Collaboration long terme, projets récurrents</li>
+        </ul>
+      </div>
+
+      <!-- Livrables attendus -->
+      <div class="glass card animate-in animate-in--d5">
+        <div class="card-title">
+          <span class="emoji">📋</span>
+          Livrables attendus
+        </div>
+        <ul class="deliverable-list">
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5l2 2 4-4.5"/></svg></span>
+            Proof of concept fonctionnel
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5l2 2 4-4.5"/></svg></span>
+            Workflow n8n configuré et documenté
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5l2 2 4-4.5"/></svg></span>
+            Intégration Claude API
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5l2 2 4-4.5"/></svg></span>
+            Documentation technique
+          </li>
+        </ul>
+      </div>
+
+      <!-- Red Flags (amber) -->
+      <div class="glass card flag-card animate-in animate-in--d6">
+        <div class="card-title">
+          <span class="emoji">⚠️</span>
+          Attention
+        </div>
+        <p class="flag-item">Budget $100 = micro-budget test. Opportunité de conversion, mais ne pas sous-estimer le scope.</p>
+      </div>
+
+      <!-- Description (collapsible, english) -->
+      <div class="glass card animate-in animate-in--d7">
+        <button class="collapse-toggle" aria-expanded="false" onclick="toggleCollapse(this)">
+          <span class="card-title" style="margin-bottom:0">
+            <span class="emoji">📝</span>
+            Description originale (EN)
+          </span>
+          <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>
+        </button>
+        <div class="collapse-body" id="desc-collapse">
+          <div class="collapse-content">
+            We need an AI engineer who can build conversational AI solutions using n8n automation. The ideal candidate should have experience with AI agent development, chatbot creation, and n8n workflow automation. Must be familiar with Claude API or similar LLM APIs. This is for ongoing projects with potential for long-term collaboration. Initial task is a proof of concept.
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ PLAN D'EXÉCUTION ═══ -->
+      <div class="glass card plan-card animate-in animate-in--d8">
+        <div class="plan-header">
+          <div class="card-title" style="margin-bottom:0">
+            <span class="emoji">🗺️</span>
+            Plan d'exécution
+          </div>
+          <div class="plan-total">
+            <span class="plan-total-item">5 étapes</span>
+            <span class="plan-total-item">⏱ ~12h total</span>
+          </div>
+        </div>
+
+        <div class="plan-timeline">
+          <!-- Étape 1 -->
+          <div class="plan-step">
+            <div class="plan-step-dot"></div>
+            <div class="plan-step-header">
+              <span class="plan-step-num">Étape 1 — Setup</span>
+              <span class="plan-step-time">~1h</span>
+            </div>
+            <div class="plan-step-title">Cadrage & environnement</div>
+            <div class="plan-step-desc">Call rapide avec le client pour clarifier le use case exact du chatbot (audience, canal, volume). Setup n8n cloud ou self-hosted selon sa préférence. Connexion API Claude.</div>
+            <div class="plan-step-tools">
+              <span class="plan-tool">n8n</span>
+              <span class="plan-tool">Claude API</span>
+              <span class="plan-tool">Call client</span>
+            </div>
+            <div class="plan-step-deliverable">Env n8n prêt + brief écrit validé par le client</div>
+          </div>
+
+          <!-- Étape 2 -->
+          <div class="plan-step">
+            <div class="plan-step-dot"></div>
+            <div class="plan-step-header">
+              <span class="plan-step-num">Étape 2 — Workflow core</span>
+              <span class="plan-step-time">~4h</span>
+            </div>
+            <div class="plan-step-title">Création du workflow conversationnel n8n</div>
+            <div class="plan-step-desc">Design du flow principal : trigger webhook → context management → appel Claude API (system prompt + conversation history) → réponse formatée. Gestion du multi-turn avec memory buffer.</div>
+            <div class="plan-step-tools">
+              <span class="plan-tool">n8n workflows</span>
+              <span class="plan-tool">Webhook</span>
+              <span class="plan-tool">Claude API</span>
+              <span class="plan-tool">JSON</span>
+            </div>
+            <div class="plan-step-deliverable">Workflow n8n fonctionnel — chatbot répond via API</div>
+          </div>
+
+          <!-- Étape 3 -->
+          <div class="plan-step">
+            <div class="plan-step-dot"></div>
+            <div class="plan-step-header">
+              <span class="plan-step-num">Étape 3 — Intelligence</span>
+              <span class="plan-step-time">~3h</span>
+            </div>
+            <div class="plan-step-title">Prompt engineering & knowledge base</div>
+            <div class="plan-step-desc">Création du system prompt adapté au business du client. Si besoin : RAG léger avec embeddings sur ses docs/FAQ. Calibrage température, max tokens, fallback responses.</div>
+            <div class="plan-step-tools">
+              <span class="plan-tool">Prompt engineering</span>
+              <span class="plan-tool">RAG</span>
+              <span class="plan-tool">Embeddings</span>
+            </div>
+            <div class="plan-step-deliverable">Chatbot répond avec pertinence sur le domaine du client</div>
+          </div>
+
+          <!-- Étape 4 -->
+          <div class="plan-step">
+            <div class="plan-step-dot"></div>
+            <div class="plan-step-header">
+              <span class="plan-step-num">Étape 4 — Tests & edge cases</span>
+              <span class="plan-step-time">~2h</span>
+            </div>
+            <div class="plan-step-title">Tests, error handling, limites</div>
+            <div class="plan-step-desc">Scénarios de test : questions hors-scope, inputs vides, rate limiting API, timeouts. Ajout de fallbacks gracieux et logging des conversations pour amélioration continue.</div>
+            <div class="plan-step-tools">
+              <span class="plan-tool">Testing</span>
+              <span class="plan-tool">Error handling</span>
+              <span class="plan-tool">Logging</span>
+            </div>
+            <div class="plan-step-deliverable">POC robuste — gère les cas limites sans crash</div>
+          </div>
+
+          <!-- Étape 5 -->
+          <div class="plan-step">
+            <div class="plan-step-dot"></div>
+            <div class="plan-step-header">
+              <span class="plan-step-num">Étape 5 — Livraison</span>
+              <span class="plan-step-time">~2h</span>
+            </div>
+            <div class="plan-step-title">Documentation & handover</div>
+            <div class="plan-step-desc">Documentation technique : architecture du workflow, endpoints API, variables d'environnement, guide de maintenance. Démo live au client + walkthrough vidéo Loom optionnel.</div>
+            <div class="plan-step-tools">
+              <span class="plan-tool">Documentation</span>
+              <span class="plan-tool">Loom</span>
+              <span class="plan-tool">Démo live</span>
+            </div>
+            <div class="plan-step-deliverable">Projet livré — client autonome pour itérer</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── RIGHT COLUMN (40%) ── -->
+    <div class="col-right">
+
+      <!-- Battle Card -->
+      <div class="glass card battle-card animate-in animate-in--d3">
+        <div class="card-title">
+          <span class="emoji">⚔️</span>
+          Battle Card — Ton angle d'attaque
+        </div>
+
+        <!-- Tes armes -->
+        <div class="battle-section">
+          <div class="battle-label">Tes armes</div>
+          <div class="weapons">
+            <div class="weapon">
+              <span class="weapon-icon">✦</span>
+              Expert n8n (3+ projets livrés)
+            </div>
+            <div class="weapon">
+              <span class="weapon-icon">✦</span>
+              Agent IA personnel (Morpheus — preuve vivante)
+            </div>
+            <div class="weapon">
+              <span class="weapon-icon">✦</span>
+              Livraison rapide — POC en 48h garanti
+            </div>
+          </div>
+        </div>
+
+        <!-- Accroche -->
+        <div class="battle-section">
+          <div class="battle-label">💬 Accroche</div>
+          <div class="accroche-box">
+            <div class="accroche-text">I build AI-powered automation with n8n and Claude daily — I literally have my own AI agent handling my workflow. Happy to demo.</div>
+          </div>
+        </div>
+
+        <!-- Différenciateur -->
+        <div class="battle-section">
+          <div class="battle-label">🏆 Ce qui te différencie</div>
+          <div class="differenciateur-box">
+            Tu es un des rares devs qui combine <strong>n8n + Claude API en production</strong>. La plupart font l'un OU l'autre.
+          </div>
+        </div>
+      </div>
+
+      <!-- Skills Match (animated bars) -->
+      <div class="glass card animate-in animate-in--d4">
+        <div class="card-title">
+          <span class="emoji">📊</span>
+          Skills Match
+        </div>
+        <div class="skills-list">
+          <div class="skill-row">
+            <span class="skill-row-name">AI Agent Dev</span>
+            <div class="skill-row-bar-wrap">
+              <div class="skill-row-bar skill-row-bar--expert" data-width="95%"></div>
+            </div>
+            <span class="skill-row-badge skill-row-badge--expert">✅ Perfect</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-row-name">n8n</span>
+            <div class="skill-row-bar-wrap">
+              <div class="skill-row-bar skill-row-bar--expert" data-width="95%"></div>
+            </div>
+            <span class="skill-row-badge skill-row-badge--expert">✅ Perfect</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-row-name">Claude API</span>
+            <div class="skill-row-bar-wrap">
+              <div class="skill-row-bar skill-row-bar--expert" data-width="95%"></div>
+            </div>
+            <span class="skill-row-badge skill-row-badge--expert">✅ Perfect</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-row-name">Chatbot Dev</span>
+            <div class="skill-row-bar-wrap">
+              <div class="skill-row-bar skill-row-bar--confirmed" data-width="80%"></div>
+            </div>
+            <span class="skill-row-badge skill-row-badge--confirmed">✅ Good</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-row-name">AI</span>
+            <div class="skill-row-bar-wrap">
+              <div class="skill-row-bar skill-row-bar--confirmed" data-width="75%"></div>
+            </div>
+            <span class="skill-row-badge skill-row-badge--confirmed">✅ Good</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scores détaillés (animated gradient bars) -->
+      <div class="glass card animate-in animate-in--d5">
+        <div class="card-title">
+          <span class="emoji">📈</span>
+          Scores détaillés
+        </div>
+        <div class="score-list">
+          <div class="score-row">
+            <span class="score-label">Feasibility</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-green" data-width="99%"></div>
+            </div>
+            <span class="score-value">99%</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Worth</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-green" data-width="100%"></div>
+            </div>
+            <span class="score-value">10/10</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Budget</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-teal" data-width="80%"></div>
+            </div>
+            <span class="score-value">8/10</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Client</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-indigo" data-width="70%"></div>
+            </div>
+            <span class="score-value">7/10</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Competition</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-green" data-width="90%"></div>
+            </div>
+            <span class="score-value">9/10</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Freshness</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-green" data-width="100%"></div>
+            </div>
+            <span class="score-value">10/10</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STICKY BOTTOM BAR ═══ -->
+<div class="bottombar">
+  <div class="bottombar-left">
+    <span class="status-dot">Nouveau</span>
+    <span>⏱ Posté il y a 26 min</span>
+  </div>
+  <div class="bottombar-right">
+    <a href="#" class="btn btn-ghost">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M11 8v3a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1h3"/><path d="M8 2h4v4"/><path d="M6 8L12 2"/></svg>
+      Voir sur Upwork
+    </a>
+    <button class="btn btn-accept" title="Postulé">✓</button>
+    <button class="btn btn-reject" title="Skip">✕</button>
+  </div>
+</div>
+
+<script>
+  // ── Collapsible description toggle ──
+  function toggleCollapse(btn) {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', !expanded);
+    const body = btn.nextElementSibling;
+    body.classList.toggle('open', !expanded);
+  }
+
+  // ── Animate all bars on load (skill bars + score bars) ──
+  document.addEventListener('DOMContentLoaded', () => {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document.querySelectorAll('[data-width]').forEach(bar => {
+          bar.style.width = bar.dataset.width;
+        });
+      }, 400);
+    });
+  });
+
+  // ── Generate cover letter (simulated — in prod: Claude API call) ──
+  function generateCover() {
+    const btn = document.getElementById('generateBtn');
+    const results = document.getElementById('coverResults');
+    btn.classList.add('loading');
+    // Simulate API call
+    setTimeout(() => {
+      btn.classList.remove('loading');
+      btn.style.display = 'none';
+      results.classList.add('visible');
+      // Smooth scroll to results
+      results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 1800);
+  }
+
+  // ── Switch between Version A / B ──
+  function switchCover(version, el) {
+    document.querySelectorAll('.cover-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.cover-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('cover-' + version).classList.add('active');
+  }
+
+  // ── Copy cover letter ──
+  function copyCover(version) {
+    const panel = document.getElementById('cover-' + version);
+    const text = panel.querySelector('.cover-text').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = panel.querySelector('.cover-copy');
+      btn.textContent = '✓ Copié !';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '📋 Copier'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+</script>
+
+</body>
+</html>

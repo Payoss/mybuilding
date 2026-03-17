@@ -108,8 +108,36 @@ class CoverLetterRequest(BaseModel):
 # CLAUDE RUNNER — centralized subprocess with model selection
 # ══════════════════════════════════════════════════════════════
 
+def _format_cover_letter(text: str) -> str:
+    """Format cover letter with proper paragraph breaks between blocks.
+    Ensures L1-L6 blocks are visually separated even if LLM outputs a wall of text."""
+    if not text:
+        return text
+    # Replace em-dashes
+    text = text.replace("—", ",").replace("–", ",")
+    # If already has paragraph breaks (2+ newlines), leave it
+    if "\n\n" in text:
+        return text.strip()
+    # Insert breaks before known block starters
+    block_starters = [
+        "I recorded a quick Loom", "I recorded a Loom", "Short Loom", "Here's a quick Loom",
+        "I've built", "I run", "My setup", "I work with",
+        "Looking at", "The way I see", "Breaking this down", "Your project", "You need", "Here's how",
+        "What's the current", "One question", "Quick question", "How do you",
+        "Built on", "Stack:", "Tools:",
+        "Send me a message", "Happy to jump", "I can start", "Let's set up",
+    ]
+    for starter in block_starters:
+        if starter in text:
+            # Insert double newline before the starter (if not at beginning)
+            idx = text.find(starter)
+            if idx > 0 and text[idx-1] != '\n':
+                text = text[:idx] + "\n\n" + text[idx:]
+    return text.strip()
+
+
 def _parse_json_from_output(output: str) -> dict:
-    """Extract and parse JSON from LLM output. Strips em-dashes from cover fields."""
+    """Extract and parse JSON from LLM output. Formats cover letters with paragraph breaks."""
     output = output.strip()
     start = output.find("{")
     end = output.rfind("}") + 1
@@ -118,7 +146,7 @@ def _parse_json_from_output(output: str) -> dict:
     data = json.loads(output[start:end])
     for key in ("cover_letter_a", "cover_letter_b", "version_a", "version_b", "proposal"):
         if key in data and isinstance(data[key], str):
-            data[key] = data[key].replace("—", ",").replace("–", ",")
+            data[key] = _format_cover_letter(data[key])
     return data
 
 

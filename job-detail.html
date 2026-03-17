@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Job Detail | mybuilding · Upwork CRM</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/style.css?v=2">
 <style>
 /* ── Job Detail Page ── */
 .jd-content { padding: 20px 28px 60px; max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
@@ -117,7 +117,7 @@
 .jd-cover-tab.active { background: var(--teal-dim); color: var(--teal); border-color: rgba(45,212,191,0.3); }
 .jd-cover-panel { display: none; }
 .jd-cover-panel.active { display: block; }
-.jd-cover-text { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 14px; color: var(--t1); font-size: 12px; font-family: inherit; line-height: 1.65; resize: vertical; min-height: 200px; outline: none; transition: border-color 0.15s; }
+.jd-cover-text { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; color: var(--t1); font-size: 13px; font-family: inherit; line-height: 1.75; resize: vertical; min-height: 280px; outline: none; transition: border-color 0.15s; white-space: pre-wrap; }
 .jd-cover-text:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(45,212,191,0.12); }
 .jd-cover-actions { display: flex; gap: 8px; margin-top: 8px; }
 .jd-copy-btn { background: var(--teal-glow); border: 1px solid rgba(45,212,191,0.3); color: var(--teal); font-size: 11px; font-weight: 600; padding: 6px 14px; border-radius: 7px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
@@ -169,8 +169,8 @@
 <div class="toast" id="toast-el"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="/js/config.js"></script>
-<script src="/js/app.js"></script>
+<script src="/js/config.js?v=2"></script>
+<script src="/js/app.js?v=2"></script>
 <script>
 document.getElementById('sidebar-mount').innerHTML = renderSidebar('upwork');
 

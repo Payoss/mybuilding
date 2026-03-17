@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Engineer — Job Detail | mybuilding · Upwork CRM</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F8F9FB;
+    --card: #FFFFFF;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.07);
+    --primary: #0d9488;
+    --primary-light: #ccfbf1;
+    --primary-dark: #0f766e;
+    --text: #111827;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    --border: #e5e7eb;
+    --border-light: #f3f4f6;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-xs: 4px;
+    --go-bg: #dcfce7;
+    --go-text: #166534;
+    --go-border: #86efac;
+    --warn-bg: #fef9c3;
+    --warn-text: #854d0e;
+    --warn-border: #fde047;
+    --red-bg: #fef2f2;
+    --red-text: #991b1b;
+    --sniper-bg: #ede9fe;
+    --sniper-text: #5b21b6;
+    --transition: 0.15s ease;
+  }
+
+  html {
+    font-family: system-ui, -apple-system, 'Inter', 'Segoe UI', sans-serif;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* ── TOP NAV ── */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .topnav-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color var(--transition);
+  }
+  .topnav-left:hover { color: var(--primary); }
+  .topnav-left svg { width: 16px; height: 16px; }
+
+  .topnav-brand {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    letter-spacing: -0.02em;
+  }
+  .topnav-brand strong {
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  /* ── CONTAINER ── */
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 32px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 32px 24px;
+    margin-bottom: 20px;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 16px;
+  }
+
+  .header-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.25;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .verdict-badge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    background: var(--go-bg);
+    color: var(--go-text);
+    border: 1.5px solid var(--go-border);
+  }
+  .verdict-badge .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--go-text);
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 18px;
+  }
+
+  .meta-sep {
+    color: var(--border);
+    user-select: none;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .pill-sniper {
+    background: var(--sniper-bg);
+    color: var(--sniper-text);
+  }
+  .pill-new {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+    transition: all var(--transition);
+    text-decoration: none;
+  }
+  .btn:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .btn svg { width: 14px; height: 14px; }
+
+  .btn-primary {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+  .btn-primary:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+    box-shadow: 0 2px 8px rgba(13,148,136,0.25);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-secondary);
+  }
+  .btn-ghost:hover {
+    background: var(--border-light);
+    color: var(--text);
+  }
+
+  .btn-skip {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-tertiary);
+  }
+  .btn-skip:hover {
+    background: var(--red-bg);
+    color: var(--red-text);
+    border-color: transparent;
+  }
+
+  /* ── TWO-COLUMN LAYOUT ── */
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 0.7fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.55;
+  }
+
+  /* ── POURQUOI CE JOB ── */
+  .match-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .match-list li {
+    position: relative;
+    padding-left: 22px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .match-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    opacity: 0.7;
+  }
+  .match-list li strong {
+    font-weight: 600;
+  }
+
+  /* ── BULLETS GENERIC ── */
+  .bullet-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .bullet-list li {
+    position: relative;
+    padding-left: 18px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+  .bullet-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  /* ── LIVRABLES ── */
+  .deliverable-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .deliverable-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .deliverable-list li .check {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .deliverable-list li .check svg {
+    width: 10px;
+    height: 10px;
+    color: var(--primary-dark);
+  }
+
+  /* ── RED FLAGS ── */
+  .flag-card {
+    border-left: 3px solid var(--warn-border);
+    background: var(--warn-bg);
+  }
+  .flag-card .card-title { color: var(--warn-text); }
+  .flag-item {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--warn-text);
+  }
+
+  /* ── COLLAPSIBLE DESCRIPTION ── */
+  .collapse-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+  }
+  .collapse-toggle .chevron {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--transition);
+    color: var(--text-tertiary);
+  }
+  .collapse-toggle[aria-expanded="true"] .chevron {
+    transform: rotate(180deg);
+  }
+  .collapse-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease;
+  }
+  .collapse-body.open {
+    max-height: 600px;
+  }
+  .collapse-content {
+    padding-top: 14px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+
+  /* ── BATTLE CARD ── */
+  .battle-card {
+    border: 1px solid var(--primary);
+    border-left: 3px solid var(--primary);
+    background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%);
+  }
+  .battle-card .card-title { color: var(--primary-dark); }
+
+  .battle-section { margin-bottom: 16px; }
+  .battle-section:last-child { margin-bottom: 0; }
+  .battle-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+  }
+
+  .battle-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .battle-list li {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+    padding-left: 16px;
+    position: relative;
+  }
+  .battle-list li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  .accroche {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text);
+    font-style: italic;
+    background: var(--primary-light);
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--primary);
+  }
+
+  .differenciateur {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+  }
+
+  /* ── SKILLS MATCH TABLE ── */
+  .skills-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .skills-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    padding: 0 0 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .skills-table td {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: middle;
+  }
+  .skills-table tr:last-child td { border-bottom: none; }
+  .skills-table td:first-child { font-weight: 500; color: var(--text); }
+  .skills-table td:nth-child(2) { color: var(--text-secondary); }
+  .skills-table td:last-child { text-align: right; }
+
+  .match-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--radius-xs);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .match-perfect { background: var(--go-bg); color: var(--go-text); }
+  .match-good { background: #dbeafe; color: #1e40af; }
+
+  /* ── SCORES ── */
+  .score-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .score-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .score-label {
+    flex: 0 0 100px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .score-bar-track {
+    flex: 1;
+    height: 7px;
+    background: var(--border-light);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .fill-green { background: linear-gradient(90deg, #34d399, #0d9488); }
+  .fill-teal { background: linear-gradient(90deg, #5eead4, #0d9488); }
+  .fill-blue { background: linear-gradient(90deg, #93c5fd, #3b82f6); }
+  .fill-amber { background: linear-gradient(90deg, #fcd34d, #f59e0b); }
+
+  .score-value {
+    flex: 0 0 48px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── STICKY BOTTOM BAR ── */
+  .bottombar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    padding: 0 32px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .bottombar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .status-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: var(--primary-dark);
+  }
+  .status-dot::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .bottombar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 860px) {
+    .columns { grid-template-columns: 1fr; }
+    .container { padding: 16px; }
+    .header { padding: 20px; }
+    .header-top { flex-direction: column; gap: 12px; }
+    .topnav, .bottombar { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── TOP NAV ─── -->
+<nav class="topnav">
+  <div class="topnav-left" onclick="history.back()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+    Retour aux jobs
+  </div>
+  <div class="topnav-brand"><strong>mybuilding</strong> · Upwork CRM</div>
+</nav>
+
+<!-- ─── MAIN CONTAINER ─── -->
+<div class="container">
+
+  <!-- ─── HEADER CARD ─── -->
+  <div class="header">
+    <div class="header-top">
+      <h1 class="header-title">AI Engineer Needed for Conversational AI &amp; n8n Automation Solutions</h1>
+      <div class="verdict-badge"><span class="dot"></span> GO</div>
+    </div>
+
+    <div class="header-meta">
+      <span>Posté il y a 26 min</span>
+      <span class="meta-sep">·</span>
+      <span><strong>$100</strong> Fixed Price</span>
+      <span class="meta-sep">·</span>
+      <span>🇺🇸 United States</span>
+      <span class="meta-sep">·</span>
+      <span class="pill pill-sniper">🎯 SNIPER</span>
+      <span class="pill pill-new">● Nouveau</span>
+    </div>
+
+    <div class="header-actions">
+      <a href="#" class="btn btn-ghost">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8M6 8h8M6 13h8M2 3h0M2 8h0M2 13h0"/></svg>
+        Voir sur Upwork ↗
+      </a>
+      <button class="btn btn-primary">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4z"/></svg>
+        Générer Candidature
+      </button>
+      <button class="btn">✓ Postulé</button>
+      <button class="btn btn-skip">Skip</button>
+    </div>
+  </div>
+
+  <!-- ─── TWO COLUMNS ─── -->
+  <div class="columns">
+
+    <!-- ── LEFT COLUMN ── -->
+    <div class="col-left">
+
+      <!-- Pourquoi ce job -->
+      <div class="card">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>
+          Pourquoi ce job est pour toi
+        </div>
+        <ul class="match-list">
+          <li>Tu matches parfaitement : <strong>n8n automation</strong> est ton core skill, <strong>Claude API</strong> c'est littéralement ton agent IA, et tu as déjà livré 3 chatbots conversationnels.</li>
+          <li>Budget $100 = test/POC → parfait pour démontrer ta vitesse d'exécution et convertir en contrat long terme.</li>
+          <li>Client US vérifié, 0 compétition visible sur la combo n8n + Claude. <strong>Tu es seul sur ce créneau.</strong></li>
+        </ul>
+      </div>
+
+      <!-- Ce que le client veut -->
+      <div class="card">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H2v12h12V2z"/><path d="M5 6h6M5 9h4"/></svg>
+          Ce que le client veut
+        </div>
+        <ul class="bullet-list">
+          <li>Un ingénieur IA capable de construire des solutions conversationnelles avec n8n</li>
+          <li>Expérience avec les agents IA, création de chatbots et workflows n8n</li>
+          <li>Maîtrise de Claude API ou d'APIs LLM similaires</li>
+          <li>Première tâche : proof of concept — potentiel de collaboration long terme</li>
+        </ul>
+      </div>
+
+      <!-- Livrables attendus -->
+      <div class="card">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l3 3 5-6"/></svg>
+          Livrables attendus
+        </div>
+        <ul class="deliverable-list">
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5l2 2 4-4.5"/></svg></span>
+            POC chatbot conversationnel fonctionnel
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5l2 2 4-4.5"/></svg></span>
+            Workflow n8n intégré avec Claude API
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5l2 2 4-4.5"/></svg></span>
+            Documentation technique du setup
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5l2 2 4-4.5"/></svg></span>
+            Démonstration live ou Loom
+          </li>
+        </ul>
+      </div>
+
+      <!-- Red Flags -->
+      <div class="card flag-card">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M8 13h0"/></svg>
+          Attention
+        </div>
+        <p class="flag-item">Budget $100 serré pour un POC complet — bien cadrer le scope en amont. Objectif : convertir en hourly dès la V2.</p>
+      </div>
+
+      <!-- Description originale (collapsible) -->
+      <div class="card">
+        <button class="collapse-toggle" aria-expanded="false" onclick="toggleCollapse(this)">
+          <span class="card-title" style="margin-bottom:0">
+            <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M2 8h12M2 12h8"/></svg>
+            Description originale (EN)
+          </span>
+          <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>
+        </button>
+        <div class="collapse-body" id="desc-collapse">
+          <div class="collapse-content">
+            We need an AI engineer who can build conversational AI solutions using n8n automation. The ideal candidate should have experience with AI agent development, chatbot creation, and n8n workflow automation. Must be familiar with Claude API or similar LLM APIs. This is for ongoing projects with potential for long-term collaboration. Initial task is a proof of concept.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── RIGHT COLUMN ── -->
+    <div class="col-right">
+
+      <!-- Battle Card -->
+      <div class="card battle-card">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l10 10M13 3L3 13"/></svg>
+          Battle Card — Ton angle d'attaque
+        </div>
+
+        <div class="battle-section">
+          <div class="battle-label">Qualités à mettre en avant</div>
+          <ul class="battle-list">
+            <li>Expert n8n — 3+ projets livrés en production</li>
+            <li>Agent IA personnel (Morpheus) — Claude API daily</li>
+            <li>Livraison rapide — POC en 48h garanti</li>
+          </ul>
+        </div>
+
+        <div class="battle-section">
+          <div class="battle-label">Phrase d'accroche</div>
+          <div class="accroche">"I build AI-powered automation with n8n and Claude daily — I literally have my own AI agent handling my workflow. Happy to demo."</div>
+        </div>
+
+        <div class="battle-section">
+          <div class="battle-label">Ce qui te différencie</div>
+          <p class="differenciateur">Tu es un des rares devs qui combine n8n + Claude API en production. La plupart font l'un OU l'autre — toi tu fais les deux, quotidiennement.</p>
+        </div>
+      </div>
+
+      <!-- Skills Match -->
+      <div class="card">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l3 3 5-6"/></svg>
+          Skills Match
+        </div>
+        <table class="skills-table">
+          <thead>
+            <tr>
+              <th>Skill</th>
+              <th>Ton niveau</th>
+              <th>Match</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>AI Agent Development</td>
+              <td>Expert (Morpheus)</td>
+              <td><span class="match-tag match-perfect">✅ Perfect</span></td>
+            </tr>
+            <tr>
+              <td>n8n</td>
+              <td>Expert (3 projets)</td>
+              <td><span class="match-tag match-perfect">✅ Perfect</span></td>
+            </tr>
+            <tr>
+              <td>Claude API</td>
+              <td>Expert (daily use)</td>
+              <td><span class="match-tag match-perfect">✅ Perfect</span></td>
+            </tr>
+            <tr>
+              <td>Chatbot Development</td>
+              <td>Confirmé</td>
+              <td><span class="match-tag match-good">✅ Good</span></td>
+            </tr>
+            <tr>
+              <td>Artificial Intelligence</td>
+              <td>Confirmé</td>
+              <td><span class="match-tag match-good">✅ Good</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Scores détaillés -->
+      <div class="card">
+        <div class="card-title">
+          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 14V8h3v6H2zM7 14V5h3v9H7zM12 14V2h3v12h-3z"/></svg>
+          Scores détaillés
+        </div>
+        <div class="score-list">
+          <div class="score-row">
+            <span class="score-label">Feasibility</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-green" style="width: 99%"></div>
+            </div>
+            <span class="score-value">99%</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Worth</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-green" style="width: 100%"></div>
+            </div>
+            <span class="score-value">10/10</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Budget</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-teal" style="width: 80%"></div>
+            </div>
+            <span class="score-value">8/10</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Client</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-blue" style="width: 70%"></div>
+            </div>
+            <span class="score-value">7/10</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Competition</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-green" style="width: 90%"></div>
+            </div>
+            <span class="score-value">9/10</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Freshness</span>
+            <div class="score-bar-track">
+              <div class="score-bar-fill fill-green" style="width: 100%"></div>
+            </div>
+            <span class="score-value">10/10</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ─── STICKY BOTTOM BAR ─── -->
+<div class="bottombar">
+  <div class="bottombar-left">
+    <span class="status-dot">Nouveau</span>
+    <span>Posté il y a 26 min</span>
+  </div>
+  <div class="bottombar-right">
+    <a href="#" class="btn btn-ghost">
+      ↗ Voir sur Upwork
+    </a>
+    <button class="btn btn-primary">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M8 2l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4z"/></svg>
+      Générer Candidature
+    </button>
+    <button class="btn">✓ Postulé</button>
+  </div>
+</div>
+
+<script>
+  function toggleCollapse(btn) {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', !expanded);
+    const body = btn.nextElementSibling;
+    body.classList.toggle('open', !expanded);
+  }
+
+  // Animate score bars on load
+  document.addEventListener('DOMContentLoaded', () => {
+    const fills = document.querySelectorAll('.score-bar-fill');
+    fills.forEach(f => {
+      const w = f.style.width;
+      f.style.width = '0%';
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          f.style.width = w;
+        });
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

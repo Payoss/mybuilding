@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Detail — AI Engineer & n8n Automation</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #FFFCF8;
+            color: #1a1a2e;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e0dbd4; border-radius: 3px; }
+
+        /* ── Layout ── */
+        .page {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 32px 24px 80px;
+        }
+
+        /* ── Back link ── */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #71717a;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            margin-bottom: 28px;
+        }
+        .back-link:hover {
+            background: #f5f0ea;
+            color: #1a1a2e;
+        }
+        .back-link svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* ── Header ── */
+        .header {
+            margin-bottom: 32px;
+        }
+        .sniper-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #92400e;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 5px 14px;
+            border-radius: 20px;
+            margin-bottom: 14px;
+        }
+        .header h1 {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1.3;
+            color: #1a1a2e;
+            margin-bottom: 12px;
+            letter-spacing: -0.01em;
+        }
+        .meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #71717a;
+        }
+        .meta-row .sep {
+            color: #d4d0ca;
+        }
+        .meta-row .budget {
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+        .meta-row .flag {
+            font-size: 15px;
+        }
+        .meta-row .new-tag {
+            background: #ecfdf5;
+            color: #065f46;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-left: 4px;
+        }
+
+        /* ── Card base ── */
+        .card {
+            background: #FFFFFF;
+            border: 1px solid #f0ede8;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: box-shadow 0.2s ease;
+        }
+        .card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+
+        /* ── Verdict Card ── */
+        .verdict-card {
+            background: linear-gradient(135deg, #f0fdfa, #f5f3ff);
+            border: 1px solid #ccfbf1;
+        }
+        .verdict-card:hover {
+            box-shadow: 0 4px 16px rgba(13,148,136,0.08);
+        }
+        .verdict-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .verdict-icon {
+            width: 36px;
+            height: 36px;
+            background: #0d9488;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .verdict-title {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 17px;
+            font-weight: 700;
+            color: #0d9488;
+        }
+        .verdict-subtitle {
+            font-size: 13px;
+            color: #71717a;
+        }
+        .meters {
+            display: flex;
+            gap: 28px;
+            flex-wrap: wrap;
+        }
+        .meter {
+            flex: 1;
+            min-width: 200px;
+        }
+        .meter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #71717a;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+        .meter-bar-wrapper {
+            background: #e6e2dc;
+            border-radius: 6px;
+            height: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        .meter-bar {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .meter-bar.teal { background: linear-gradient(90deg, #0d9488, #14b8a6); }
+        .meter-bar.indigo { background: linear-gradient(90deg, #7c5cfc, #a78bfa); }
+        .meter-value {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-top: 4px;
+        }
+
+        /* ── Section Headers ── */
+        .section-header {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-header::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #f0ede8;
+        }
+
+        /* ── Why this job ── */
+        .reasons-list {
+            list-style: none;
+            padding: 0;
+        }
+        .reasons-list li {
+            position: relative;
+            padding: 12px 16px 12px 40px;
+            margin-bottom: 8px;
+            background: #fafaf8;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .reasons-list li:hover {
+            border-color: #e8e4de;
+            background: #fff;
+        }
+        .reasons-list li::before {
+            content: '';
+            position: absolute;
+            left: 16px;
+            top: 17px;
+            width: 8px;
+            height: 8px;
+            background: #0d9488;
+            border-radius: 50%;
+        }
+        .reasons-list li strong {
+            color: #0d9488;
+            font-weight: 600;
+        }
+
+        /* ── Client wants ── */
+        .client-wants .want-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f5f2ed;
+            align-items: flex-start;
+        }
+        .client-wants .want-item:last-child {
+            border-bottom: none;
+        }
+        .want-icon {
+            font-size: 17px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .want-label {
+            font-size: 12px;
+            color: #71717a;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 600;
+        }
+        .want-value {
+            font-size: 14px;
+            color: #1a1a2e;
+        }
+
+        /* ── Battle Card ── */
+        .battle-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 16px;
+        }
+        @media (max-width: 560px) {
+            .battle-grid { grid-template-columns: 1fr; }
+        }
+        .battle-box {
+            background: #fafaf8;
+            border: 1px solid #f0ede8;
+            border-radius: 10px;
+            padding: 18px;
+        }
+        .battle-box-title {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: #71717a;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 12px;
+        }
+        .battle-list {
+            list-style: none;
+            padding: 0;
+        }
+        .battle-list li {
+            position: relative;
+            padding: 4px 0 4px 18px;
+            font-size: 13px;
+            color: #1a1a2e;
+        }
+        .battle-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #0d9488;
+            font-weight: 600;
+        }
+        .accroche-text {
+            font-style: italic;
+            color: #1a1a2e;
+            font-size: 14px;
+            line-height: 1.6;
+            border-left: 3px solid #7c5cfc;
+            padding-left: 16px;
+            margin-bottom: 14px;
+        }
+        .differenciateur {
+            background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+            border: 1px solid #e4e0f5;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #5b21b6;
+        }
+        .differenciateur strong {
+            font-weight: 700;
+        }
+
+        /* ── Skills Match ── */
+        .skills-table {
+            width: 100%;
+        }
+        .skill-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f5f2ed;
+        }
+        .skill-row:last-child {
+            border-bottom: none;
+        }
+        .skill-name {
+            width: 140px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a1a2e;
+            flex-shrink: 0;
+        }
+        .skill-bar-wrapper {
+            flex: 1;
+            background: #ece8e2;
+            border-radius: 4px;
+            height: 6px;
+            overflow: hidden;
+        }
+        .skill-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .skill-bar.expert { background: #0d9488; width: 100%; }
+        .skill-bar.confirmed { background: #14b8a6; width: 78%; }
+        .skill-level {
+            width: 80px;
+            font-size: 12px;
+            color: #71717a;
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .skill-check {
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        /* ── Collapsible Description ── */
+        .collapsible {
+            cursor: pointer;
+            user-select: none;
+        }
+        .collapsible .section-header {
+            cursor: pointer;
+        }
+        .collapsible .section-header .toggle-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: #f0ede8;
+            font-size: 11px;
+            color: #71717a;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .collapsible.open .toggle-icon {
+            transform: rotate(180deg);
+        }
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .collapsible.open .collapsible-content {
+            max-height: 600px;
+        }
+        .description-text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #71717a;
+            padding: 0 4px 8px;
+        }
+
+        /* ── Action Bar ── */
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #f0ede8;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        .btn-primary {
+            background: #0d9488;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #0f766e;
+            box-shadow: 0 4px 12px rgba(13,148,136,0.25);
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background: #7c5cfc;
+            color: #fff;
+        }
+        .btn-secondary:hover {
+            background: #6d4fe0;
+            box-shadow: 0 4px 12px rgba(124,92,252,0.25);
+            transform: translateY(-1px);
+        }
+        .btn-outline {
+            background: transparent;
+            color: #1a1a2e;
+            border: 1px solid #e0dbd4;
+        }
+        .btn-outline:hover {
+            background: #f5f2ed;
+            border-color: #d4d0ca;
+        }
+        .btn-ghost {
+            background: transparent;
+            color: #71717a;
+        }
+        .btn-ghost:hover {
+            background: #faf8f5;
+            color: #1a1a2e;
+        }
+
+        /* ── Animations on load ── */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(12px);
+            animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .fade-up:nth-child(1) { animation-delay: 0s; }
+        .fade-up:nth-child(2) { animation-delay: 0.06s; }
+        .fade-up:nth-child(3) { animation-delay: 0.12s; }
+        .fade-up:nth-child(4) { animation-delay: 0.18s; }
+        .fade-up:nth-child(5) { animation-delay: 0.24s; }
+        .fade-up:nth-child(6) { animation-delay: 0.30s; }
+        .fade-up:nth-child(7) { animation-delay: 0.36s; }
+        .fade-up:nth-child(8) { animation-delay: 0.42s; }
+        .fade-up:nth-child(9) { animation-delay: 0.48s; }
+
+        /* ── Meter animation ── */
+        .meter-bar[data-width] {
+            width: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+
+        <!-- Back -->
+        <a href="#" class="back-link fade-up">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+            Retour aux jobs
+        </a>
+
+        <!-- Header -->
+        <div class="header fade-up">
+            <div class="sniper-badge">
+                <span>&#127919;</span> SNIPER
+            </div>
+            <h1>AI Engineer Needed for Conversational AI &amp; n8n Automation Solutions</h1>
+            <div class="meta-row">
+                <span class="budget">$100</span>
+                <span class="sep">&middot;</span>
+                <span>Fixed Price</span>
+                <span class="sep">&middot;</span>
+                <span class="flag">&#127482;&#127480;</span>
+                <span>United States</span>
+                <span class="sep">&middot;</span>
+                <span>Post&eacute; il y a 26 min</span>
+                <span class="new-tag">New</span>
+            </div>
+        </div>
+
+        <!-- Verdict -->
+        <div class="card verdict-card fade-up">
+            <div class="verdict-header">
+                <div class="verdict-icon">&#10003;</div>
+                <div>
+                    <div class="verdict-title">GO &mdash; Ce job est fait pour toi</div>
+                    <div class="verdict-subtitle">Match quasi parfait avec ton profil et ta stack</div>
+                </div>
+            </div>
+            <div class="meters">
+                <div class="meter">
+                    <div class="meter-label">Feasibility</div>
+                    <div class="meter-bar-wrapper">
+                        <div class="meter-bar teal" data-width="99"></div>
+                    </div>
+                    <div class="meter-value">99%</div>
+                </div>
+                <div class="meter">
+                    <div class="meter-label">Worth Score</div>
+                    <div class="meter-bar-wrapper">
+                        <div class="meter-bar indigo" data-width="100"></div>
+                    </div>
+                    <div class="meter-value">10 / 10</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pourquoi ce job -->
+        <div class="card fade-up">
+            <div class="section-header">Pourquoi ce job est pour toi</div>
+            <ul class="reasons-list">
+                <li>Tu matches parfaitement : <strong>n8n automation</strong> est ton core skill, <strong>Claude API</strong> c'est litt&eacute;ralement ton agent IA, et tu as d&eacute;j&agrave; livr&eacute; 3 chatbots conversationnels.</li>
+                <li>Budget $100 = test/POC &rarr; parfait pour d&eacute;montrer ta vitesse d'ex&eacute;cution et convertir en contrat long terme.</li>
+                <li>Client US v&eacute;rifi&eacute;, 0 comp&eacute;tition visible sur la combo n8n + Claude. Tu es seul sur ce cr&eacute;neau.</li>
+            </ul>
+        </div>
+
+        <!-- Ce que le client veut -->
+        <div class="card fade-up">
+            <div class="section-header">Ce que le client veut</div>
+            <div class="client-wants">
+                <div class="want-item">
+                    <span class="want-icon">&#127919;</span>
+                    <div>
+                        <div class="want-label">Objectif</div>
+                        <div class="want-value">Chatbot IA conversationnel avec workflow n8n automatis&eacute;</div>
+                    </div>
+                </div>
+                <div class="want-item">
+                    <span class="want-icon">&#128295;</span>
+                    <div>
+                        <div class="want-label">Stack</div>
+                        <div class="want-value">n8n, Claude API, AI agents, chatbot framework</div>
+                    </div>
+                </div>
+                <div class="want-item">
+                    <span class="want-icon">&#128203;</span>
+                    <div>
+                        <div class="want-label">Livrables</div>
+                        <div class="want-value">POC fonctionnel, documentation technique, d&eacute;mo live</div>
+                    </div>
+                </div>
+                <div class="want-item">
+                    <span class="want-icon">&#128640;</span>
+                    <div>
+                        <div class="want-label">Potentiel</div>
+                        <div class="want-value">Collaboration long terme sur des projets IA suppl&eacute;mentaires</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battle Card -->
+        <div class="card fade-up">
+            <div class="section-header">Ton angle d'attaque</div>
+            <div class="battle-grid">
+                <div class="battle-box">
+                    <div class="battle-box-title">Qualit&eacute;s</div>
+                    <ul class="battle-list">
+                        <li>Expert n8n (3+ projets livr&eacute;s)</li>
+                        <li>Agent IA personnel (Morpheus)</li>
+                        <li>Livraison rapide &mdash; POC en 48h</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="battle-box" style="margin-bottom: 12px;">
+                        <div class="battle-box-title">Accroche</div>
+                        <div class="accroche-text">&ldquo;I build AI-powered automation with n8n and Claude daily &mdash; I literally have my own AI agent handling my workflow. Happy to demo.&rdquo;</div>
+                    </div>
+                    <div class="differenciateur">
+                        <strong>&#10024; Diff&eacute;renciateur :</strong> Tu es un des rares devs qui combine n8n + Claude API en production.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills Match -->
+        <div class="card fade-up">
+            <div class="section-header">Skills Match</div>
+            <div class="skills-table">
+                <div class="skill-row">
+                    <div class="skill-name">AI Agent Dev</div>
+                    <div class="skill-bar-wrapper"><div class="skill-bar expert"></div></div>
+                    <div class="skill-level">Expert</div>
+                    <div class="skill-check">&#9989;</div>
+                </div>
+                <div class="skill-row">
+                    <div class="skill-name">n8n</div>
+                    <div class="skill-bar-wrapper"><div class="skill-bar expert"></div></div>
+                    <div class="skill-level">Expert</div>
+                    <div class="skill-check">&#9989;</div>
+                </div>
+                <div class="skill-row">
+                    <div class="skill-name">Claude API</div>
+                    <div class="skill-bar-wrapper"><div class="skill-bar expert"></div></div>
+                    <div class="skill-level">Expert</div>
+                    <div class="skill-check">&#9989;</div>
+                </div>
+                <div class="skill-row">
+                    <div class="skill-name">Chatbot Dev</div>
+                    <div class="skill-bar-wrapper"><div class="skill-bar confirmed"></div></div>
+                    <div class="skill-level">Confirm&eacute;</div>
+                    <div class="skill-check">&#9989;</div>
+                </div>
+                <div class="skill-row">
+                    <div class="skill-name">Artificial Intelligence</div>
+                    <div class="skill-bar-wrapper"><div class="skill-bar confirmed"></div></div>
+                    <div class="skill-level">Confirm&eacute;</div>
+                    <div class="skill-check">&#9989;</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Description originale (collapsible) -->
+        <div class="card collapsible fade-up" onclick="this.classList.toggle('open')">
+            <div class="section-header">
+                Description originale
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="collapsible-content">
+                <p class="description-text">
+                    We need an AI engineer who can build conversational AI solutions using n8n automation. The ideal candidate should have experience with AI agent development, chatbot creation, and n8n workflow automation. Must be familiar with Claude API or similar LLM APIs. This is for ongoing projects with potential for long-term collaboration. Initial task is a proof of concept.
+                </p>
+            </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar fade-up">
+            <a href="#" class="btn btn-primary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Upwork
+            </a>
+            <a href="#" class="btn btn-secondary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Candidature
+            </a>
+            <a href="#" class="btn btn-outline">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Postul&eacute;
+            </a>
+            <a href="#" class="btn btn-ghost">
+                Skip
+            </a>
+        </div>
+
+    </div>
+
+    <script>
+        // Animate meter bars on load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                document.querySelectorAll('.meter-bar[data-width]').forEach(bar => {
+                    bar.style.width = bar.dataset.width + '%';
+                });
+            }, 400);
+        });
+    </script>
+</body>
+</html>
