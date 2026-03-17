@@ -605,7 +605,7 @@ async function checkDetailPage(tab) {
   if (existing.length > 0) {
     // PATCH using the URL actually stored in Supabase (not the normalized one)
     const storedUrl = existing[0].url;
-    const patch = { description_full: detail.description, url: canonicalUrl };
+    const patch = { description_full: detail.description, url: canonicalUrl, source: 'extension' };
     if (detail.skills?.length) patch.skills = detail.skills;
     if (detail.country) patch.country = detail.country;
     if (detail.budget) {
