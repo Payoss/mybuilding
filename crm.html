@@ -187,7 +187,6 @@
       </div>
       <div id="proj-filters" class="fchips">
         <button class="fchip active" onclick="setFilter('',this)">Tous</button>
-        <button class="fchip" onclick="setFilter('applied',this)">📩 Postulé</button>
         <button class="fchip" onclick="setFilter('interviewing',this)">🟣 Entretien</button>
         <button class="fchip" onclick="setFilter('negotiation',this)">🟡 Négociation</button>
         <button class="fchip" onclick="setFilter('won',this)">🟢 Won</button>
@@ -240,12 +239,12 @@ function escH(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;
 // ── Load ──
 async function loadAll() {
   const [pRes, cRes] = await Promise.all([
-    sb.from('upwork_jobs').select('*').in('status',['applied','interviewing','negotiation','won','active','lost']).order('applied_at',{ascending:false}).limit(200),
+    sb.from('upwork_jobs').select('*').in('status',['interviewing','negotiation','won','active','lost']).order('applied_at',{ascending:false}).limit(200),
     sb.from('contacts').select('*').order('created_at',{ascending:false})
   ]);
   allProjects = pRes.data || [];
   allContacts = cRes.data || [];
-  var active = allProjects.filter(function(j){ return !['lost','applied'].includes(j.status); }).length;
+  var active = allProjects.filter(function(j){ return !['lost'].includes(j.status); }).length;
   document.getElementById('proj-badge').textContent = active + ' actif' + (active!==1?'s':'');
   renderProjects();
   renderContacts();
@@ -366,7 +365,6 @@ function closePanel() {
 // ── Status buttons ──
 function buildStatusRow(j) {
   var BTNS = [
-    {k:'applied',     lbl:'📩 Postulé'},
     {k:'interviewing',lbl:'🟣 Entretien'},
     {k:'negotiation', lbl:'🟡 Négociation'},
     {k:'won',         lbl:'🟢 Won'},
