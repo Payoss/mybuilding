@@ -153,15 +153,19 @@
 
   function _extractJobDetail() {
     // Title — h1 on full page, h2/div on side panel
+    // Note: bare h1/h2 are dangerous on side panel (match search page headings)
     const titleEl =
       document.querySelector('h1[data-test="job-title"]') ||
-      document.querySelector('h1.m-0') ||
       document.querySelector('[data-test="job-title"]') ||
       document.querySelector('h2[class*="job-title"]') ||
       document.querySelector('h2[class*="JobTitle"]') ||
-      document.querySelector('h1') ||
-      document.querySelector('h2');
-    const title = titleEl?.textContent?.trim() || '';
+      document.querySelector('h2.m-0') ||
+      document.querySelector('h1.m-0') ||
+      document.querySelector('[class*="JobTitle"]') ||
+      document.querySelector('[class*="job-title"]');
+    // Validate: a job title is < 200 chars
+    const rawTitle = titleEl?.textContent?.trim() || '';
+    const title = rawTitle.length < 200 ? rawTitle : '';
 
     // Full description — p.text-body-sm works on both full page and side panel
     const descEl =

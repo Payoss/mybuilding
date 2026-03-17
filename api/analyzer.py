@@ -390,8 +390,8 @@ Reponds UNIQUEMENT en JSON valide, sans texte avant ou apres."""
 
 @app.post("/api/job-enrich")
 async def job_enrich(req: EnrichRequest):
-    if not req.title.strip():
-        raise HTTPException(400, "Titre vide")
+    if not req.title:
+        req.title = "Untitled"
     context = f"""JOB TITLE: {req.title}
 DESCRIPTION: {req.description or 'Non disponible'}
 SKILLS: {', '.join(req.skills) if req.skills else 'Non specifies'}
