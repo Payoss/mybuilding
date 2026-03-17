@@ -493,6 +493,44 @@ function parseBudget(str) {
   return { min: null, max: null, type: 'fixed' };
 }
 
+// ── Re-générer le plan IA après enrichissement manuel ──
+async function _reEnrichPlan(jobId, patch, detail) {
+  const { url: sbUrl, key: sbKey } = await getSupabase();
+  if (!sbUrl || !sbKey) return;
+  const settings = await getSettings();
+  const apiBase = settings.apiUrl || 'https://mybuilding.dev';
+
+  const res = await fetch(`${apiBase}/api/pre-enrich`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: patch.title || detail.title || '',
+      description: detail.description,
+      skills: detail.skills || [],
+      budget_min: patch.budget_min ?? null,
+      budget_max: patch.budget_max ?? null,
+      budget_type: patch.budget_type ?? null,
+      country: patch.country || detail.country || ''
+    })
+  });
+  if (!res.ok) { console.warn('[mybuilding BG] Re-enrich plan HTTP', res.status); return; }
+  const enrichData = await res.json();
+  if (!enrichData) return;
+
+  await fetch(`${sbUrl}/rest/v1/upwork_jobs?id=eq.${jobId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      analysis: enrichData,
+      status: enrichData.verdict === 'SKIP' ? 'skipped' : 'enriched'
+    })
+  });
+  console.log('[mybuilding BG] Plan IA régénéré pour job', jobId);
+}
+
 // ── Chat page sync ──
 async function checkChatPage(tab) {
   const { url: sbUrl, key: sbKey } = await getSupabase();
@@ -773,6 +811,12 @@ async function checkDetailPage(tab) {
       });
       if (patchRes.ok) {
         console.log('[mybuilding BG] Detail PATCHED OK — status:', patchRes.status, 'url:', storedUrl.slice(-40));
+        // Re-générer le plan IA avec la description complète (async, non-bloquant)
+        if (detail.description && detail.description.length > 100) {
+          _reEnrichPlan(existing[0].id, patch, detail).catch(e =>
+            console.warn('[mybuilding BG] Re-enrich plan error (non-critical):', e.message)
+          );
+        }
       } else {
         const errText = await patchRes.text();
         console.warn('[mybuilding BG] PATCH FAILED:', patchRes.status, errText);
