@@ -1,0 +1,68 @@
+{
+  "version": "1.0",
+  "description": "Cover letter hooks by niche — injected into L1 of the cover letter generator",
+  "niches": {
+    "chatbot": {
+      "label": "AI Chatbot / Customer Support",
+      "keywords": ["chatbot", "customer support", "conversational", "bot", "assistant", "support agent", "dialogue"],
+      "hooks": [
+        "I noticed you need the bot to handle {detail_from_brief}. I shipped a similar Telegram bot for a news agency — it runs 7 articles/day fully autonomously.",
+        "The {feature_from_brief} you described is exactly what my own Telegram bot does in production — 100+ messages/day, zero manual input."
+      ]
+    },
+    "n8n_automation": {
+      "label": "n8n / Workflow Automation",
+      "keywords": ["n8n", "make", "zapier", "workflow", "automation", "integromat", "trigger", "automate"],
+      "hooks": [
+        "Your {process_from_brief} workflow sounds like it needs exactly {technical_detail}. I've built 50+ production n8n workflows including a full lead pipeline.",
+        "I've automated exactly this kind of {process_from_brief} before — the last one cut 40 hours/week of manual work down to zero."
+      ]
+    },
+    "telegram_whatsapp": {
+      "label": "Telegram / WhatsApp Bot",
+      "keywords": ["telegram", "whatsapp", "bot api", "messaging", "twilio"],
+      "hooks": [
+        "The {feature_from_brief} you described is exactly what I built last month. My own Telegram bot handles 50+ modules in production.",
+        "I've built a Telegram bot running 24/7 on a dedicated server — {feature_from_brief} is a feature I've already shipped."
+      ]
+    },
+    "lead_generation": {
+      "label": "Lead Generation / Scraping",
+      "keywords": ["lead", "scraping", "scraper", "data extraction", "prospection", "leads", "crawler"],
+      "hooks": [
+        "I see you need {detail_from_brief} — I've built the exact same pipeline. Delivered 300 qualified leads in 2 weeks, fully automated with n8n.",
+        "Getting {detail_from_brief} is one of my most common builds — last one ran for 3 months straight without a single manual intervention."
+      ]
+    },
+    "api_integration": {
+      "label": "API Integration / Make.com",
+      "keywords": ["api", "integration", "webhook", "connect", "rest", "endpoint", "sync"],
+      "hooks": [
+        "Connecting {api_a} to {api_b} with {condition_from_brief} is one of my most common builds. I've integrated 12+ APIs in production.",
+        "I've built this exact kind of {integration_type} integration — clean architecture, error handling, and monitoring included."
+      ]
+    },
+    "rag_knowledge": {
+      "label": "RAG / Knowledge Base / AI Search",
+      "keywords": ["rag", "vector", "embedding", "knowledge base", "search", "retrieval", "document qa"],
+      "hooks": [
+        "I run a production RAG system with hybrid search — ONNX embeddings + BM25 + knowledge graph. Your {use_case} is a direct fit.",
+        "Building {use_case} with RAG is exactly what I do daily — my own system processes thousands of documents with 95%+ retrieval accuracy."
+      ]
+    },
+    "generic": {
+      "label": "Generic (fallback)",
+      "keywords": [],
+      "hooks": [
+        "{detail_from_brief} — I've built something very similar for {client_type}. Shipped in {timeframe}, still running in production.",
+        "I noticed {detail_from_brief}. I've solved this exact problem before — here's how I'd approach yours."
+      ]
+    }
+  },
+  "rules": {
+    "always_cite_brief_detail": true,
+    "never_use_title_only": true,
+    "max_2_sentences": true,
+    "placeholders": ["{detail_from_brief}", "{feature_from_brief}", "{process_from_brief}", "{api_a}", "{api_b}", "{condition_from_brief}", "{integration_type}", "{use_case}", "{client_type}", "{timeframe}", "{technical_detail}"]
+  }
+}

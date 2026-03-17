@@ -9,12 +9,12 @@
 <style>
 .analyzer-row { display: grid; grid-template-columns: 5fr 7fr; gap: 12px; }
 .paste-area { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 12px; color: var(--t1); font-size: 12px; font-family: inherit; resize: none; outline: none; line-height: 1.5; transition: border-color 0.15s; min-height: 180px; }
-.paste-area:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.12); }
+.paste-area:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(45,212,191,0.12); }
 .paste-area::placeholder { color: var(--t3); }
 .keywords-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
-.kw-chip { background: var(--teal-glow); border: 1px solid rgba(13,148,136,0.2); color: var(--teal); font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
-.analyze-btn { width: 100%; margin-top: 12px; padding: 10px; background: var(--teal); color: white; border: none; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 0 20px rgba(13,148,136,0.25); }
-.analyze-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 0 28px rgba(13,148,136,0.4); }
+.kw-chip { background: var(--teal-glow); border: 1px solid rgba(45,212,191,0.2); color: var(--teal); font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.analyze-btn { width: 100%; margin-top: 12px; padding: 10px; background: var(--teal); color: white; border: none; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 0 20px rgba(45,212,191,0.25); }
+.analyze-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 0 28px rgba(45,212,191,0.4); }
 .analyze-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .spinner { display: none; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -72,8 +72,8 @@
 .time-dead { color: var(--red) !important; opacity: 0.7; }
 .hc-actions { display: flex; gap: 6px; align-items: center; }
 /* Gold highlight */
-.hbody-row.row-gold { border-left: 2px solid var(--teal); background: rgba(13,148,136,0.03); }
-.hbody-row.row-gold:hover { background: rgba(13,148,136,0.06); }
+.hbody-row.row-gold { border-left: 2px solid var(--teal); background: rgba(45,212,191,0.03); }
+.hbody-row.row-gold:hover { background: rgba(45,212,191,0.06); }
 /* Filter chips */
 .filter-chip { padding: 4px 10px; border-radius: 20px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); color: var(--t2); transition: all 0.15s; background: none; font-family: inherit; }
 .filter-chip.active { border-color: var(--teal); color: var(--teal); background: var(--teal-glow); }
@@ -84,7 +84,7 @@
 .search-input:focus { border-color: var(--teal); }
 .search-input::placeholder { color: var(--t3); }
 /* Bulk actions */
-.bulk-bar { display: none; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.15); border-radius: 8px; margin-bottom: 8px; font-size: 12px; color: var(--t2); }
+.bulk-bar { display: none; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(45,212,191,0.06); border: 1px solid rgba(45,212,191,0.15); border-radius: 8px; margin-bottom: 8px; font-size: 12px; color: var(--t2); }
 .bulk-bar.visible { display: flex; }
 .bulk-btn { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
 .bulk-btn-del { background: var(--red-bg); color: var(--red); }
@@ -104,8 +104,8 @@
 .proposal-block { border-left-color: var(--teal) !important; }
 .proposal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .proposal-text { width: 100%; background: transparent; border: none; outline: none; color: var(--t2); font-size: 12px; font-family: inherit; resize: none; line-height: 1.65; min-height: 130px; }
-.copy-btn { background: var(--teal-glow); border: 1px solid rgba(13,148,136,0.3); color: var(--teal); font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
-.copy-btn:hover { background: rgba(13,148,136,0.22); }
+.copy-btn { background: var(--teal-glow); border: 1px solid rgba(45,212,191,0.3); color: var(--teal); font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.copy-btn:hover { background: rgba(45,212,191,0.22); }
 .copy-btn.copied { background: var(--green-bg); border-color: rgba(34,197,94,0.3); color: var(--green); }
 .dual-score { display: inline-flex; gap: 4px; align-items: center; }
 .score-pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; font-family: 'DM Mono', monospace; }
@@ -126,10 +126,10 @@
 /* Quick Eval (mobile-first) */
 .qe-tile { display: none; }
 .qe-textarea { width: 100%; min-height: 200px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 14px; color: var(--t1); font-size: 13px; font-family: inherit; resize: none; outline: none; line-height: 1.6; transition: border-color 0.15s; }
-.qe-textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.12); }
+.qe-textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(45,212,191,0.12); }
 .qe-textarea::placeholder { color: var(--t3); }
-.qe-go-btn { width: 100%; margin-top: 12px; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 0 24px rgba(13,148,136,0.3); }
-.qe-go-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 0 32px rgba(13,148,136,0.5); }
+.qe-go-btn { width: 100%; margin-top: 12px; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 0 24px rgba(45,212,191,0.3); }
+.qe-go-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 0 32px rgba(45,212,191,0.5); }
 .qe-go-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .qe-go-btn .spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
 .qe-go-btn.loading .spinner { display: block; }
@@ -547,7 +547,7 @@ function renderResult(data) {
       </div>
     </div>
 
-    ${data.margin_ratio ? `<div class="analysis-block" style="border-left-color:var(--teal);background:rgba(13,148,136,0.04)">
+    ${data.margin_ratio ? `<div class="analysis-block" style="border-left-color:var(--teal);background:rgba(45,212,191,0.04)">
       <div class="ab-title">⏱ Margin Ratio — Interne</div>
       <div class="ab-content" style="display:flex;gap:16px;flex-wrap:wrap">
         <span>⚡ Réel : <strong>${data.real_time_hours}h</strong></span>

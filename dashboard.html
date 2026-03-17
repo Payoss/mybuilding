@@ -32,7 +32,7 @@
 /* Side panel */
 .side-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 50; display: none; }
 .side-panel-backdrop.open { display: block; }
-.side-panel { position: fixed; top: 0; right: -420px; width: 420px; max-width: 100vw; height: 100vh; background: #12121e; border-left: 1px solid var(--border); z-index: 51; display: flex; flex-direction: column; transition: right 0.25s cubic-bezier(0.16,1,0.3,1); overflow-y: auto; }
+.side-panel { position: fixed; top: 0; right: -420px; width: 420px; max-width: 100vw; height: 100vh; background: #222436; border-left: 1px solid var(--border); z-index: 51; display: flex; flex-direction: column; transition: right 0.25s cubic-bezier(0.16,1,0.3,1); overflow-y: auto; }
 .side-panel.open { right: 0; }
 .sp-header { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
 .sp-title { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; word-wrap: break-word; white-space: normal; line-height: 1.35; }
@@ -47,7 +47,7 @@
 .sp-status-btn:hover { border-color: var(--teal); color: var(--teal); }
 .sp-status-btn.active { background: var(--teal-dim); color: var(--teal); border-color: var(--teal); font-weight: 600; }
 .sp-notes { width: 100%; min-height: 80px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 7px; padding: 8px 11px; color: var(--t1); font-size: 12px; font-family: inherit; outline: none; resize: vertical; transition: border-color 0.15s; }
-.sp-notes:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.12); }
+.sp-notes:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(45,212,191,0.12); }
 .sp-save-btn { padding: 8px 16px; background: var(--teal); color: white; border: none; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
 .sp-save-btn:hover { opacity: 0.9; }
 @media (max-width: 768px) {
@@ -78,6 +78,74 @@
       <div class="metric"><div class="metric-label">Pipeline pondéré</div><div class="metric-val skeleton" style="width:80px;height:28px">&nbsp;</div></div>
       <div class="metric"><div class="metric-label">À encaisser</div><div class="metric-val skeleton" style="width:80px;height:28px">&nbsp;</div></div>
       <div class="metric"><div class="metric-label">Revenue ce mois</div><div class="metric-val skeleton" style="width:80px;height:28px">&nbsp;</div></div>
+    </div>
+
+    <!-- NIGHT OPS BANNER -->
+    <div class="night-ops-banner fade-up" id="night-ops" style="display:none">
+      <div>
+        <div class="night-ops-sprint" id="nops-sprint">BOOT</div>
+        <div class="night-ops-timer" id="nops-timer">00:00</div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:12px;font-weight:500;color:var(--t1)" id="nops-desc">Prépare tes outils — 21h00</div>
+        <div class="progress-bar"><div class="progress-fill progress-teal" id="nops-progress" style="width:0%"></div></div>
+      </div>
+      <div class="night-ops-count">
+        <div class="night-ops-stat">
+          <div class="night-ops-stat-val teal" id="nops-sent">0</div>
+          <div class="night-ops-stat-label">Envoyées</div>
+        </div>
+        <div class="night-ops-stat">
+          <div class="night-ops-stat-val up" id="nops-target">7</div>
+          <div class="night-ops-stat-label">Target</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPWORK KPIs (proposals, reply rate, win rate, connects) -->
+    <div class="metrics fade-up" id="upwork-kpis" style="grid-template-columns:repeat(5,1fr)">
+      <div class="metric">
+        <div class="metric-label">Proposals / sem</div>
+        <div class="metric-val" id="kpi-props-week">—</div>
+        <div class="metric-sub muted">target 50</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Reply rate</div>
+        <div class="metric-val" id="kpi-reply-rate">—</div>
+        <div class="metric-sub muted">30 derniers jours</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Win rate</div>
+        <div class="metric-val" id="kpi-win-rate">—</div>
+        <div class="metric-sub muted">contrats signés</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Temps / proposal</div>
+        <div class="metric-val" id="kpi-time-prop">~8m</div>
+        <div class="metric-sub muted">target 8 min</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Connects</div>
+        <div class="metric-val" id="kpi-connects" style="display:flex;align-items:center;gap:8px">—</div>
+        <div class="metric-sub muted">restants</div>
+      </div>
+    </div>
+
+    <!-- SEMAINE TYPE (effort par jour) -->
+    <div class="tile fade-up" style="padding:14px 18px">
+      <div class="tile-title">Semaine Type <span class="tile-title-sub">Effort recommandé par nuit</span></div>
+      <div class="week-bar" id="week-bars">
+        <div class="week-day" style="height:50%;background:var(--amber)" data-label="Lun — Moyen (5-7)"></div>
+        <div class="week-day" style="height:25%;background:var(--red)" data-label="Mar — Light (3-5) — pire reply"></div>
+        <div class="week-day" style="height:70%;background:var(--blue)" data-label="Mer — Push (7-10)"></div>
+        <div class="week-day" style="height:75%;background:var(--blue)" data-label="Jeu — Push (7-10) — best hire"></div>
+        <div class="week-day" style="height:50%;background:var(--amber)" data-label="Ven — Moyen (5-7)"></div>
+        <div class="week-day" style="height:95%;background:var(--green)" data-label="Sam — ALL IN (8-12)"></div>
+        <div class="week-day" style="height:100%;background:var(--green)" data-label="Dim — ALL IN (10-13) — reply x2"></div>
+      </div>
+      <div class="week-labels">
+        <span>Lun</span><span style="color:var(--red)">Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span style="color:var(--green)">Sam</span><span style="color:var(--green);font-weight:700">Dim</span>
+      </div>
     </div>
 
     <!-- BENTO -->
@@ -177,7 +245,7 @@
       <div id="sp-entretien-response" style="margin-top:10px;display:none">
         <div style="font-size:10px;color:var(--t3);margin-bottom:4px">Réponse suggérée :</div>
         <textarea id="sp-entretien-text" style="width:100%;box-sizing:border-box;min-height:120px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;color:var(--t2);font-family:inherit;font-size:11px;padding:8px;resize:vertical;outline:none;line-height:1.5"></textarea>
-        <button onclick="copyEntretienResponse()" style="margin-top:6px;padding:5px 12px;background:var(--teal-glow);border:1px solid rgba(13,148,136,0.3);border-radius:6px;color:var(--teal);font-size:11px;font-family:inherit;cursor:pointer">📋 Copier</button>
+        <button onclick="copyEntretienResponse()" style="margin-top:6px;padding:5px 12px;background:var(--teal-glow);border:1px solid rgba(45,212,191,0.3);border-radius:6px;color:var(--teal);font-size:11px;font-family:inherit;cursor:pointer">📋 Copier</button>
       </div>
     </div>
     <button class="sp-save-btn" onclick="savePanel()">Sauvegarder</button>
@@ -260,7 +328,7 @@ async function loadDashboard() {
 
     // Activity
     const acts = actRes.data || [];
-    const typeColors = { note:'#94a3b8', email:'#93c5fd', call:'#34d399', meeting:'#a78bfa', invoice_sent:'#fbbf24', invoice_paid:'#34d399', deal_won:'#34d399', upwork_applied:'#0d9488' };
+    const typeColors = { note:'#94a3b8', email:'#93c5fd', call:'#34d399', meeting:'#a78bfa', invoice_sent:'#fbbf24', invoice_paid:'#34d399', deal_won:'#34d399', upwork_applied:'#2dd4bf' };
     document.getElementById('activity-list').innerHTML = acts.length ? acts.map(a => `
       <div class="activity-row">
         <div class="activity-dot" style="background:${typeColors[a.type]||'#475569'}"></div>
@@ -486,8 +554,117 @@ async function savePanel() {
 // Keyboard: Escape to close panel
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closePanel(); });
 
+// ── Night Ops Timer ──
+var SPRINTS = [
+  { name: 'BOOT',     start: '21:00', end: '21:15', desc: 'Ouvre tes outils — café, alertes, Upwork', color: 'var(--amber)' },
+  { name: 'SPRINT 1', start: '21:15', end: '22:45', desc: 'Snipe les jobs après-midi US (4-6 proposals)', color: 'var(--green)' },
+  { name: 'PAUSE',    start: '22:45', end: '23:00', desc: 'Pause 15 min — étire-toi', color: 'var(--t3)' },
+  { name: 'SPRINT 2', start: '23:00', end: '00:15', desc: 'Soirée US — follow-ups (2-4 proposals)', color: 'var(--blue)' },
+  { name: 'PAUSE',    start: '00:15', end: '00:30', desc: 'Pause 15 min — snack', color: 'var(--t3)' },
+  { name: 'SPRINT 3', start: '00:30', end: '02:00', desc: 'Zone morte — top de pile (1-3 proposals)', color: 'var(--purple)' },
+  { name: 'DELIVERY', start: '02:00', end: '04:30', desc: 'Travail client — deep work', color: 'var(--blue)' },
+  { name: 'CLOSE',    start: '04:30', end: '05:00', desc: 'Dernier scan, log, prépare demain', color: 'var(--amber)' },
+];
+
+function parseTime(str) {
+  var p = str.split(':');
+  return parseInt(p[0]) * 60 + parseInt(p[1]);
+}
+
+function updateNightOps() {
+  var now = new Date();
+  var h = now.getHours(), m = now.getMinutes();
+  var nowMin = h * 60 + m;
+  // Normalize: treat 0-5h as 24-29h for continuity
+  if (h < 6) nowMin += 24 * 60;
+  var normalizedMin = nowMin;
+
+  var activeSprint = null;
+  for (var i = 0; i < SPRINTS.length; i++) {
+    var s = SPRINTS[i];
+    var startMin = parseTime(s.start);
+    var endMin = parseTime(s.end);
+    if (startMin < 6 * 60) startMin += 24 * 60;
+    if (endMin <= 6 * 60) endMin += 24 * 60;
+    if (endMin <= startMin) endMin += 24 * 60;
+    if (normalizedMin >= startMin && normalizedMin < endMin) {
+      activeSprint = s;
+      // Calculate progress
+      var elapsed = normalizedMin - startMin;
+      var total = endMin - startMin;
+      var pct = Math.round((elapsed / total) * 100);
+      document.getElementById('nops-sprint').textContent = s.name;
+      document.getElementById('nops-sprint').style.color = s.color;
+      document.getElementById('nops-desc').textContent = s.desc;
+      document.getElementById('nops-timer').textContent = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+      document.getElementById('nops-progress').style.width = pct + '%';
+      document.getElementById('night-ops').style.display = '';
+      break;
+    }
+  }
+  if (!activeSprint) {
+    // Check if we're in the general window 21h-5h to show at least the timer
+    if ((h >= 21 || h < 5)) {
+      document.getElementById('night-ops').style.display = '';
+      document.getElementById('nops-sprint').textContent = 'NIGHT OPS';
+      document.getElementById('nops-timer').textContent = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+      document.getElementById('nops-desc').textContent = 'Entre deux sprints';
+      document.getElementById('nops-progress').style.width = '0%';
+    } else {
+      document.getElementById('night-ops').style.display = 'none';
+    }
+  }
+}
+
+updateNightOps();
+setInterval(updateNightOps, 30000);
+
+// ── Upwork KPIs ──
+async function loadUpworkKPIs() {
+  try {
+    var now = new Date();
+    var weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+    var monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString();
+
+    var [weekRes, monthRes, wonRes, interviewRes] = await Promise.all([
+      sb.from('upwork_jobs').select('id', { count: 'exact', head: true }).in('status', ['applied','interviewing','won','lost']).gte('applied_at', weekAgo),
+      sb.from('upwork_jobs').select('id', { count: 'exact', head: true }).in('status', ['applied','interviewing','won','lost']).gte('applied_at', monthAgo),
+      sb.from('upwork_jobs').select('id', { count: 'exact', head: true }).eq('status', 'won').gte('applied_at', monthAgo),
+      sb.from('upwork_jobs').select('id', { count: 'exact', head: true }).in('status', ['interviewing','won']).gte('applied_at', monthAgo),
+    ]);
+
+    var propsWeek = weekRes.count || 0;
+    var propsMonth = monthRes.count || 0;
+    var wonCount = wonRes.count || 0;
+    var interviewCount = interviewRes.count || 0;
+
+    var replyRate = propsMonth > 0 ? Math.round((interviewCount / propsMonth) * 100) : 0;
+    var winRate = propsMonth > 0 ? Math.round((wonCount / propsMonth) * 100) : 0;
+
+    document.getElementById('kpi-props-week').innerHTML = '<span class="' + (propsWeek >= 50 ? 'up' : propsWeek >= 30 ? 'warn' : '') + '">' + propsWeek + '</span>';
+    document.getElementById('kpi-reply-rate').innerHTML = '<span class="' + (replyRate >= 20 ? 'up' : replyRate >= 10 ? 'warn' : '') + '">' + replyRate + '%</span>';
+    document.getElementById('kpi-win-rate').innerHTML = '<span class="' + (winRate >= 15 ? 'up' : winRate >= 5 ? 'warn' : '') + '">' + winRate + '%</span>';
+
+    // Night ops proposals sent tonight
+    var tonight = new Date();
+    tonight.setHours(21, 0, 0, 0);
+    if (now.getHours() < 6) tonight.setDate(tonight.getDate() - 1);
+    var tonightStr = tonight.toISOString();
+    var { count: sentTonight } = await sb.from('upwork_jobs').select('id', { count: 'exact', head: true }).in('status', ['applied','interviewing','won','lost']).gte('applied_at', tonightStr);
+    document.getElementById('nops-sent').textContent = sentTonight || 0;
+    // Target based on day of week
+    var dayTargets = [5, 4, 8, 8, 6, 10, 12]; // Mon-Sun
+    var today = now.getDay();
+    var todayIdx = today === 0 ? 6 : today - 1;
+    document.getElementById('nops-target').textContent = dayTargets[todayIdx];
+  } catch(e) {
+    console.error('Upwork KPI error:', e);
+  }
+}
+
 loadDashboard();
 loadCandidatures();
+loadUpworkKPIs();
 </script>
 </body>
 </html>

@@ -17,6 +17,6 @@ var PROFILE = {
     'I work with my own AI agent system',
     'I can deliver a working prototype in 48h'
   ],
-  minBudget: 1000,
-  currency: 'EUR'
+  minBudget: 300,
+  currency: 'USD'
 };

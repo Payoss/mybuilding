@@ -9,7 +9,7 @@ Performance:
   - /api/full-pipeline → Groq step1+step2, combined <5s
   - worth_score >= 8 → pre-generation triggered by frontend at job open
 """
-import json, sys, asyncio, os, pathlib, re
+import json, sys, asyncio, os, pathlib, re, subprocess
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Any
 
@@ -68,9 +68,10 @@ app = FastAPI(title="mybuilding-api", docs_url=None, redoc_url=None)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://mybuilding.dev", "https://www.mybuilding.dev", "http://localhost"],
-    allow_methods=["POST", "GET"],
-    allow_headers=["Content-Type"],
+    allow_origins=["https://mybuilding.dev", "https://www.mybuilding.dev", "http://localhost", "http://localhost:3000", "http://127.0.0.1"],
+    allow_origin_regex=r"^chrome-extension://.*$",
+    allow_methods=["POST", "GET", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
@@ -752,4 +753,97 @@ COUNTRY: {req.country or 'Non specifie'}"""
         raise HTTPException(504, "Timeout Claude")
     except Exception as e:
         print(f"pre-enrich error: {e}", file=sys.stderr)
+        raise HTTPException(500, str(e))
+
+
+# ══════════════════════════════════════════════════════════════
+# SPY — Méthode Alex Step 1: Espionnage du job avant rédaction
+# Analyse les besoins cachés, frustration, vrai budget, angle d'attaque
+# ══════════════════════════════════════════════════════════════
+
+class SpyRequest(BaseModel):
+    title: str
+    description: str = ""
+    skills: list = []
+    budget_min: Optional[Any] = None
+    budget_max: Optional[Any] = None
+    budget_type: str = "fixed"
+    country: str = ""
+
+
+# Load hooks library for niche matching
+_HOOKS_LIBRARY_PATH = pathlib.Path(__file__).parent / "hooks_library.json"
+_HOOKS_LIBRARY = json.loads(_HOOKS_LIBRARY_PATH.read_text()) if _HOOKS_LIBRARY_PATH.exists() else {}
+
+
+def _match_niche(title: str, description: str) -> tuple[str, list[str]]:
+    """Match job to a niche from hooks_library.json. Returns (niche_id, hooks)."""
+    text = f"{title} {description}".lower()
+    best_niche = "generic"
+    best_score = 0
+    for niche_id, niche_data in _HOOKS_LIBRARY.get("niches", {}).items():
+        score = sum(1 for kw in niche_data.get("keywords", []) if kw.lower() in text)
+        if score > best_score:
+            best_score = score
+            best_niche = niche_id
+    hooks = _HOOKS_LIBRARY.get("niches", {}).get(best_niche, {}).get("hooks", [])
+    return best_niche, hooks
+
+
+SPY_SYSTEM = """Tu es un espion qui analyse les job posts Upwork pour Paul Annes.
+Tu ne rédiges PAS de cover letter. Tu fais le TRAVAIL D'ESPIONNAGE — lire entre les lignes.
+
+Analyse ce job post et donne-moi en JSON :
+
+{
+  "real_need": "<Ce que le client veut VRAIMENT — pas ce qu'il dit, ce qu'il veut au fond. 2-3 phrases>",
+  "frustration": "<Sa frustration probable : mauvaise expérience passée ? deadline ratée ? dev incompétent ? scope qui dérive ? Ou rien de détecté. 1-2 phrases>",
+  "real_budget": "<Le vrai budget : est-il flexible ? sous-estimé ? placeholder Upwork ($5/$10/$25) ? Estimation réaliste en $. 1 phrase>",
+  "attack_angle": "<L'angle d'attaque UNIQUE pour la cover letter de Paul — ce qui va le différencier. 2 phrases>",
+  "red_flags": "<Red flags éventuels : time-waster, scope creep, client difficile, budget irréaliste. Ou 'Aucun red flag détecté.' 1-2 phrases>",
+  "hook_opening": "<Le hook d'ouverture parfait en 1 phrase — cite un DÉTAIL PRÉCIS du brief, pas le titre>",
+  "niche_detected": "<chatbot|n8n_automation|telegram_whatsapp|lead_generation|api_integration|rag_knowledge|generic>",
+  "emotion": "<stressed|excited|tired_of_manual_work|neutral|urgent>",
+  "tone_recommended": "<casual|direct|technical|empathetic>"
+}
+
+RÈGLES :
+- Analyse en FRANÇAIS
+- Sois SPÉCIFIQUE — pas de phrases génériques
+- Le hook_opening doit citer un détail PRÉCIS du brief (pas le titre)
+- Si le budget est $5/$10/$25, c'est un placeholder Upwork — le signaler
+- Ne jamais inventer des informations non présentes dans le brief
+
+Réponds UNIQUEMENT en JSON valide."""
+
+
+@app.post("/api/spy")
+async def spy_job(req: SpyRequest):
+    """Méthode Alex Step 1 — Espionnage du job.
+    Analyse besoins cachés, frustration, vrai budget, angle d'attaque, red flags."""
+    if not req.title.strip() and not req.description.strip():
+        raise HTTPException(400, "Titre et description vides")
+
+    # Match niche + get hooks
+    niche, hooks = _match_niche(req.title, req.description or "")
+    client_signals = _extract_client_signals(req.title, req.description or "")
+
+    context = f"""JOB TITLE: {req.title}
+DESCRIPTION: {req.description or 'Non disponible'}
+SKILLS: {', '.join(req.skills) if req.skills else 'Non specifies'}
+BUDGET: {req.budget_min or '?'} - {req.budget_max or '?'} ({req.budget_type})
+COUNTRY: {req.country or 'Non specifie'}"""
+
+    prompt = SPY_SYSTEM + "\n\n" + context
+    try:
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(_executor, _run_groq, prompt, 30)
+        # Enrich with local analysis
+        data["niche_matched"] = niche
+        data["hooks_available"] = hooks
+        data["client_signals"] = client_signals
+        data["proof_points"] = _select_proof_points(f"{req.title} {req.description or ''}", n=3)
+        return data
+    except Exception as e:
+        print(f"spy error: {e}", file=sys.stderr)
         raise HTTPException(500, str(e))

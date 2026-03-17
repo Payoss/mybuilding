@@ -6,9 +6,9 @@
 var LOGO_SVG = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
   <rect x="3" y="8" width="12" height="9" rx="1" fill="white" opacity="0.9"/>
   <path d="M1.5 9L9 2L16.5 9" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <rect x="7" y="12" width="4" height="5" rx="0.5" fill="rgba(13,148,136,0.9)"/>
-  <rect x="4.5" y="10" width="2.5" height="2.5" rx="0.4" fill="rgba(13,148,136,0.7)"/>
-  <rect x="11" y="10" width="2.5" height="2.5" rx="0.4" fill="rgba(13,148,136,0.7)"/>
+  <rect x="7" y="12" width="4" height="5" rx="0.5" fill="rgba(45,212,191,0.9)"/>
+  <rect x="4.5" y="10" width="2.5" height="2.5" rx="0.4" fill="rgba(45,212,191,0.7)"/>
+  <rect x="11" y="10" width="2.5" height="2.5" rx="0.4" fill="rgba(45,212,191,0.7)"/>
 </svg>`;
 
 // ---- Formatters ----
@@ -122,7 +122,7 @@ function openCreateClientModal(jobOrNull, callback, existingContact) {
   }).join('');
 
   var jobBadge = (!isEdit && job)
-    ? '<div style="background:rgba(13,148,136,0.08);border:1px solid rgba(13,148,136,0.2);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:var(--teal,#0d9488)">'+
+    ? '<div style="background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.2);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:var(--teal,#2dd4bf)">'+
       '🔗 Job : <span style="color:#e2e8f0;font-weight:500">'+
       (job.title||'Sans titre').substring(0,70)+'</span></div>'
     : '';
@@ -172,7 +172,7 @@ function openCreateClientModal(jobOrNull, callback, existingContact) {
         '<div id="_ccm_err" style="display:none;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:8px;padding:8px 12px;font-size:12px;color:#f87171;margin-top:12px"></div>'+
         '<div style="display:flex;gap:8px;margin-top:16px">'+
           '<button id="_ccm_cancel" style="flex:1;padding:11px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:9px;color:#94a3b8;font-family:inherit;font-size:13px;cursor:pointer;transition:all 0.15s">Annuler</button>'+
-          '<button id="_ccm_submit" style="flex:2;padding:11px;background:#0d9488;border:none;border-radius:9px;color:white;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;box-shadow:0 0 20px rgba(13,148,136,0.3)">'+btnLabel+'</button>'+
+          '<button id="_ccm_submit" style="flex:2;padding:11px;background:#2dd4bf;border:none;border-radius:9px;color:white;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;box-shadow:0 0 20px rgba(45,212,191,0.3)">'+btnLabel+'</button>'+
         '</div>'+
       '</div>'+
     '</div>';

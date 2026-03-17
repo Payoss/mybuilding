@@ -1,0 +1,94 @@
+{
+  "facts": [
+    {
+      "id": "morpheus_38agents",
+      "fact": "Built a personal AI system with 38 specialized agents running 24/7 in production — automated briefings, memory indexing, and 20+ cron jobs",
+      "domains": ["ai", "automation", "agents", "system", "pipeline"],
+      "keywords": ["agent", "AI", "automation", "system", "workflow", "pipeline", "LLM", "autonomous", "multi-agent"]
+    },
+    {
+      "id": "notomai_legal",
+      "fact": "Built a legal AI SaaS (Notomai) generating notarial documents in <30 seconds — 6 document types, 85-92% conformity, team of 3, beta with real notaries",
+      "domains": ["saas", "legal", "ai", "nextjs", "supabase", "product", "document"],
+      "keywords": ["SaaS", "product", "legal", "document", "Claude", "API", "startup", "PDF", "generation", "template", "compliance"]
+    },
+    {
+      "id": "telegram_bot_production",
+      "fact": "Running a Telegram bot 24/7 on a dedicated server — 100+ daily messages, automated briefings, budget tracking, conversation context management",
+      "domains": ["automation", "bot", "telegram", "cron", "server", "chatbot"],
+      "keywords": ["bot", "Telegram", "automation", "cron", "server", "deploy", "monitoring", "notification", "chatbot", "WhatsApp", "conversational"]
+    },
+    {
+      "id": "chrome_extension_crm",
+      "fact": "Built a Chrome extension + CRM pipeline that automatically scores freelance job offers using local AI — feasibility, worth detection, sniper alerts",
+      "domains": ["chrome", "extension", "scraping", "supabase", "ai", "scoring", "crm"],
+      "keywords": ["Chrome", "extension", "scraping", "scoring", "CRM", "pipeline", "data", "automation", "Supabase", "browser"]
+    },
+    {
+      "id": "n8n_workflows_production",
+      "fact": "Built 50+ production n8n workflows — lead pipelines, email automation, webhook integrations, multi-trigger sequences, self-hosted on dedicated server",
+      "domains": ["n8n", "automation", "workflow", "integration", "webhook"],
+      "keywords": ["n8n", "Make", "Zapier", "workflow", "automation", "webhook", "integration", "lead", "pipeline", "trigger", "email"]
+    },
+    {
+      "id": "rag_hybrid_search",
+      "fact": "Built a production RAG system with hybrid search — ONNX embeddings + BM25 + knowledge graph with temporal decay and PageRank scoring",
+      "domains": ["rag", "vector", "embedding", "search", "knowledge"],
+      "keywords": ["RAG", "vector", "embedding", "search", "knowledge", "retrieval", "Pinecone", "Chroma", "semantic", "document", "QA"]
+    },
+    {
+      "id": "api_integrations_live",
+      "fact": "Integrated 12+ APIs in production: Claude, Gmail, Google Calendar, YouTube Data, Telegram, Supabase, Cloudflare Workers AI, government APIs",
+      "domains": ["api", "integration", "webhook", "rest"],
+      "keywords": ["API", "integration", "REST", "webhook", "connect", "Airtable", "Google Sheets", "Notion", "sync", "endpoint"]
+    },
+    {
+      "id": "fullstack_speed",
+      "fact": "Deployed a full-stack app solo in 3 days — Next.js + Supabase + dedicated server, complete with auth, real-time data, and CI/CD",
+      "domains": ["fullstack", "deploy", "nextjs", "react", "supabase", "speed"],
+      "keywords": ["Next.js", "React", "full-stack", "deploy", "Supabase", "frontend", "backend", "TypeScript", "fast", "solo"]
+    },
+    {
+      "id": "scraping_pipeline",
+      "fact": "Built automated scraping pipelines — Chrome extension DOM extraction, Playwright headless, data cleaning, and direct-to-database ingestion",
+      "domains": ["scraping", "data", "extraction", "browser", "pipeline"],
+      "keywords": ["scraping", "web scraping", "data extraction", "Playwright", "browser", "crawler", "automation", "selenium", "parse"]
+    },
+    {
+      "id": "server_infrastructure",
+      "fact": "Managing a production server: Hetzner ARM64, Ubuntu, nginx, systemd, PostgreSQL 16 + pgvector, Let's Encrypt, auto-deploy pipeline from git push",
+      "domains": ["infra", "server", "deploy", "devops", "linux"],
+      "keywords": ["server", "deploy", "Linux", "nginx", "PostgreSQL", "Docker", "CI/CD", "infrastructure", "VPS", "cloud", "devops"]
+    },
+    {
+      "id": "pdf_document_processing",
+      "fact": "Built document processing pipelines: PDF generation with Jinja2 templates, python-docx, OCR extraction, structured data output",
+      "domains": ["pdf", "document", "processing", "extraction", "generation"],
+      "keywords": ["PDF", "document", "OCR", "extraction", "generation", "template", "invoice", "report", "processing"]
+    },
+    {
+      "id": "claude_api_native",
+      "fact": "Native Claude API expert — custom client library with token management, streaming, structured JSON output, multi-model routing (Opus/Sonnet/Haiku)",
+      "domains": ["claude", "anthropic", "llm", "api"],
+      "keywords": ["Claude", "Anthropic", "LLM", "GPT", "OpenAI", "API", "prompt", "AI", "model", "token"]
+    },
+    {
+      "id": "crm_freelance_suite",
+      "fact": "Built mybuilding.dev — a full CRM for freelancers with AI job scoring, cover letter generation, pipeline management, calendar, and Chrome extension",
+      "domains": ["crm", "freelance", "dashboard", "management"],
+      "keywords": ["CRM", "dashboard", "management", "freelance", "pipeline", "client", "tracking", "project"]
+    },
+    {
+      "id": "data_pipeline_etl",
+      "fact": "Built ETL data pipelines: event capture with NER extraction, dual-backend SQLite/PostgreSQL, auto-journaling, graph analytics with community detection",
+      "domains": ["data", "pipeline", "etl", "analytics", "graph"],
+      "keywords": ["data", "pipeline", "ETL", "analytics", "graph", "database", "transform", "ingest", "clean", "process"]
+    },
+    {
+      "id": "voice_conversational_ai",
+      "fact": "Built conversational AI systems with context management, multi-command routing, conversation buffers, and automated response generation",
+      "domains": ["voice", "conversational", "chatbot", "ai"],
+      "keywords": ["voice", "conversational", "chatbot", "AI", "assistant", "customer support", "dialogue", "NLP", "language"]
+    }
+  ]
+}

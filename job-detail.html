@@ -51,7 +51,7 @@
 
 /* ── Skills Tags ── */
 .jd-skills { display: flex; gap: 6px; flex-wrap: wrap; }
-.jd-skill { font-size: 10px; padding: 3px 9px; border-radius: 10px; background: var(--teal-glow); border: 1px solid rgba(13,148,136,0.2); color: var(--teal); font-weight: 500; }
+.jd-skill { font-size: 10px; padding: 3px 9px; border-radius: 10px; background: var(--teal-glow); border: 1px solid rgba(45,212,191,0.2); color: var(--teal); font-weight: 500; }
 
 /* ── Description ── */
 .jd-desc { font-size: 12px; color: var(--t2); line-height: 1.65; white-space: pre-wrap; word-break: break-word; max-height: 300px; overflow-y: auto; }
@@ -85,13 +85,13 @@
 .jd-plan-title { font-size: 13px; font-weight: 600; color: var(--t1); margin-bottom: 3px; }
 .jd-plan-desc { font-size: 11px; color: var(--t2); line-height: 1.5; margin-bottom: 4px; }
 .jd-plan-tools { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 3px; }
-.jd-plan-tool { font-size: 9px; background: var(--teal-glow); color: var(--teal); padding: 1px 6px; border-radius: 4px; font-weight: 500; border: 1px solid rgba(13,148,136,0.15); }
+.jd-plan-tool { font-size: 9px; background: var(--teal-glow); color: var(--teal); padding: 1px 6px; border-radius: 4px; font-weight: 500; border: 1px solid rgba(45,212,191,0.15); }
 .jd-plan-deliverable { font-size: 10px; color: var(--green); font-weight: 500; }
 
 /* ── Generate Zone ── */
 .jd-generate-zone { animation: fadeUp 0.35s 0.15s cubic-bezier(0.16,1,0.3,1) both; }
-.jd-generate-btn { width: 100%; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 0 24px rgba(13,148,136,0.3); }
-.jd-generate-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 0 32px rgba(13,148,136,0.45); }
+.jd-generate-btn { width: 100%; padding: 14px; background: var(--teal); color: white; border: none; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 0 24px rgba(45,212,191,0.3); }
+.jd-generate-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 0 32px rgba(45,212,191,0.45); }
 .jd-generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ── Generation Progress ── */
@@ -100,28 +100,28 @@
 .gen-steps { display: flex; justify-content: space-between; position: relative; margin-bottom: 12px; }
 .gen-step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; z-index: 1; }
 .gen-step-dot { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.4s cubic-bezier(0.16,1,0.3,1); }
-.gen-step.done .gen-step-dot { background: var(--teal); border-color: var(--teal); box-shadow: 0 0 12px rgba(13,148,136,0.5); }
-.gen-step.active .gen-step-dot { background: rgba(13,148,136,0.2); border-color: var(--teal); animation: pulse-dot 1.5s ease infinite; }
+.gen-step.done .gen-step-dot { background: var(--teal); border-color: var(--teal); box-shadow: 0 0 12px rgba(45,212,191,0.5); }
+.gen-step.active .gen-step-dot { background: rgba(45,212,191,0.2); border-color: var(--teal); animation: pulse-dot 1.5s ease infinite; }
 .gen-step-label { font-size: 10px; color: var(--t3); font-weight: 500; transition: color 0.3s; white-space: nowrap; }
 .gen-step.done .gen-step-label, .gen-step.active .gen-step-label { color: var(--teal); }
 .gen-track { position: relative; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.gen-track-fill { height: 100%; background: linear-gradient(90deg, var(--teal), rgba(13,148,136,0.6)); border-radius: 2px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); width: 0%; }
+.gen-track-fill { height: 100%; background: linear-gradient(90deg, var(--teal), rgba(45,212,191,0.6)); border-radius: 2px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); width: 0%; }
 .gen-elapsed { text-align: center; margin-top: 8px; font-size: 11px; color: var(--t3); }
-@keyframes pulse-dot { 0%, 100% { box-shadow: 0 0 6px rgba(13,148,136,0.3); } 50% { box-shadow: 0 0 16px rgba(13,148,136,0.6); } }
+@keyframes pulse-dot { 0%, 100% { box-shadow: 0 0 6px rgba(45,212,191,0.3); } 50% { box-shadow: 0 0 16px rgba(45,212,191,0.6); } }
 
 /* ── Cover Letter Results ── */
 .jd-cover-results { display: none; margin-top: 14px; }
 .jd-cover-results.visible { display: block; animation: fadeUp 0.3s cubic-bezier(0.16,1,0.3,1) both; }
 .jd-cover-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
 .jd-cover-tab { flex: 1; padding: 8px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.15s; color: var(--t3); background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
-.jd-cover-tab.active { background: var(--teal-dim); color: var(--teal); border-color: rgba(13,148,136,0.3); }
+.jd-cover-tab.active { background: var(--teal-dim); color: var(--teal); border-color: rgba(45,212,191,0.3); }
 .jd-cover-panel { display: none; }
 .jd-cover-panel.active { display: block; }
 .jd-cover-text { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 14px; color: var(--t1); font-size: 12px; font-family: inherit; line-height: 1.65; resize: vertical; min-height: 200px; outline: none; transition: border-color 0.15s; }
-.jd-cover-text:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.12); }
+.jd-cover-text:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(45,212,191,0.12); }
 .jd-cover-actions { display: flex; gap: 8px; margin-top: 8px; }
-.jd-copy-btn { background: var(--teal-glow); border: 1px solid rgba(13,148,136,0.3); color: var(--teal); font-size: 11px; font-weight: 600; padding: 6px 14px; border-radius: 7px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
-.jd-copy-btn:hover { background: rgba(13,148,136,0.22); }
+.jd-copy-btn { background: var(--teal-glow); border: 1px solid rgba(45,212,191,0.3); color: var(--teal); font-size: 11px; font-weight: 600; padding: 6px 14px; border-radius: 7px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.jd-copy-btn:hover { background: rgba(45,212,191,0.22); }
 .jd-copy-btn.copied { background: var(--green-bg); border-color: rgba(34,197,94,0.3); color: var(--green); }
 
 /* ── Description FR ── */
@@ -324,7 +324,7 @@ function renderPage() {
     + '<div style="display:flex;flex-direction:column;gap:14px">'
     // Description
     + '<div class="jd-card">'
-    + '<div class="jd-card-title">📄 Description originale' + (j.description_full ? ' <span style="font-size:11px;color:#0d9488;font-weight:400">✓ complète</span>' : ' <span style="font-size:11px;color:#888;font-weight:400">snippet</span>') + '</div>'
+    + '<div class="jd-card-title">📄 Description originale' + (j.description_full ? ' <span style="font-size:11px;color:#2dd4bf;font-weight:400">✓ complète</span>' : ' <span style="font-size:11px;color:#888;font-weight:400">snippet</span>') + '</div>'
     + '<div class="jd-desc" id="desc-original">' + ((j.description_full || j.description) ? escHtml(j.description_full || j.description).replace(/\n/g, '<br>') : '<span class="muted">Pas de description — ouvre le job sur Upwork pour l\'extraire automatiquement</span>') + '</div>'
     + '</div>'
     // Description FR
@@ -376,13 +376,13 @@ async function loadLinkedContact() {
     var init = (contact.name||'?').split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
     div.innerHTML =
       '<div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:2px">'+
-      '<div style="width:32px;height:32px;border-radius:50%;background:rgba(13,148,136,0.15);border:1px solid rgba(13,148,136,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0d9488;flex-shrink:0">'+escHtml(init)+'</div>'+
+      '<div style="width:32px;height:32px;border-radius:50%;background:rgba(45,212,191,0.15);border:1px solid rgba(45,212,191,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#2dd4bf;flex-shrink:0">'+escHtml(init)+'</div>'+
       '<div style="flex:1;min-width:0">'+
       '<div style="font-size:12px;font-weight:600;color:#f1f5f9">'+escHtml(contact.name)+'</div>'+
       '<div style="font-size:10px;color:#64748b">'+
       [contact.company, contact.email, contact.country].filter(Boolean).join(' · ')+'</div>'+
       '</div>'+
-      '<span style="font-size:9px;background:rgba(13,148,136,0.1);border:1px solid rgba(13,148,136,0.2);color:#0d9488;padding:2px 8px;border-radius:10px;font-weight:600">Contact lié</span>'+
+      '<span style="font-size:9px;background:rgba(45,212,191,0.1);border:1px solid rgba(45,212,191,0.2);color:#2dd4bf;padding:2px 8px;border-radius:10px;font-weight:600">Contact lié</span>'+
       '<button onclick="openCreateClientModal(null,function(c){loadLinkedContact();},'+JSON.stringify(contact).replace(/"/g,'&quot;')+')" '+
       'style="padding:4px 11px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#94a3b8;font-family:inherit;font-size:10px;cursor:pointer">✏️ Éditer</button>'+
       '</div>';
@@ -391,7 +391,7 @@ async function loadLinkedContact() {
       '<div style="background:rgba(255,255,255,0.015);border:1px dashed rgba(255,255,255,0.08);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:10px;color:#64748b;font-size:12px">'+
       '<span>👤 Aucun contact lié à ce job</span>'+
       '<button onclick="openCreateClientModal(_job,function(c){loadLinkedContact();})" '+
-      'style="padding:5px 13px;background:#0d9488;border:none;border-radius:7px;color:white;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;margin-left:auto">➕ Créer le contact</button>'+
+      'style="padding:5px 13px;background:#2dd4bf;border:none;border-radius:7px;color:white;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;margin-left:auto">➕ Créer le contact</button>'+
       '</div>';
   }
 }
