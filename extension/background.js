@@ -644,7 +644,7 @@ async function checkDetailPage(tab) {
       budget_max: budgetParsed.max,
       budget_type: budgetParsed.type,
       skills: detail.skills || [],
-      source: 'extension_detail',
+      source: 'extension',
       status: 'new'
     };
     const scores = scoreJob(base);
