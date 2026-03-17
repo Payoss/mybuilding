@@ -278,61 +278,37 @@
       document.querySelector('a[href*="/jobs/"]');
     result.jobTitle = jobEl?.textContent?.trim() || null;
 
-    // Message elements — try multiple patterns React/Next Upwork uses
-    const msgEls = document.querySelectorAll(
-      '[data-test="thread-message"], ' +
-      '[data-test="message"], ' +
-      '[data-test="message-item"], ' +
-      '[class*="MessageItem"], ' +
-      '[class*="message-item"], ' +
-      '[class*="ChatMessage"], ' +
-      '[class*="chat-message"]'
-    );
+    // Message elements — Upwork uses div.story-section per message group
+    const msgEls = document.querySelectorAll('div.story-section');
 
     msgEls.forEach(el => {
       try {
-        // Sender name
-        const senderEl =
-          el.querySelector('[data-test="sender-name"]') ||
-          el.querySelector('[class*="SenderName"]') ||
-          el.querySelector('[class*="sender-name"]') ||
-          el.querySelector('[class*="AuthorName"]') ||
-          el.querySelector('[class*="author-name"]') ||
-          el.querySelector('strong:first-child');
+        // Sender name — [data-test="story-header"]
+        const senderEl = el.querySelector('[data-test="story-header"]');
         const senderName = senderEl?.textContent?.trim() || '';
 
-        // Message text — prefer innerText to preserve line breaks
+        // Message text — [data-test="story-message"] p
         const textEl =
-          el.querySelector('[data-test="message-content"]') ||
-          el.querySelector('[data-test="message-text"]') ||
-          el.querySelector('[class*="MessageText"]') ||
-          el.querySelector('[class*="message-text"]') ||
-          el.querySelector('[class*="MessageBody"]') ||
-          el.querySelector('[class*="message-body"]') ||
-          el.querySelector('.air3-typography p') ||
+          el.querySelector('[data-test="story-message"] p') ||
+          el.querySelector('[data-test="story-message"]') ||
+          el.querySelector('.up-d-message p') ||
           el.querySelector('p');
         const text = (textEl?.innerText || textEl?.textContent || '').trim();
         if (!text || text.length < 2) return;
 
-        // Timestamp
-        const tsEl =
-          el.querySelector('time') ||
-          el.querySelector('[data-test="message-time"]') ||
-          el.querySelector('[class*="MessageTime"]') ||
-          el.querySelector('[class*="message-time"]') ||
-          el.querySelector('[class*="Timestamp"]');
+        // Timestamp — time element
+        const tsEl = el.querySelector('time');
         const ts = tsEl?.getAttribute('datetime') || new Date().toISOString();
 
-        // Determine direction — outgoing = sent by me
+        // Direction — check class on story-section, or sender name contains "Paul"
         const elClass = Array.from(el.classList).join(' ').toLowerCase();
         const isOutgoing =
+          elClass.includes('own') ||
           elClass.includes('outgoing') ||
-          elClass.includes('sent') ||
-          elClass.includes('-self') ||
-          elClass.includes('mine') ||
+          elClass.includes('right') ||
+          elClass.includes('self') ||
           el.getAttribute('data-own') === 'true' ||
-          el.getAttribute('data-direction') === 'outgoing' ||
-          !!el.querySelector('[class*="outgoing"], [class*="Outgoing"], [class*="self-"], [class*="Self-"]');
+          /^paul\b/i.test(senderName);
 
         const sender = isOutgoing ? 'me' : 'client';
         const name = isOutgoing ? 'Paul' : (senderName || result.clientName || 'Client');
