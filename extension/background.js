@@ -413,69 +413,10 @@ async function checkForNewJobs() {
         preEnrichJobs(topJobs, result.data).catch(e =>
           console.warn('[mybuilding BG] Pre-enrich error (non-critical):', e.message)
         );
-        // Phase 6: Fetch full descriptions via background tabs (max 3, rate-limited)
-        fetchFullDescriptions(topJobs).catch(e =>
-          console.warn('[mybuilding BG] Full desc fetch error (non-critical):', e.message)
-        );
       }
     }
   } catch (e) {
     console.error('[mybuilding BG] Error:', e);
-  }
-}
-
-// ── Phase 6: Fetch full descriptions via background tabs ──
-async function fetchFullDescriptions(jobs) {
-  const { url: sbUrl, key: sbKey } = await getSupabase();
-  if (!sbUrl || !sbKey) return;
-
-  const batch = jobs.filter(j => j.url).slice(0, 3); // max 3 jobs
-  for (const job of batch) {
-    let tab;
-    try {
-      // Open tab silently in background
-      tab = await chrome.tabs.create({ url: job.url, active: false });
-
-      // Wait for tab to fully load
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Tab load timeout')), 15000);
-        chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-          if (tabId === tab.id && info.status === 'complete') {
-            clearTimeout(timeout);
-            chrome.tabs.onUpdated.removeListener(listener);
-            resolve();
-          }
-        });
-      });
-
-      // Give JS time to render
-      await new Promise(r => setTimeout(r, 1500));
-
-      // Extract full description via content script
-      const detail = await chrome.tabs.sendMessage(tab.id, { type: 'GET_JOB_DETAIL' });
-
-      if (detail?.description && detail.description.length > 100) {
-        await fetch(`${sbUrl}/rest/v1/upwork_jobs?url=eq.${encodeURIComponent(job.url)}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': sbKey,
-            'Authorization': `Bearer ${sbKey}`,
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify({ description_full: detail.description })
-        });
-        console.log(`[mybuilding BG] description_full fetched: ${job.title.slice(0, 40)}`);
-      }
-    } catch (e) {
-      console.warn(`[mybuilding BG] Full desc failed for ${job.title?.slice(0, 30)}:`, e.message);
-    } finally {
-      // Always close the tab
-      if (tab?.id) chrome.tabs.remove(tab.id).catch(() => {});
-    }
-
-    // Rate-limit: 3s between each tab
-    await new Promise(r => setTimeout(r, 3000));
   }
 }
 
