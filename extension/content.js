@@ -300,15 +300,12 @@
         const tsEl = el.querySelector('time');
         const ts = tsEl?.getAttribute('datetime') || new Date().toISOString();
 
-        // Direction — check class on story-section, or sender name contains "Paul"
-        const elClass = Array.from(el.classList).join(' ').toLowerCase();
-        const isOutgoing =
-          elClass.includes('own') ||
-          elClass.includes('outgoing') ||
-          elClass.includes('right') ||
-          elClass.includes('self') ||
-          el.getAttribute('data-own') === 'true' ||
-          /^paul\b/i.test(senderName);
+        // Direction — compare sender name against client name
+        // If story-header contains the client's first name → client. Otherwise → me.
+        const clientFirst = (result.clientName || '').split(/[\s,]+/)[0].toLowerCase();
+        const senderLower = senderName.toLowerCase();
+        const isClient = clientFirst.length > 2 && senderLower.includes(clientFirst);
+        const isOutgoing = !isClient;
 
         const sender = isOutgoing ? 'me' : 'client';
         const name = isOutgoing ? 'Paul' : (senderName || result.clientName || 'Client');
