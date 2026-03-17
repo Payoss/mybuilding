@@ -732,9 +732,12 @@ async function checkDetailPage(tab) {
     }
   }
 
-  if (!detail?.id || !detail?.description) {
-    console.warn('[mybuilding BG] Detail page: no description extracted');
+  if (!detail?.id) {
+    console.warn('[mybuilding BG] Detail page: no job ID extracted — panel not detected');
     return;
+  }
+  if (!detail.description) {
+    console.warn('[mybuilding BG] Detail page: no description — will patch skills/title only');
   }
 
   // Check if job exists — try canonical URL, side-panel URL, then LIKE on job ID (handles slug URLs)
@@ -885,7 +888,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         // Probe le content script : s'il trouve un job panel dans le DOM, on enrich ce job
         let probe = null;
         try { probe = await chrome.tabs.sendMessage(tab.id, { type: 'GET_JOB_DETAIL' }); } catch (e) {}
-        if (probe?.id && probe?.description) await checkDetailPage(tab);
+        if (probe?.id) await checkDetailPage(tab);
         else await checkForNewJobs();
       }
       sendResponse({ ok: true });

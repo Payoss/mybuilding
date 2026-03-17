@@ -153,9 +153,11 @@
     // Sur full detail page (URL contient ~ID) → tout le doc est dédié au job
     if (/\/jobs\/~[a-zA-Z0-9]+/.test(window.location.href)) return document;
 
-    // Le lien "Open job in a new window" est UNIQUE au panel — il a target="_blank"
-    // Les liens des cartes de résultats utilisent le routing SPA (pas target="_blank")
-    const openLink = document.querySelector('a[target="_blank"][href*="/jobs/~"]');
+    // Le lien "Open job in a new window" est UNIQUE au panel
+    const openLink =
+      document.querySelector('a[target="_blank"][href*="/jobs/~"]') ||
+      document.querySelector('a[data-test="open-job-in-new-window"]') ||
+      document.querySelector('a[data-test="open-new-tab"][href*="/jobs/~"]');
     if (!openLink) return null;
 
     // Remonter depuis ce lien pour trouver un container reconnaissable
@@ -171,19 +173,22 @@
       }
       el = el.parentElement;
     }
-    // Fallback : remonter 6 niveaux depuis le lien
-    let anc = openLink;
-    for (let i = 0; i < 6; i++) { if (anc.parentElement) anc = anc.parentElement; }
-    return anc;
+    // Fallback : document entier — vaut mieux risquer un peu de contamination
+    // que d'avoir un scope trop étroit qui rate la description
+    return document;
   }
 
   function _isJobDetailPage() {
     const href = window.location.href;
     if (/\/jobs\/~[a-zA-Z0-9]+/.test(href)) return true;
     if (/\/nx\/search\/jobs\/details\/~[a-zA-Z0-9]+/.test(href)) return true;
-    // Side panel (URL inchangée) : "Open job in a new window" a target="_blank"
-    // Les cartes de résultats n'ont PAS target="_blank" sur leurs liens
-    return !!document.querySelector('a[target="_blank"][href*="/jobs/~"]');
+    // Side panel (URL inchangée) : cherche le lien "Open job in a new window"
+    // target="_blank" ou data-test spécifique — les cartes de liste n'ont pas ça
+    return !!(
+      document.querySelector('a[target="_blank"][href*="/jobs/~"]') ||
+      document.querySelector('a[data-test="open-job-in-new-window"]') ||
+      document.querySelector('a[data-test="open-new-tab"][href*="/jobs/~"]')
+    );
   }
 
   function _extractJobDetail() {
@@ -258,7 +263,9 @@
     // URL d'abord, puis le lien "Open in new window" (target="_blank", spécifique au panel)
     const idFromUrl = window.location.href.match(/~([a-zA-Z0-9]+)/);
     const jobLink = !idFromUrl
-      ? document.querySelector('a[target="_blank"][href*="/jobs/~"]')
+      ? (document.querySelector('a[target="_blank"][href*="/jobs/~"]') ||
+         document.querySelector('a[data-test="open-job-in-new-window"]') ||
+         document.querySelector('a[data-test="open-new-tab"][href*="/jobs/~"]'))
       : null;
     const idFromLink = jobLink?.href?.match(/~([a-zA-Z0-9]+)/);
     const idMatch = idFromUrl || idFromLink;
