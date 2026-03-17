@@ -606,6 +606,7 @@ async function checkDetailPage(tab) {
     // PATCH using the URL actually stored in Supabase (not the normalized one)
     const storedUrl = existing[0].url;
     const patch = { description_full: detail.description, url: canonicalUrl, source: 'extension' };
+    if (detail.title) patch.title = detail.title;  // update title if extracted (fixes "Sans titre" jobs)
     if (detail.skills?.length) patch.skills = detail.skills;
     if (detail.country) patch.country = detail.country;
     if (detail.budget) {

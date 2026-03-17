@@ -152,8 +152,8 @@
   }
 
   function _extractJobDetail() {
-    // Title — h1 on full page, h2/div on side panel
-    // Note: bare h1/h2 are dangerous on side panel (match search page headings)
+    // Title — h1 on full page, specific selectors on side panel
+    // Bare h1/h2 avoided — too risky on side panel (match search page headings)
     const titleEl =
       document.querySelector('h1[data-test="job-title"]') ||
       document.querySelector('[data-test="job-title"]') ||
@@ -163,9 +163,17 @@
       document.querySelector('h1.m-0') ||
       document.querySelector('[class*="JobTitle"]') ||
       document.querySelector('[class*="job-title"]');
-    // Validate: a job title is < 200 chars
-    const rawTitle = titleEl?.textContent?.trim() || '';
-    const title = rawTitle.length < 200 ? rawTitle : '';
+    let rawTitle = titleEl?.textContent?.trim() || '';
+    // Fallback: document.title — Upwork sets it to "Job Title | Upwork" on detail pages
+    if (!rawTitle || rawTitle.length >= 200) {
+      const docTitle = document.title || '';
+      const parts = docTitle.split('|');
+      const candidate = parts[0].trim();
+      if (candidate && candidate.toLowerCase() !== 'upwork' && candidate.length < 200) {
+        rawTitle = candidate;
+      }
+    }
+    const title = rawTitle;
 
     // Full description — p.text-body-sm works on both full page and side panel
     const descEl =
