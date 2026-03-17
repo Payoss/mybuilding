@@ -500,7 +500,8 @@ async function _reEnrichPlan(jobId, patch, detail) {
   const settings = await getSettings();
   const apiBase = settings.apiUrl || 'https://mybuilding.dev';
 
-  const res = await fetch(`${apiBase}/api/pre-enrich`, {
+  // Utilise /api/job-enrich — même endpoint que job-detail.html, format compatible
+  const res = await fetch(`${apiBase}/api/job-enrich`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -510,12 +511,27 @@ async function _reEnrichPlan(jobId, patch, detail) {
       budget_min: patch.budget_min ?? null,
       budget_max: patch.budget_max ?? null,
       budget_type: patch.budget_type ?? null,
-      country: patch.country || detail.country || ''
+      country: patch.country || detail.country || '',
+      feasibility: patch.feasibility ?? null,
+      worth_score: patch.worth_score ?? null,
+      time_estimate: patch.time_estimate ?? null
     })
   });
   if (!res.ok) { console.warn('[mybuilding BG] Re-enrich plan HTTP', res.status); return; }
   const enrichData = await res.json();
   if (!enrichData) return;
+
+  // Récupérer l'analysis existante pour préserver messages + autres données
+  let existingAnalysis = {};
+  try {
+    const existRes = await fetch(`${sbUrl}/rest/v1/upwork_jobs?select=analysis&id=eq.${jobId}`, {
+      headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` }
+    });
+    if (existRes.ok) { const rows = await existRes.json(); existingAnalysis = rows[0]?.analysis || {}; }
+  } catch (e) {}
+
+  // Stocker sous analysis.enrichment (même clé que job-detail.html) + préserver le reste
+  const updatedAnalysis = Object.assign({}, existingAnalysis, { enrichment: enrichData });
 
   await fetch(`${sbUrl}/rest/v1/upwork_jobs?id=eq.${jobId}`, {
     method: 'PATCH',
@@ -523,12 +539,9 @@ async function _reEnrichPlan(jobId, patch, detail) {
       'Content-Type': 'application/json',
       'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Prefer': 'return=minimal'
     },
-    body: JSON.stringify({
-      analysis: enrichData,
-      status: enrichData.verdict === 'SKIP' ? 'skipped' : 'enriched'
-    })
+    body: JSON.stringify({ analysis: updatedAnalysis })
   });
-  console.log('[mybuilding BG] Plan IA régénéré pour job', jobId);
+  console.log('[mybuilding BG] Plan IA régénéré et caché (analysis.enrichment) pour job', jobId);
 }
 
 // ── Chat page sync ──
