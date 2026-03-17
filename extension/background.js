@@ -624,8 +624,66 @@ async function checkChatPage(tab) {
     } catch (e) {}
   }
 
+  // ── Fetch job URL (needed for contact link) ──
+  let jobUrl = null;
+  if (jobId) {
+    try {
+      const res = await fetch(
+        `${sbUrl}/rest/v1/upwork_jobs?select=url&id=eq.${jobId}`,
+        { headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` } }
+      );
+      if (res.ok) { const rows = await res.json(); if (rows.length) jobUrl = rows[0].url; }
+    } catch (e) {}
+  }
+
+  // ── Auto-create contact if not found ──
+  if (chat.clientName) {
+    // Check if contact already exists for this job or name
+    let contactExists = false;
+    try {
+      const nameParts = chat.clientName.split(',').map(n => n.trim()).filter(Boolean);
+      const firstName = nameParts[0] || chat.clientName;
+      const safe = firstName.substring(0, 50).replace(/[%_']/g, '\\$&');
+      const q = jobId
+        ? `upwork_job_id=eq.${jobId}`
+        : `name=ilike.*${encodeURIComponent(safe)}*`;
+      const res = await fetch(
+        `${sbUrl}/rest/v1/contacts?select=id&${q}&limit=1`,
+        { headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` } }
+      );
+      if (res.ok) { const rows = await res.json(); contactExists = rows.length > 0; }
+    } catch (e) {}
+
+    if (!contactExists) {
+      const contactPayload = {
+        name: chat.clientName.split(',')[0].trim(), // take first name if multiple
+        source: 'upwork',
+        stage: 'lead',
+      };
+      if (jobId) contactPayload.upwork_job_id = jobId;
+      if (jobUrl) contactPayload.upwork_url = jobUrl;
+      try {
+        const res = await fetch(`${sbUrl}/rest/v1/contacts`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`,
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(contactPayload)
+        });
+        if (res.ok || res.status === 201) {
+          console.log('[mybuilding BG] Contact créé auto:', contactPayload.name);
+        }
+      } catch (e) {
+        console.warn('[mybuilding BG] Contact auto-create failed:', e.message);
+      }
+    }
+  }
+
+  // ── If still no job, use fallback ──
   if (!jobId) {
-    console.warn('[mybuilding BG] Chat sync: no matching job for', chat.clientName, chat.jobTitle);
+    console.warn('[mybuilding BG] Chat sync: no job matched, messages not saved');
     chrome.storage.local.set({ mb_last_chat_sync: { ok: false, reason: 'no_job_match', clientName: chat.clientName } });
     return;
   }
