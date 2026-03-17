@@ -104,7 +104,22 @@ document.getElementById('clearCacheBtn').addEventListener('click', () => {
 
 // Detect active tab context to set scan mode
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-  updateScanMode(tabs[0]?.url || '');
+  const tab = tabs[0];
+  if (!tab) return;
+  updateScanMode(tab.url || '');
+  // Si l'URL ne détecte pas un panel (ex: Best Matches), probe le content script
+  if (!_isDetailMode && !_isChatMode) {
+    chrome.tabs.sendMessage(tab.id, { type: 'GET_JOB_DETAIL' }, (detail) => {
+      if (chrome.runtime.lastError) return; // content script pas chargé
+      if (detail?.id && detail?.description) {
+        _isDetailMode = true;
+        const btn = document.getElementById('scanBtn');
+        const hint = document.getElementById('scan-hint');
+        btn.textContent = '🔍 Enrichir ce job';
+        hint.textContent = 'Mode détail — récupère la description complète et met à jour le CRM';
+      }
+    });
+  }
 });
 
 loadStatus();

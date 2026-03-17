@@ -858,10 +858,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (!tab) { sendResponse({ ok: false }); return; }
       const url = tab.url || '';
       const isChat = url.includes('/messages/rooms/') || url.includes('/ab/messages/') || url.includes('/nx/messages/');
-      const isDetail = /\/jobs\/~[a-zA-Z0-9]+/.test(url) || /\/nx\/search\/jobs\/details\/~[a-zA-Z0-9]+/.test(url);
+      const isDetailByUrl = /\/jobs\/~[a-zA-Z0-9]+/.test(url) || /\/nx\/search\/jobs\/details\/~[a-zA-Z0-9]+/.test(url);
       if (isChat) await checkChatPage(tab);
-      else if (isDetail) await checkDetailPage(tab);
-      else await checkForNewJobs();
+      else if (isDetailByUrl) await checkDetailPage(tab);
+      else {
+        // URL ne matche pas — side panel peut être ouvert sans changement d'URL (ex: Best Matches)
+        // Probe le content script : s'il trouve un job panel dans le DOM, on enrich ce job
+        let probe = null;
+        try { probe = await chrome.tabs.sendMessage(tab.id, { type: 'GET_JOB_DETAIL' }); } catch (e) {}
+        if (probe?.id && probe?.description) await checkDetailPage(tab);
+        else await checkForNewJobs();
+      }
       sendResponse({ ok: true });
     };
     if (msg.tabId) {

@@ -147,8 +147,11 @@
 
   // ── Job Detail Page Extraction ──
   function _isJobDetailPage() {
-    return /\/jobs\/~[a-zA-Z0-9]+/.test(window.location.href) ||
-           /\/nx\/search\/jobs\/details\/~[a-zA-Z0-9]+/.test(window.location.href);
+    const href = window.location.href;
+    if (/\/jobs\/~[a-zA-Z0-9]+/.test(href)) return true;
+    if (/\/nx\/search\/jobs\/details\/~[a-zA-Z0-9]+/.test(href)) return true;
+    // Side panel sans changement d'URL (ex: Best Matches) — détecter via DOM
+    return !!document.querySelector('a[href*="/jobs/~"]');
   }
 
   function _extractJobDetail() {
@@ -211,8 +214,12 @@
       document.querySelector('[class*="ClientLocation"]');
     const country = countryEl?.textContent?.trim() || '';
 
-    // Job ID from URL — normalize to canonical /jobs/~XXX regardless of side panel URL
-    const idMatch = window.location.href.match(/~([a-zA-Z0-9]+)/);
+    // Job ID — URL d'abord, sinon fallback sur le lien job visible dans le panel
+    // ("Open job in a new window" ou tout a[href*="/jobs/~"] dans le panel)
+    const idFromUrl = window.location.href.match(/~([a-zA-Z0-9]+)/);
+    const jobLink = !idFromUrl ? document.querySelector('a[href*="/jobs/~"]') : null;
+    const idFromLink = jobLink?.href?.match(/~([a-zA-Z0-9]+)/);
+    const idMatch = idFromUrl || idFromLink;
     const id = idMatch ? idMatch[1] : null;
     const url = id ? `https://www.upwork.com/jobs/~${id}` : window.location.href.split('?')[0];
 
