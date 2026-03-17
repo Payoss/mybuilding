@@ -1036,6 +1036,18 @@ async function setAppliedStatus(id, status) {
   var job = allApplied.find(function(j) { return j.id === id; });
   if (job) { job.status = status; renderApplied(); }
   toast('Statut mis à jour : ' + status);
+  // Trigger contact modal when switching to interviewing
+  if (status === 'interviewing' && job) {
+    var q = sb.from('contacts').select('id').limit(1);
+    if (job.id) q = q.or('upwork_job_id.eq.'+job.id+(job.url?',upwork_url.eq.'+job.url:''));
+    else if (job.url) q = q.eq('upwork_url', job.url);
+    var { data: existing } = (job.id || job.url) ? await q : { data: [] };
+    if (!existing || !existing.length) {
+      openCreateClientModal(job, function(contact) {
+        toast('Contact créé : ' + contact.name + ' ✓');
+      });
+    }
+  }
 }
 
 // ---- Proposal Memory Bank ----

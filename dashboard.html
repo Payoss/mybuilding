@@ -382,8 +382,10 @@ function closePanel() {
   currentPanelJob = null;
 }
 
-function setPanelStatus(status) {
+async function setPanelStatus(status) {
   if (!currentPanelJob) return;
+  // Save to DB
+  await sb.from('upwork_jobs').update({ status: status }).eq('id', currentPanelJob.id);
   currentPanelJob.status = status;
   var btns = document.querySelectorAll('#sp-statuses .sp-status-btn');
   var statuses = ['applied','interviewing','won','lost'];
@@ -393,6 +395,19 @@ function setPanelStatus(status) {
   // Show entretien section when status = interviewing
   document.getElementById('sp-entretien').style.display = status === 'interviewing' ? 'block' : 'none';
   document.getElementById('sp-entretien-response').style.display = 'none';
+  // Trigger contact modal if switching to interviewing and no contact exists
+  if (status === 'interviewing') {
+    var job = currentPanelJob;
+    var q = sb.from('contacts').select('id').limit(1);
+    if (job.id)  q = q.or('upwork_job_id.eq.'+job.id+(job.url?',upwork_url.eq.'+job.url:''));
+    else if (job.url) q = q.eq('upwork_url', job.url);
+    var { data: existing } = job.id || job.url ? await q : { data: [] };
+    if (!existing || !existing.length) {
+      openCreateClientModal(job, function(contact) {
+        toast('Contact créé : ' + contact.name + ' ✓');
+      });
+    }
+  }
 }
 
 async function genererReponseEntretien() {

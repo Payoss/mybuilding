@@ -3,86 +3,165 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>mybuilding — CRM</title>
+<title>mybuilding — CRM Projets</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-.tabs { display: flex; gap: 2px; background: var(--glass); border: 1px solid var(--border); border-radius: 8px; padding: 3px; width: fit-content; }
-.tab { padding: 5px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; color: var(--t2); transition: all 0.15s; }
-.tab.active { background: var(--teal-dim); color: var(--t1); font-weight: 500; }
-.filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.filter-chip { padding: 4px 10px; border-radius: 20px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); color: var(--t2); transition: all 0.15s; background: none; font-family: inherit; }
-.filter-chip.active { border-color: var(--teal); color: var(--teal); background: var(--teal-glow); }
-.contact-name { font-size: 12px; font-weight: 500; color: var(--t1); }
-.contact-sub  { font-size: 10px; color: var(--t3); margin-top: 1px; }
-.avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--teal-dim); border: 1px solid rgba(13,148,136,0.3); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: var(--teal); flex-shrink: 0; }
-.pipeline-col { display: flex; flex-direction: column; gap: 8px; }
-.pipeline-header { font-size: 10px; font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: 0.07em; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; }
-.pipeline-card { background: var(--glass); border: 1px solid var(--border); border-radius: 8px; padding: 11px 12px; cursor: pointer; transition: all 0.15s; }
-.pipeline-card:hover { border-color: var(--border-h); background: var(--glass-h); }
-.pipeline-card-title { font-size: 12px; font-weight: 500; color: var(--t1); margin-bottom: 4px; }
-.pipeline-card-meta { font-size: 11px; color: var(--t3); display: flex; align-items: center; justify-content: space-between; }
-.kanban { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; align-items: start; }
+/* ── Project list ── */
+.proj-head { display:grid; grid-template-columns:16px 4fr 1fr 1fr 1fr 1.2fr 60px; gap:12px; padding:10px 18px; border-bottom:1px solid var(--border); }
+.proj-head-cell { font-size:10px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:.06em; }
+.proj-row { display:grid; grid-template-columns:16px 4fr 1fr 1fr 1fr 1.2fr 60px; gap:12px; align-items:center; padding:12px 18px; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; transition:background 0.12s; }
+.proj-row:hover { background:rgba(255,255,255,0.025); }
+.proj-row:last-child { border-bottom:none; }
+.proj-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:2px; }
+.dot-applied { background:#93c5fd; }
+.dot-interviewing { background:#a78bfa; box-shadow:0 0 8px rgba(167,139,250,0.5); }
+.dot-negotiation { background:#fbbf24; box-shadow:0 0 8px rgba(251,191,36,0.4); }
+.dot-won,.dot-active { background:#34d399; box-shadow:0 0 8px rgba(52,211,153,0.4); }
+.dot-lost { background:#f87171; }
+.proj-title-main { font-size:12px; font-weight:500; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:400px; }
+.proj-title-sub { font-size:10px; color:var(--t3); margin-top:2px; }
+.proj-budget { font-size:11px; color:var(--t2); font-family:'DM Mono',monospace; }
+.proj-score { font-size:11px; font-weight:700; font-family:'DM Mono',monospace; }
+.proj-age { font-size:10px; color:var(--t3); }
+.proj-contact-cell { font-size:11px; }
+.proj-msgs-cell { font-size:11px; color:var(--t3); }
+
+/* ── Panel backdrop ── */
+.crm-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:90; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+.crm-backdrop.open { opacity:1; pointer-events:all; }
+
+/* ── Panel ── */
+.crm-panel { position:fixed; top:0; right:-78%; width:75%; max-width:1000px; height:100vh; background:#0b0b12; border-left:1px solid rgba(255,255,255,0.07); z-index:100; display:flex; flex-direction:column; transition:right 0.32s cubic-bezier(0.16,1,0.3,1); }
+.crm-panel.open { right:0; }
+.crm-panel-scroll { flex:1; overflow-y:auto; }
+.crm-panel-scroll::-webkit-scrollbar { width:4px; }
+.crm-panel-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:2px; }
+
+/* Panel header */
+.cp-hdr { padding:16px 22px 14px; border-bottom:1px solid rgba(255,255,255,0.06); position:sticky; top:0; background:#0b0b12; z-index:5; }
+.cp-hdr-row1 { display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; }
+.cp-title { font-size:15px; font-weight:700; color:var(--t1); line-height:1.35; flex:1; }
+.cp-close { background:none; border:none; color:var(--t3); cursor:pointer; font-size:20px; padding:2px 8px; border-radius:6px; transition:all 0.15s; line-height:1; }
+.cp-close:hover { background:rgba(255,255,255,0.05); color:var(--t1); }
+.cp-status-row { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+.cp-sb { padding:4px 11px; border-radius:6px; font-size:11px; font-weight:600; border:1px solid var(--border); background:none; color:var(--t3); font-family:inherit; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+.cp-sb:hover { border-color:rgba(255,255,255,0.15); color:var(--t1); }
+.cp-sb.s-applied { background:rgba(147,197,253,0.1); border-color:rgba(147,197,253,0.3); color:#93c5fd; }
+.cp-sb.s-interviewing { background:rgba(167,139,250,0.12); border-color:rgba(167,139,250,0.3); color:#a78bfa; }
+.cp-sb.s-negotiation { background:rgba(251,191,36,0.1); border-color:rgba(251,191,36,0.3); color:#fbbf24; }
+.cp-sb.s-won,.cp-sb.s-active { background:rgba(52,211,153,0.1); border-color:rgba(52,211,153,0.3); color:#34d399; }
+.cp-sb.s-lost { background:rgba(248,113,113,0.1); border-color:rgba(248,113,113,0.3); color:#f87171; }
+
+/* Panel sections */
+.cp-sec { padding:16px 22px; border-bottom:1px solid rgba(255,255,255,0.05); }
+.cp-sec-title { font-size:10px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:.07em; margin-bottom:12px; display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; }
+.cp-sec-title:hover { color:var(--t2); }
+.cp-chevron { transition:transform 0.2s; font-size:10px; margin-left:2px; }
+.cp-acc-body { display:none; }
+.cp-acc.open .cp-acc-body { display:block; }
+.cp-acc.open .cp-chevron { transform:rotate(90deg); }
+
+/* Client + Scores dual */
+.cp-dual { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.cp-client-name { font-size:14px; font-weight:600; color:var(--t1); margin-bottom:5px; }
+.cp-client-meta { font-size:11px; color:var(--t3); line-height:1.8; }
+.cp-client-actions { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+.cp-score-bar { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.cp-score-lbl { font-size:11px; color:var(--t3); width:82px; flex-shrink:0; }
+.cp-score-track { flex:1; height:4px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+.cp-score-fill { height:100%; border-radius:3px; transition:width 0.8s cubic-bezier(0.16,1,0.3,1); }
+.cp-score-val { font-size:11px; font-weight:700; font-family:'DM Mono',monospace; width:50px; text-align:right; flex-shrink:0; }
+
+/* Messages */
+.msg-thread { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; max-height:340px; overflow-y:auto; padding:2px 0; }
+.msg-thread::-webkit-scrollbar { width:3px; }
+.msg-thread::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+.msg-bubble { padding:10px 14px; border-radius:10px; max-width:84%; }
+.msg-bubble.client { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); align-self:flex-start; }
+.msg-bubble.me { background:rgba(13,148,136,0.1); border:1px solid rgba(13,148,136,0.2); align-self:flex-end; }
+.msg-sender-label { font-size:10px; font-weight:600; margin-bottom:4px; }
+.msg-bubble.client .msg-sender-label { color:#a78bfa; }
+.msg-bubble.me .msg-sender-label { color:var(--teal); text-align:right; }
+.msg-text { font-size:12px; color:var(--t2); line-height:1.55; white-space:pre-wrap; word-break:break-word; }
+.msg-ts-label { font-size:9px; color:var(--t3); margin-top:4px; text-align:right; }
+.msg-add-row { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:end; }
+.msg-sel { padding:7px 10px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; color:var(--t1); font-family:inherit; font-size:11px; outline:none; cursor:pointer; }
+.msg-inp { padding:8px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; color:var(--t1); font-family:inherit; font-size:12px; outline:none; resize:none; line-height:1.45; min-height:36px; max-height:120px; transition:border-color 0.15s; width:100%; box-sizing:border-box; }
+.msg-inp:focus { border-color:var(--teal); }
+
+/* Skills */
+.cp-skills { display:flex; gap:6px; flex-wrap:wrap; }
+.cp-skill { font-size:10px; padding:3px 9px; border-radius:10px; background:var(--teal-glow); border:1px solid rgba(13,148,136,0.2); color:var(--teal); font-weight:500; }
+
+/* Enrich */
+.cp-e-text { font-size:12px; color:var(--t2); line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+.cp-battle-ul { list-style:none; padding:0; margin:0 0 8px 0; }
+.cp-battle-ul li { font-size:12px; color:var(--t2); padding:2px 0; display:flex; align-items:flex-start; gap:7px; }
+.cp-battle-ul li::before { content:''; display:block; width:5px; height:5px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+.str-li::before { background:#34d399; }
+.risk-li::before { background:#f87171; }
+.diff-li::before { background:var(--teal); }
+.cp-e-sub { font-size:10px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:.04em; margin:10px 0 5px; }
+.cp-plan-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:10px; }
+.cp-plan-card { background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+.cp-plan-num { font-size:9px; font-weight:700; color:var(--teal); text-transform:uppercase; margin-bottom:3px; }
+.cp-plan-t { font-size:12px; font-weight:600; color:var(--t1); margin-bottom:3px; }
+.cp-plan-d { font-size:11px; color:var(--t2); line-height:1.45; }
+.cp-plan-del { font-size:10px; color:#34d399; margin-top:5px; }
+
+/* Cover letter */
+.cp-gen-btn { width:100%; padding:13px; background:var(--teal); color:white; border:none; border-radius:10px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; box-shadow:0 0 20px rgba(13,148,136,0.3); }
+.cp-gen-btn:hover:not(:disabled) { opacity:.9; box-shadow:0 0 30px rgba(13,148,136,0.45); }
+.cp-gen-btn:disabled { opacity:.55; cursor:not-allowed; }
+.cp-cover-wrap { display:none; margin-top:12px; }
+.cp-cover-wrap.visible { display:block; }
+.cp-ctabs { display:flex; gap:4px; margin-bottom:10px; }
+.cp-ctab { flex:1; padding:7px; text-align:center; font-size:11px; font-weight:600; cursor:pointer; border-radius:7px; transition:all 0.15s; color:var(--t3); background:rgba(255,255,255,0.02); border:1px solid var(--border); }
+.cp-ctab.active { background:var(--teal-dim); color:var(--teal); border-color:rgba(13,148,136,0.3); }
+.cp-cpanel { display:none; }
+.cp-cpanel.active { display:block; }
+.cp-ctext { width:100%; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:12px 14px; color:var(--t1); font-size:12px; font-family:inherit; line-height:1.65; resize:vertical; min-height:180px; outline:none; box-sizing:border-box; }
+
+/* Contacts tab table */
+.ct-table { width:100%; border-collapse:collapse; }
+.ct-table th { text-align:left; font-size:10px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:.06em; padding:9px 14px; border-bottom:1px solid var(--border); }
+.ct-table td { padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.04); font-size:12px; color:var(--t2); vertical-align:middle; }
+.ct-table tr:last-child td { border-bottom:none; }
+.ct-table tbody tr { cursor:pointer; transition:background 0.12s; }
+.ct-table tbody tr:hover td { background:rgba(255,255,255,0.02); }
+
+/* Filter chips */
+.fchips { display:flex; gap:6px; flex-wrap:wrap; }
+.fchip { padding:4px 12px; border-radius:20px; font-size:11px; cursor:pointer; border:1px solid var(--border); color:var(--t3); transition:all 0.15s; background:none; font-family:inherit; }
+.fchip.active { border-color:var(--teal); color:var(--teal); background:var(--teal-glow); }
+.fchip:hover:not(.active) { color:var(--t1); border-color:rgba(255,255,255,0.15); }
+
+/* Loading */
+.cp-load { display:flex; align-items:center; gap:10px; padding:30px 22px; font-size:12px; color:var(--t3); }
+.cp-spin { width:16px; height:16px; border:2px solid rgba(255,255,255,0.1); border-top-color:var(--teal); border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.avatar { width:28px; height:28px; border-radius:50%; background:var(--teal-dim); border:1px solid rgba(13,148,136,0.3); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:var(--teal); flex-shrink:0; }
 </style>
 </head>
 <body>
 <script src="/js/auth.js"></script>
 <div id="sidebar-mount"></div>
 
-<!-- ADD CONTACT MODAL -->
-<div class="modal" id="contactModal">
-  <div class="modal-backdrop" onclick="closeContactModal()"></div>
-  <div class="modal-box">
-    <div class="modal-title">
-      <span id="modal-title-text">Nouveau contact</span>
-      <button class="modal-close" onclick="closeContactModal()">×</button>
+<!-- BACKDROP -->
+<div class="crm-backdrop" id="crm-backdrop" onclick="closePanel()"></div>
+
+<!-- PROJECT PANEL -->
+<div class="crm-panel" id="crm-panel">
+  <div class="cp-hdr">
+    <div class="cp-hdr-row1">
+      <div class="cp-title" id="cp-title">—</div>
+      <button class="cp-close" onclick="closePanel()">✕</button>
     </div>
-    <form id="contactForm" onsubmit="saveContact(event)">
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Nom *</label>
-          <input class="form-input" name="name" placeholder="John Doe" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input class="form-input" name="email" type="email" placeholder="john@example.com">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Téléphone</label>
-          <input class="form-input" name="phone" placeholder="+33 6 00 00 00 00">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Entreprise</label>
-          <input class="form-input" name="company" placeholder="Acme Inc.">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Source</label>
-          <select class="form-select" name="source">
-            <option value="direct">Direct</option>
-            <option value="upwork">Upwork</option>
-            <option value="referral">Référence</option>
-            <option value="other">Autre</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Étape</label>
-          <select class="form-select" name="stage">
-            <option value="lead">Lead</option>
-            <option value="proposal">Proposition</option>
-            <option value="active">Actif</option>
-            <option value="inactive">Inactif</option>
-          </select>
-        </div>
-        <div class="form-group full">
-          <label class="form-label">Notes</label>
-          <textarea class="form-textarea" name="notes" placeholder="Contexte, besoins, remarques..."></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-glass" onclick="closeContactModal()">Annuler</button>
-        <button type="submit" class="btn btn-teal" id="saveBtn">Créer le contact</button>
-      </div>
-    </form>
+    <div class="cp-status-row" id="cp-status-row"></div>
+  </div>
+  <div class="crm-panel-scroll">
+    <div id="cp-body"><div class="cp-load"><div class="cp-spin"></div>Chargement...</div></div>
   </div>
 </div>
 
@@ -91,58 +170,55 @@
     <div class="topbar-left">
       <span class="breadcrumb">mybuilding /</span>
       <span class="page-title">CRM</span>
-      <span id="contacts-badge" class="teal-chip">—</span>
+      <span id="proj-badge" class="teal-chip">—</span>
     </div>
     <div class="topbar-right">
-      <input class="search-input" id="search" placeholder="🔍 Rechercher..." oninput="filterContacts()">
-      <button class="btn btn-teal" onclick="openContactModal()">+ Contact</button>
+      <input class="search-input" id="crm-search" placeholder="🔍 Rechercher..." oninput="onSearch()">
+      <button class="btn btn-teal" style="font-size:12px" onclick="openCreateClientModal(null, function(c){ allContacts.push(c); renderContacts(); })">+ Contact</button>
     </div>
   </div>
 
   <div class="content">
-
-    <!-- TABS -->
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <!-- TABS + FILTERS -->
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
       <div class="tabs">
-        <div class="tab active" onclick="switchTab('contacts',this)">Contacts</div>
-        <div class="tab" onclick="switchTab('pipeline',this)">Pipeline</div>
+        <div class="tab active" onclick="switchTab('projects',this)">Projets actifs</div>
+        <div class="tab" onclick="switchTab('contacts',this)">Contacts</div>
       </div>
-      <div class="filter-row" id="stage-filters">
-        <button class="filter-chip active" data-stage="" onclick="setStageFilter('',this)">Tous</button>
-        <button class="filter-chip" data-stage="lead" onclick="setStageFilter('lead',this)">Leads</button>
-        <button class="filter-chip" data-stage="proposal" onclick="setStageFilter('proposal',this)">Proposition</button>
-        <button class="filter-chip" data-stage="active" onclick="setStageFilter('active',this)">Actifs</button>
-        <button class="filter-chip" data-stage="inactive" onclick="setStageFilter('inactive',this)">Inactifs</button>
+      <div id="proj-filters" class="fchips">
+        <button class="fchip active" onclick="setFilter('',this)">Tous</button>
+        <button class="fchip" onclick="setFilter('applied',this)">📩 Postulé</button>
+        <button class="fchip" onclick="setFilter('interviewing',this)">🟣 Entretien</button>
+        <button class="fchip" onclick="setFilter('negotiation',this)">🟡 Négociation</button>
+        <button class="fchip" onclick="setFilter('won',this)">🟢 Won</button>
+        <button class="fchip" onclick="setFilter('lost',this)">🔴 Lost</button>
       </div>
+      <div id="contacts-filters" class="fchips" style="display:none">
+        <button class="fchip active" onclick="setContactFilter('',this)">Tous</button>
+        <button class="fchip" onclick="setContactFilter('prospect',this)">Prospect</button>
+        <button class="fchip" onclick="setContactFilter('active',this)">Actif</button>
+        <button class="fchip" onclick="setContactFilter('upwork',this)">Upwork</button>
+      </div>
+    </div>
+
+    <!-- PROJECTS TAB -->
+    <div id="tab-projects" class="tile fade-up" style="padding:0;overflow:hidden">
+      <div class="proj-head">
+        <div></div>
+        <div class="proj-head-cell">Projet</div>
+        <div class="proj-head-cell">Budget</div>
+        <div class="proj-head-cell">Score</div>
+        <div class="proj-head-cell">Depuis</div>
+        <div class="proj-head-cell">Contact</div>
+        <div class="proj-head-cell">Msgs</div>
+      </div>
+      <div id="proj-rows"><div class="cp-load"><div class="cp-spin"></div>Chargement...</div></div>
     </div>
 
     <!-- CONTACTS TAB -->
-    <div id="tab-contacts" class="tile fade-up">
-      <table class="data-table" id="contacts-table">
-        <thead>
-          <tr>
-            <th style="width:36px"></th>
-            <th>Contact</th>
-            <th>Étape</th>
-            <th>Source</th>
-            <th>MRR</th>
-            <th>Créé</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="contacts-tbody">
-          <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👤</div><div class="empty-text">Chargement...</div></div></td></tr>
-        </tbody>
-      </table>
+    <div id="tab-contacts" class="tile fade-up" style="display:none;padding:0;overflow:hidden">
+      <div id="contacts-rows"><div class="cp-load"><div class="cp-spin"></div>Chargement...</div></div>
     </div>
-
-    <!-- PIPELINE TAB -->
-    <div id="tab-pipeline" style="display:none">
-      <div class="kanban" id="kanban-board">
-        <div class="empty-state"><div class="empty-text">Chargement...</div></div>
-      </div>
-    </div>
-
   </div>
 </main>
 
@@ -152,166 +228,412 @@
 <script>
 document.getElementById('sidebar-mount').innerHTML = renderSidebar('crm');
 
-var allContacts = [];
-var currentStage = '';
-var editingId = null;
+// ── State ──
+var allProjects = [], allContacts = [];
+var currentProject = null;
+var projFilter = '', contactFilter = '', searchQ = '';
+var currentTab = 'projects';
 
-async function loadContacts() {
-  try {
-    const { data, error } = await sb.from('contacts').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    allContacts = data || [];
-    document.getElementById('contacts-badge').textContent = allContacts.length + ' contacts';
-    renderContacts();
-    renderKanban();
-  } catch(e) {
-    toast('Erreur chargement contacts', 'error');
-  }
-}
+// ── Escape HTML ──
+function escH(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
-function filterContacts() {
+// ── Load ──
+async function loadAll() {
+  const [pRes, cRes] = await Promise.all([
+    sb.from('upwork_jobs').select('*').in('status',['applied','interviewing','negotiation','won','active','lost']).order('applied_at',{ascending:false}).limit(200),
+    sb.from('contacts').select('*').order('created_at',{ascending:false})
+  ]);
+  allProjects = pRes.data || [];
+  allContacts = cRes.data || [];
+  var active = allProjects.filter(function(j){ return !['lost','applied'].includes(j.status); }).length;
+  document.getElementById('proj-badge').textContent = active + ' actif' + (active!==1?'s':'');
+  renderProjects();
   renderContacts();
 }
 
-function setStageFilter(stage, el) {
-  currentStage = stage;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  renderContacts();
-}
+// ── Status config ──
+var S = {
+  applied:     {dot:'dot-applied',     lbl:'Postulé',     col:'#93c5fd'},
+  interviewing:{dot:'dot-interviewing',lbl:'Entretien',   col:'#a78bfa'},
+  negotiation: {dot:'dot-negotiation', lbl:'Négociation', col:'#fbbf24'},
+  won:         {dot:'dot-won',         lbl:'Won',         col:'#34d399'},
+  active:      {dot:'dot-active',      lbl:'Actif',       col:'#34d399'},
+  lost:        {dot:'dot-lost',        lbl:'Lost',        col:'#f87171'},
+};
 
-function getFiltered() {
-  var q = (document.getElementById('search').value || '').toLowerCase();
-  return allContacts.filter(c => {
-    if (currentStage && c.stage !== currentStage) return false;
-    if (q && !((c.name||'').toLowerCase().includes(q) || (c.company||'').toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q))) return false;
+// ── Render projects ──
+function renderProjects() {
+  var rows = allProjects.filter(function(j) {
+    if (projFilter && j.status !== projFilter) return false;
+    if (searchQ && !(j.title||'').toLowerCase().includes(searchQ) && !(j.skills||[]).join(' ').toLowerCase().includes(searchQ)) return false;
     return true;
   });
-}
-
-function renderContacts() {
-  var rows = getFiltered();
-  var tbody = document.getElementById('contacts-tbody');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👤</div><div class="empty-text">Aucun contact</div></div></td></tr>';
+    document.getElementById('proj-rows').innerHTML = '<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">Aucun projet trouvé</div>';
     return;
   }
-  tbody.innerHTML = rows.map(c => {
-    var initials = (c.name || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    return `<tr onclick="editContact('${c.id}')">
-      <td><div class="avatar">${initials}</div></td>
-      <td>
-        <div class="contact-name">${c.name}</div>
-        <div class="contact-sub">${[c.company, c.email].filter(Boolean).join(' · ') || '—'}</div>
-      </td>
-      <td>${stageBadge(c.stage)}</td>
-      <td class="muted">${c.source || '—'}</td>
-      <td class="mono ${c.mrr > 0 ? 'teal' : 'muted'}">${c.mrr > 0 ? fmtEur(c.mrr) : '—'}</td>
-      <td class="muted">${fmtDate(c.created_at)}</td>
-      <td><button class="btn btn-glass" style="padding:4px 10px;font-size:11px" onclick="editContact('${c.id}');event.stopPropagation()">Éditer</button></td>
-    </tr>`;
+  document.getElementById('proj-rows').innerHTML = rows.map(function(j) {
+    var cfg = S[j.status] || {dot:'dot-applied',lbl:j.status,col:'var(--t3)'};
+    var bmin = j.budget_min||0, bmax = j.budget_max||bmin;
+    var budgetStr = (bmin||bmax) ? '$'+(bmin>=1000?(bmin/1000).toFixed(1)+'K':bmin)+(bmax!==bmin?'–$'+(bmax>=1000?(bmax/1000).toFixed(1)+'K':bmax):'') : '—';
+    var w = j.worth_score;
+    var wc = w>=8?'#34d399':w>=6?'#fbbf24':'#f87171';
+    var contact = allContacts.find(function(c){ return c.upwork_job_id===j.id||c.upwork_url===j.url; });
+    var msgs = (j.analysis&&j.analysis.messages) ? j.analysis.messages.length : 0;
+    return '<div class="proj-row" onclick="openPanel(\''+j.id+'\')">'+
+      '<div><div class="proj-dot '+cfg.dot+'" title="'+cfg.lbl+'"></div></div>'+
+      '<div><div class="proj-title-main">'+escH(j.title||'—')+'</div>'+
+      '<div class="proj-title-sub">'+(j.skills||[]).slice(0,3).map(escH).join(' · ')+'</div></div>'+
+      '<div class="proj-budget">'+budgetStr+'</div>'+
+      '<div class="proj-score" style="color:'+wc+'">'+(w!=null?w+'/10':'—')+'</div>'+
+      '<div class="proj-age">'+fmtRelative(j.applied_at||j.scraped_at)+'</div>'+
+      '<div class="proj-contact-cell">'+(contact?'<span style="color:var(--teal)">'+escH(contact.name.split(' ')[0])+'</span>':'<span style="color:var(--t3)">—</span>')+'</div>'+
+      '<div class="proj-msgs-cell">'+(msgs>0?'💬 '+msgs:'—')+'</div>'+
+      '</div>';
   }).join('');
 }
 
-function renderKanban() {
-  var stages = [
-    { key: 'prospect',    label: 'Prospect',    color: 'var(--teal)' },
-    { key: 'proposal',    label: 'Proposition',  color: 'var(--blue)' },
-    { key: 'negotiation', label: 'Négociation',  color: 'var(--amber)' },
-    { key: 'active',      label: 'Actif',        color: 'var(--green)' },
-    { key: 'won',         label: 'Won ★',        color: 'var(--green)' },
+// ── Render contacts ──
+function renderContacts() {
+  var rows = allContacts.filter(function(c) {
+    if (contactFilter==='upwork') return c.source==='upwork';
+    if (contactFilter && c.stage!==contactFilter) return false;
+    if (searchQ && !(c.name||'').toLowerCase().includes(searchQ) && !(c.company||'').toLowerCase().includes(searchQ)) return false;
+    return true;
+  });
+  if (!rows.length) {
+    document.getElementById('contacts-rows').innerHTML = '<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">Aucun contact</div>';
+    return;
+  }
+  document.getElementById('contacts-rows').innerHTML =
+    '<table class="ct-table"><thead><tr><th>Contact</th><th>Étape</th><th>Source</th><th>MRR</th><th>Créé</th><th></th></tr></thead><tbody>'+
+    rows.map(function(c) {
+      var init = (c.name||'?').split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+      return '<tr onclick="openContactEdit(\''+c.id+'\')">'+
+        '<td><div style="display:flex;align-items:center;gap:10px"><div class="avatar">'+init+'</div>'+
+        '<div><div style="font-size:12px;font-weight:500;color:var(--t1)">'+escH(c.name)+'</div>'+
+        '<div style="font-size:10px;color:var(--t3)">'+(([c.company,c.email].filter(Boolean).join(' · '))||'—')+'</div></div></div></td>'+
+        '<td>'+stageBadge(c.stage)+'</td>'+
+        '<td class="muted">'+(c.source==='upwork'?'<span class="teal-chip" style="font-size:9px">Upwork</span>':(c.source||'—'))+'</td>'+
+        '<td class="mono '+(c.mrr>0?'teal':'muted')+'">'+(c.mrr>0?fmtEur(c.mrr):'—')+'</td>'+
+        '<td class="muted">'+fmtDate(c.created_at)+'</td>'+
+        '<td><button class="btn btn-glass" style="padding:3px 9px;font-size:10px" onclick="event.stopPropagation();openContactEdit(\''+c.id+'\')">Éditer</button></td>'+
+        '</tr>';
+    }).join('')+'</tbody></table>';
+}
+
+// ── Filters ──
+function onSearch() {
+  searchQ = (document.getElementById('crm-search').value||'').toLowerCase();
+  renderProjects(); renderContacts();
+}
+function setFilter(f,el) {
+  projFilter=f;
+  document.querySelectorAll('#proj-filters .fchip').forEach(function(c){c.classList.remove('active');});
+  el.classList.add('active'); renderProjects();
+}
+function setContactFilter(f,el) {
+  contactFilter=f;
+  document.querySelectorAll('#contacts-filters .fchip').forEach(function(c){c.classList.remove('active');});
+  el.classList.add('active'); renderContacts();
+}
+function switchTab(tab,el) {
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');}); el.classList.add('active');
+  document.getElementById('tab-projects').style.display=tab==='projects'?'':'none';
+  document.getElementById('tab-contacts').style.display=tab==='contacts'?'':'none';
+  document.getElementById('proj-filters').style.display=tab==='projects'?'flex':'none';
+  document.getElementById('contacts-filters').style.display=tab==='contacts'?'flex':'none';
+}
+
+// ── PANEL OPEN ──
+function openPanel(jobId) {
+  var j = allProjects.find(function(p){return p.id===jobId;});
+  if (!j) return;
+  currentProject = j;
+  document.getElementById('crm-backdrop').classList.add('open');
+  document.getElementById('crm-panel').classList.add('open');
+  document.getElementById('cp-title').textContent = j.title || '—';
+  buildStatusRow(j);
+  buildPanelBody(j);
+}
+function closePanel() {
+  document.getElementById('crm-backdrop').classList.remove('open');
+  document.getElementById('crm-panel').classList.remove('open');
+  currentProject = null;
+}
+
+// ── Status buttons ──
+function buildStatusRow(j) {
+  var BTNS = [
+    {k:'applied',     lbl:'📩 Postulé'},
+    {k:'interviewing',lbl:'🟣 Entretien'},
+    {k:'negotiation', lbl:'🟡 Négociation'},
+    {k:'won',         lbl:'🟢 Won'},
+    {k:'active',      lbl:'⚡ Actif'},
+    {k:'lost',        lbl:'🔴 Lost'},
   ];
-  // Use contacts grouped by stage for kanban
-  var grouped = {};
-  stages.forEach(s => { grouped[s.key] = []; });
-  allContacts.forEach(c => { if (grouped[c.stage]) grouped[c.stage].push(c); });
-
-  document.getElementById('kanban-board').innerHTML = stages.map(s => `
-    <div class="pipeline-col">
-      <div class="pipeline-header" style="background:rgba(255,255,255,0.03)">
-        <span style="color:${s.color}">${s.label}</span>
-        <span class="muted">${grouped[s.key].length}</span>
-      </div>
-      ${grouped[s.key].map(c => `
-        <div class="pipeline-card" onclick="editContact('${c.id}')">
-          <div class="pipeline-card-title">${c.name}</div>
-          <div class="pipeline-card-meta">
-            <span>${c.company || c.email || '—'}</span>
-            ${c.mrr > 0 ? '<span class="teal mono">' + fmtEur(c.mrr) + '/m</span>' : ''}
-          </div>
-        </div>`).join('')}
-    </div>`).join('');
+  document.getElementById('cp-status-row').innerHTML =
+    BTNS.map(function(b){ return '<button class="cp-sb'+(j.status===b.k?' s-'+b.k:'')+'" onclick="setProjectStatus(\''+b.k+'\')">'+b.lbl+'</button>'; }).join('')+
+    (j.url?'<a href="'+escH(j.url)+'" target="_blank" class="btn btn-glass" style="padding:4px 10px;font-size:11px;text-decoration:none;margin-left:auto">↗ Upwork</a>':'');
 }
 
-function switchTab(tab, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('tab-contacts').style.display = tab === 'contacts' ? '' : 'none';
-  document.getElementById('tab-pipeline').style.display = tab === 'pipeline' ? '' : 'none';
-  document.getElementById('stage-filters').style.display = tab === 'contacts' ? '' : 'none';
-}
-
-function openContactModal(contact) {
-  editingId = contact ? contact.id : null;
-  var form = document.getElementById('contactForm');
-  form.reset();
-  document.getElementById('modal-title-text').textContent = contact ? 'Éditer le contact' : 'Nouveau contact';
-  document.getElementById('saveBtn').textContent = contact ? 'Sauvegarder' : 'Créer le contact';
-  if (contact) {
-    ['name','email','phone','company','source','stage','notes'].forEach(k => {
-      var el = form.elements[k];
-      if (el) el.value = contact[k] || '';
-    });
-  }
-  document.getElementById('contactModal').classList.add('open');
-}
-
-function closeContactModal() {
-  document.getElementById('contactModal').classList.remove('open');
-  editingId = null;
-}
-
-function editContact(id) {
-  var c = allContacts.find(x => x.id === id);
-  if (c) openContactModal(c);
-}
-
-async function saveContact(e) {
-  e.preventDefault();
-  var form = e.target;
-  var data = {
-    name:    form.name.value,
-    email:   form.email.value || null,
-    phone:   form.phone.value || null,
-    company: form.company.value || null,
-    source:  form.source.value,
-    stage:   form.stage.value,
-    notes:   form.notes.value || null,
-  };
-  try {
-    var btn = document.getElementById('saveBtn');
-    btn.disabled = true; btn.textContent = '...';
-    if (editingId) {
-      var { error } = await sb.from('contacts').update(data).eq('id', editingId);
-      if (error) throw error;
-      toast('Contact mis à jour');
-    } else {
-      var { error } = await sb.from('contacts').insert(data);
-      if (error) throw error;
-      toast('Contact créé ✓');
+async function setProjectStatus(status) {
+  if (!currentProject) return;
+  if (status==='interviewing' && currentProject.status!=='interviewing') {
+    var hasContact = allContacts.find(function(c){ return c.upwork_job_id===currentProject.id||c.upwork_url===currentProject.url; });
+    if (!hasContact) {
+      var job = currentProject;
+      openCreateClientModal(job, function(contact) {
+        allContacts.push(contact);
+        renderProjects();
+        buildPanelBody(currentProject);
+      });
     }
-    closeContactModal();
-    await loadContacts();
-  } catch(err) {
-    toast(err.message || 'Erreur', 'error');
-  } finally {
-    var btn = document.getElementById('saveBtn');
-    btn.disabled = false;
-    btn.textContent = editingId ? 'Sauvegarder' : 'Créer le contact';
   }
+  await sb.from('upwork_jobs').update({status:status}).eq('id',currentProject.id);
+  currentProject.status = status;
+  var proj = allProjects.find(function(p){return p.id===currentProject.id;});
+  if (proj) proj.status = status;
+  buildStatusRow(currentProject);
+  renderProjects();
+  toast('Statut → '+status);
 }
 
-loadContacts();
+// ── PANEL BODY ──
+function buildPanelBody(j) {
+  var contact = allContacts.find(function(c){ return c.upwork_job_id===j.id||c.upwork_url===j.url; });
+  var msgs = (j.analysis&&j.analysis.messages)||[];
+  var enr = (j.analysis&&j.analysis.enrichment)||null;
+  var feas = j.feasibility||0, worth = j.worth_score||0;
+  var fc = feas>=80?'#34d399':feas>=55?'#fbbf24':'#f87171';
+  var wc = worth>=8?'#34d399':worth>=6?'#fbbf24':'#f87171';
+  var bmin=j.budget_min||0, bmax=j.budget_max||bmin;
+  var budgetStr = (bmin||bmax)?'$'+(bmin>=1000?(bmin/1000).toFixed(1)+'K':bmin)+(bmax!==bmin?'–$'+(bmax>=1000?(bmax/1000).toFixed(1)+'K':bmax):'')+(j.budget_type?' · '+j.budget_type:''):'Non défini';
+
+  // CLIENT
+  var clientHtml = contact
+    ? '<div class="cp-client-name">'+escH(contact.name)+'</div>'+
+      '<div class="cp-client-meta">'+
+      (contact.company?'🏢 '+escH(contact.company)+'<br>':'')+
+      (contact.email?'📧 '+escH(contact.email)+'<br>':'')+
+      (j.country?'📍 '+escH(j.country.replace(/^Location\s+/i,'')):'')+'</div>'+
+      '<div class="cp-client-actions">'+
+      '<button class="btn btn-glass" style="font-size:11px;padding:4px 10px" onclick="openContactEdit(\''+contact.id+'\')">✏️ Éditer</button>'+
+      '</div>'
+    : '<div style="color:var(--t3);font-size:12px;margin-bottom:10px">Aucun contact lié à ce projet</div>'+
+      '<button class="btn btn-teal" style="font-size:11px;padding:6px 14px" onclick="openCreateClientModal(currentProject,function(c){allContacts.push(c);renderProjects();buildPanelBody(currentProject);})">➕ Créer le contact</button>';
+
+  // SCORES
+  var scoresHtml =
+    scoreBar('Faisabilité',feas,feas+'%',fc)+
+    scoreBar('Worth',worth*10,worth+'/10',wc)+
+    '<div style="font-size:11px;color:var(--t3);margin-top:8px">Budget : <span style="color:var(--t2);font-weight:600">'+budgetStr+'</span></div>'+
+    (j.time_estimate?'<div style="font-size:11px;color:var(--t3)">Temps estimé : <span style="color:var(--t2);font-weight:600">'+escH(j.time_estimate)+'</span></div>':'');
+
+  // MESSAGES
+  var msgsHtml = renderMsgs(msgs);
+
+  // SKILLS
+  var skills = (j.skills||[]).filter(function(s){return s&&!/^(Unverified|Location |\$0)/i.test(s);});
+  var skillsHtml = skills.length ? skills.map(function(s){return '<span class="cp-skill">'+escH(s)+'</span>';}).join('') : '<span style="color:var(--t3);font-size:12px">—</span>';
+
+  // DESCRIPTION ORIGINALE
+  var descOrig = (j.description_full||j.description||'Non disponible').substring(0,2000);
+
+  // DESCRIPTION FR
+  var descFr = (enr&&enr.description_fr)||(j.analysis&&j.analysis.description_fr)||null;
+
+  // ENRICHISSEMENT
+  var enrichHtml = '';
+  if (enr) {
+    enrichHtml =
+      acc('🎯 Pourquoi pour toi', enr.why_for_you?'<div class="cp-e-text">'+escH(enr.why_for_you)+'</div>':'<span style="color:var(--t3);font-size:12px">—</span>')+
+      accBattle(enr.battle_card)+
+      accPlan(enr.execution_plan);
+  } else {
+    enrichHtml = '<div class="cp-sec" style="color:var(--t3);font-size:12px">Enrichissement non généré — '+
+      '<a href="/job-detail.html?id='+j.id+'" style="color:var(--teal)">ouvrir la fiche job</a> pour lancer.</div>';
+  }
+
+  document.getElementById('cp-body').innerHTML =
+    // Client + Scores
+    '<div class="cp-sec"><div class="cp-dual">'+
+    '<div><div class="cp-sec-title">👤 Client</div>'+clientHtml+'</div>'+
+    '<div><div class="cp-sec-title">📊 Scores</div>'+scoresHtml+'</div>'+
+    '</div></div>'+
+
+    // Messages
+    '<div class="cp-sec">'+
+    '<div class="cp-sec-title">💬 Messages <span style="font-size:9px;color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px">'+msgs.length+' échanges</span></div>'+
+    '<div class="msg-thread" id="cp-msg-thread">'+msgsHtml+'</div>'+
+    '<div class="msg-add-row">'+
+    '<select class="msg-sel" id="msg-sender"><option value="client">👤 Client</option><option value="me">🟢 Moi</option></select>'+
+    '<textarea class="msg-inp" id="msg-inp" placeholder="Colle ou tape le message... (Ctrl+Entrée pour envoyer)" rows="2" onkeydown="if(event.key===\'Enter\'&&(event.ctrlKey||event.metaKey)){event.preventDefault();addMessage();}"></textarea>'+
+    '<button class="btn btn-teal" style="padding:7px 14px;font-size:12px;white-space:nowrap" onclick="addMessage()">Ajouter</button>'+
+    '</div></div>'+
+
+    // Skills
+    '<div class="cp-sec"><div class="cp-sec-title">🔧 Skills</div><div class="cp-skills">'+skillsHtml+'</div></div>'+
+
+    // Descriptions (accordions)
+    acc('📋 Description originale','<div class="cp-e-text" style="max-height:250px;overflow-y:auto">'+escH(descOrig)+'</div>')+
+    (descFr?acc('🇫🇷 Description traduite','<div class="cp-e-text">'+escH(descFr)+'</div>'):'')  +
+
+    // Enrichissement
+    enrichHtml+
+
+    // Generate
+    '<div class="cp-sec" id="cp-gen-sec">'+
+    '<button class="cp-gen-btn" onclick="generateCover()">✦ Générer ma candidature (Version A + B)</button>'+
+    '<div class="cp-cover-wrap" id="cp-cover-wrap">'+
+    '<div class="cp-ctabs">'+
+    '<div class="cp-ctab active" onclick="switchCover(\'a\',this)">Version A — Direct</div>'+
+    '<div class="cp-ctab" onclick="switchCover(\'b\',this)">Version B — Conversationnelle</div>'+
+    '</div>'+
+    '<div class="cp-cpanel active" id="cp-ca"><textarea class="cp-ctext" id="cp-ta" readonly placeholder="Génération en cours..."></textarea><div style="display:flex;gap:8px;margin-top:6px"><button class="btn btn-glass" style="font-size:11px" onclick="copyCover(\'a\')">📋 Copier A</button></div></div>'+
+    '<div class="cp-cpanel" id="cp-cb"><textarea class="cp-ctext" id="cp-tb" readonly placeholder="Génération en cours..."></textarea><div style="display:flex;gap:8px;margin-top:6px"><button class="btn btn-glass" style="font-size:11px" onclick="copyCover(\'b\')">📋 Copier B</button></div></div>'+
+    '</div></div>'+
+    '<div style="height:60px"></div>';
+
+  // Scroll messages to bottom
+  setTimeout(function(){var t=document.getElementById('cp-msg-thread');if(t)t.scrollTop=t.scrollHeight;},60);
+}
+
+function scoreBar(label,pct,val,color) {
+  return '<div class="cp-score-bar"><div class="cp-score-lbl">'+label+'</div>'+
+    '<div class="cp-score-track"><div class="cp-score-fill" style="width:'+Math.min(100,pct)+'%;background:'+color+'"></div></div>'+
+    '<div class="cp-score-val" style="color:'+color+'">'+val+'</div></div>';
+}
+
+function renderMsgs(msgs) {
+  if (!msgs.length) return '<div style="text-align:center;color:var(--t3);font-size:12px;padding:20px 0">Aucun message — ajoute le premier échange</div>';
+  return msgs.map(function(m) {
+    var isMe = m.sender==='me';
+    var ts = m.ts ? new Date(m.ts).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+    return '<div class="msg-bubble '+(isMe?'me':'client')+'">'+
+      '<div class="msg-sender-label">'+(isMe?'Moi':escH(m.name||'Client'))+'</div>'+
+      '<div class="msg-text">'+escH(m.text)+'</div>'+
+      (ts?'<div class="msg-ts-label">'+ts+'</div>':'')+
+      '</div>';
+  }).join('');
+}
+
+// ── Accordion helpers ──
+function acc(title, content) {
+  return '<div class="cp-sec cp-acc open" onclick="toggleAcc(this)">'+
+    '<div class="cp-sec-title">'+title+'<span class="cp-chevron">›</span></div>'+
+    '<div class="cp-acc-body">'+content+'</div></div>';
+}
+function accBattle(bc) {
+  if (!bc) return '';
+  var h = '';
+  if (bc.strengths&&bc.strengths.length) h+='<div class="cp-e-sub">Forces</div><ul class="cp-battle-ul">'+bc.strengths.map(function(s){return '<li class="str-li">'+escH(s)+'</li>';}).join('')+'</ul>';
+  if (bc.risks&&bc.risks.length) h+='<div class="cp-e-sub">Risques</div><ul class="cp-battle-ul">'+bc.risks.map(function(r){return '<li class="risk-li">'+escH(r)+'</li>';}).join('')+'</ul>';
+  if (bc.differentiators&&bc.differentiators.length) h+='<div class="cp-e-sub">Différenciateurs</div><ul class="cp-battle-ul">'+bc.differentiators.map(function(d){return '<li class="diff-li">'+escH(d)+'</li>';}).join('')+'</ul>';
+  return acc('⚔️ Battle Card', h);
+}
+function accPlan(plan) {
+  if (!plan||!plan.length) return '';
+  var h = '<div class="cp-plan-grid">'+plan.map(function(s){
+    return '<div class="cp-plan-card">'+
+      '<div class="cp-plan-num">Étape '+(s.step||'')+' · '+escH(s.hours||'')+'</div>'+
+      '<div class="cp-plan-t">'+escH(s.title||'')+'</div>'+
+      '<div class="cp-plan-d">'+escH(s.description||'')+'</div>'+
+      (s.deliverable?'<div class="cp-plan-del">→ '+escH(s.deliverable)+'</div>':'')+
+      '</div>';
+  }).join('')+'</div>';
+  return acc('📅 Plan d\'exécution', h);
+}
+function toggleAcc(el) { el.classList.toggle('open'); }
+
+// ── Add message ──
+async function addMessage() {
+  if (!currentProject) return;
+  var inp = document.getElementById('msg-inp');
+  var text = (inp.value||'').trim();
+  if (!text) return;
+  var sender = document.getElementById('msg-sender').value;
+  var contact = allContacts.find(function(c){return c.upwork_job_id===currentProject.id||c.upwork_url===currentProject.url;});
+  var msg = {sender:sender, text:text, ts:new Date().toISOString()};
+  if (sender==='client'&&contact) msg.name = contact.name;
+
+  var analysis = Object.assign({},currentProject.analysis||{});
+  if (!analysis.messages) analysis.messages = [];
+  analysis.messages.push(msg);
+
+  await sb.from('upwork_jobs').update({analysis:analysis}).eq('id',currentProject.id);
+  currentProject.analysis = analysis;
+  var p = allProjects.find(function(x){return x.id===currentProject.id;});
+  if (p) p.analysis = analysis;
+
+  document.getElementById('cp-msg-thread').innerHTML = renderMsgs(analysis.messages);
+  setTimeout(function(){var t=document.getElementById('cp-msg-thread');if(t)t.scrollTop=t.scrollHeight;},40);
+  inp.value='';
+  renderProjects();
+}
+
+// ── Cover letter ──
+async function generateCover() {
+  if (!currentProject) return;
+  var btn = document.querySelector('.cp-gen-btn');
+  btn.textContent='⏳ Génération en cours...'; btn.disabled=true;
+  document.getElementById('cp-ta').value='';
+  document.getElementById('cp-tb').value='';
+  document.getElementById('cp-cover-wrap').classList.add('visible');
+  try {
+    var res = await fetch('/api/full-pipeline',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        title:currentProject.title, description:currentProject.description_full||currentProject.description,
+        skills:currentProject.skills||[], budget_min:currentProject.budget_min, budget_max:currentProject.budget_max,
+        budget_type:currentProject.budget_type, country:currentProject.country,
+        feasibility:currentProject.feasibility, worth_score:currentProject.worth_score, time_estimate:currentProject.time_estimate
+      })
+    });
+    if (!res.ok) throw new Error('API '+res.status);
+    var reader=res.body.getReader(), decoder=new TextDecoder(), rawA='', rawB='', cur=null;
+    while(true) {
+      var r=await reader.read(); if(r.done) break;
+      var lines=decoder.decode(r.value,{stream:true}).split('\n');
+      for (var line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        var d=line.slice(6).trim(); if(d==='[DONE]') break;
+        try {
+          var p=JSON.parse(d);
+          if(p.type==='version_start') cur=p.version;
+          else if(p.type==='token') {
+            if(cur==='a'){rawA+=p.text;document.getElementById('cp-ta').value=rawA;}
+            else if(cur==='b'){rawB+=p.text;document.getElementById('cp-tb').value=rawB;}
+          }
+        } catch(e){}
+      }
+    }
+  } catch(e) { toast('Erreur: '+e.message,'error'); }
+  finally { btn.textContent='✦ Générer ma candidature (Version A + B)'; btn.disabled=false; }
+}
+function switchCover(v,el) {
+  document.querySelectorAll('.cp-ctab').forEach(function(t){t.classList.remove('active');}); el.classList.add('active');
+  document.querySelectorAll('.cp-cpanel').forEach(function(p){p.classList.remove('active');}); document.getElementById('cp-c'+v).classList.add('active');
+}
+function copyCover(v) {
+  var ta=document.getElementById('cp-t'+v); if(!ta||!ta.value) return;
+  navigator.clipboard.writeText(ta.value).then(function(){toast('Copié ✓');});
+}
+
+// ── Contact edit (via shared modal from app.js) ──
+function openContactEdit(id) {
+  var c = allContacts.find(function(x){return x.id===id;});
+  if (!c) return;
+  openCreateClientModal(c, function(updated) {
+    var idx=allContacts.findIndex(function(x){return x.id===c.id;});
+    if(idx>=0) allContacts[idx]=Object.assign({},allContacts[idx],updated);
+    renderContacts(); renderProjects();
+    if(currentProject) buildPanelBody(currentProject);
+  }, c);
+}
+
+loadAll();
 </script>
 </body>
 </html>

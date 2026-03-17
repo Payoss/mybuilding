@@ -79,6 +79,200 @@ function toast(msg, type) {
   }, 3000);
 }
 
+// ---- Create / Edit Contact Modal ----
+// openCreateClientModal(jobOrNull, callback, existingContact?)
+// - job: upwork_jobs row (CREATE mode) or null
+// - existingContact: contacts row (EDIT mode) — also accepted as first param for openContactEdit pattern
+// - callback(contact): called with the saved/updated contact object
+function openCreateClientModal(jobOrNull, callback, existingContact) {
+  // Support: openCreateClientModal(existingContact, cb, existingContact) from openContactEdit
+  var isEdit = !!existingContact;
+  var job = isEdit ? null : (jobOrNull && !jobOrNull.name ? jobOrNull : null);
+  var contact = existingContact || null;
+
+  var old = document.getElementById('_ccm_overlay');
+  if (old) old.remove();
+
+  // ── Prefill values ──
+  var name     = (contact && contact.name)    || '';
+  var email    = (contact && contact.email)   || '';
+  var company  = (contact && contact.company) || '';
+  var phone    = (contact && contact.phone)   || '';
+  var stage    = (contact && contact.stage)   || 'lead';
+  var notes    = (contact && contact.notes)   || '';
+  var country  = (contact && contact.country) || (job && job.country ? job.country.replace(/^Location\s+/i,'') : '');
+  var linkedin = (contact && contact.linkedin_url) || '';
+
+  var modalTitle = isEdit ? 'Modifier le contact' : 'Nouveau contact client';
+  var btnLabel   = isEdit ? 'Enregistrer' : 'Créer le contact';
+
+  // ── Overlay ──
+  var ov = document.createElement('div');
+  ov.id = '_ccm_overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;backdrop-filter:blur(6px)';
+
+  // ── Modal ──
+  var STAGES = [
+    {v:'lead',lbl:'Lead'},{v:'prospect',lbl:'Prospect'},{v:'active',lbl:'Actif'},
+    {v:'negotiation',lbl:'Négo'},{v:'won',lbl:'Won'},{v:'inactive',lbl:'Inactif'},
+    {v:'lost',lbl:'Lost'},{v:'churned',lbl:'Churned'}
+  ];
+  var stageOpts = STAGES.map(function(s){
+    return '<option value="'+s.v+'"'+(stage===s.v?' selected':'')+'>'+s.lbl+'</option>';
+  }).join('');
+
+  var jobBadge = (!isEdit && job)
+    ? '<div style="background:rgba(13,148,136,0.08);border:1px solid rgba(13,148,136,0.2);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:var(--teal,#0d9488)">'+
+      '🔗 Job : <span style="color:#e2e8f0;font-weight:500">'+
+      (job.title||'Sans titre').substring(0,70)+'</span></div>'
+    : '';
+
+  ov.innerHTML =
+    '<div style="background:#0f0f17;border:1px solid rgba(255,255,255,0.09);border-radius:14px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.6)">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid rgba(255,255,255,0.06)">'+
+        '<div style="font-size:15px;font-weight:700;color:#f1f5f9">'+modalTitle+'</div>'+
+        '<button id="_ccm_close" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:20px;padding:2px 8px;border-radius:6px;line-height:1;transition:all 0.15s" onmouseover="this.style.color=\'#f1f5f9\'" onmouseout="this.style.color=\'#64748b\'">✕</button>'+
+      '</div>'+
+      '<div style="padding:18px 22px 22px">'+
+        jobBadge+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+          '<div style="grid-column:1/-1">'+
+            '<label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Nom complet *</label>'+
+            '<input id="_ccm_name" type="text" value="'+_ccmEsc(name)+'" placeholder="John Smith" style="'+_ccmInput()+'" required>'+
+          '</div>'+
+          '<div>'+
+            '<label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Email</label>'+
+            '<input id="_ccm_email" type="email" value="'+_ccmEsc(email)+'" placeholder="john@company.com" style="'+_ccmInput()+'">'+
+          '</div>'+
+          '<div>'+
+            '<label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Entreprise</label>'+
+            '<input id="_ccm_company" type="text" value="'+_ccmEsc(company)+'" placeholder="Acme Corp" style="'+_ccmInput()+'">'+
+          '</div>'+
+          '<div>'+
+            '<label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Téléphone</label>'+
+            '<input id="_ccm_phone" type="text" value="'+_ccmEsc(phone)+'" placeholder="+33 6 00 00 00 00" style="'+_ccmInput()+'">'+
+          '</div>'+
+          '<div>'+
+            '<label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Pays</label>'+
+            '<input id="_ccm_country" type="text" value="'+_ccmEsc(country)+'" placeholder="France" style="'+_ccmInput()+'">'+
+          '</div>'+
+          '<div>'+
+            '<label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Étape</label>'+
+            '<select id="_ccm_stage" style="'+_ccmInput()+'cursor:pointer">'+stageOpts+'</select>'+
+          '</div>'+
+          '<div style="grid-column:1/-1">'+
+            '<label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">LinkedIn</label>'+
+            '<input id="_ccm_linkedin" type="url" value="'+_ccmEsc(linkedin)+'" placeholder="https://linkedin.com/in/..." style="'+_ccmInput()+'">'+
+          '</div>'+
+          '<div style="grid-column:1/-1">'+
+            '<label style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Notes</label>'+
+            '<textarea id="_ccm_notes" rows="3" placeholder="Notes..." style="'+_ccmInput()+'resize:vertical;min-height:60px;line-height:1.5">'+_ccmEsc(notes)+'</textarea>'+
+          '</div>'+
+        '</div>'+
+        '<div id="_ccm_err" style="display:none;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:8px;padding:8px 12px;font-size:12px;color:#f87171;margin-top:12px"></div>'+
+        '<div style="display:flex;gap:8px;margin-top:16px">'+
+          '<button id="_ccm_cancel" style="flex:1;padding:11px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:9px;color:#94a3b8;font-family:inherit;font-size:13px;cursor:pointer;transition:all 0.15s">Annuler</button>'+
+          '<button id="_ccm_submit" style="flex:2;padding:11px;background:#0d9488;border:none;border-radius:9px;color:white;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;box-shadow:0 0 20px rgba(13,148,136,0.3)">'+btnLabel+'</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+
+  document.body.appendChild(ov);
+
+  // Focus name
+  setTimeout(function(){ var n=document.getElementById('_ccm_name'); if(n)n.focus(); }, 80);
+
+  // Close handlers
+  function closeModal() { ov.remove(); }
+  document.getElementById('_ccm_close').addEventListener('click', closeModal);
+  document.getElementById('_ccm_cancel').addEventListener('click', closeModal);
+  ov.addEventListener('click', function(e){ if(e.target===ov) closeModal(); });
+
+  // Hover styles on buttons
+  var submitBtn = document.getElementById('_ccm_submit');
+  submitBtn.addEventListener('mouseover', function(){ this.style.opacity='.88'; });
+  submitBtn.addEventListener('mouseout', function(){ this.style.opacity='1'; });
+
+  // ── Submit ──
+  document.getElementById('_ccm_submit').addEventListener('click', async function() {
+    var nameVal = (document.getElementById('_ccm_name').value||'').trim();
+    if (!nameVal) {
+      var err = document.getElementById('_ccm_err');
+      err.textContent = 'Le nom est obligatoire.';
+      err.style.display = 'block';
+      document.getElementById('_ccm_name').style.borderColor = '#f87171';
+      return;
+    }
+
+    submitBtn.textContent = '⏳ Enregistrement...';
+    submitBtn.disabled = true;
+
+    var payload = {
+      name:    nameVal,
+      email:   (document.getElementById('_ccm_email').value||'').trim()||null,
+      company: (document.getElementById('_ccm_company').value||'').trim()||null,
+      phone:   (document.getElementById('_ccm_phone').value||'').trim()||null,
+      country: (document.getElementById('_ccm_country').value||'').trim()||null,
+      stage:   document.getElementById('_ccm_stage').value,
+      linkedin_url: (document.getElementById('_ccm_linkedin').value||'').trim()||null,
+      notes:   (document.getElementById('_ccm_notes').value||'').trim()||null,
+    };
+
+    if (!isEdit) {
+      payload.source = 'upwork';
+      if (job && job.id)  payload.upwork_job_id = job.id;
+      if (job && job.url) payload.upwork_url = job.url;
+    }
+
+    try {
+      var saved;
+      if (isEdit && contact && contact.id) {
+        // UPDATE — try with new columns first, fallback without
+        var { data, error } = await sb.from('contacts').update(payload).eq('id', contact.id).select().single();
+        if (error) {
+          // Fallback: remove columns that might not exist yet
+          var safe = Object.assign({}, payload);
+          delete safe.upwork_job_id; delete safe.upwork_url;
+          var r2 = await sb.from('contacts').update(safe).eq('id', contact.id).select().single();
+          if (r2.error) throw r2.error;
+          data = r2.data;
+        }
+        saved = data || Object.assign({}, contact, payload);
+      } else {
+        // INSERT
+        var { data, error } = await sb.from('contacts').insert(payload).select().single();
+        if (error) {
+          // Fallback without new columns
+          var safe = Object.assign({}, payload);
+          delete safe.upwork_job_id; delete safe.upwork_url;
+          var r2 = await sb.from('contacts').insert(safe).select().single();
+          if (r2.error) throw r2.error;
+          data = r2.data;
+        }
+        saved = data || Object.assign({id: '_local_'+Date.now()}, payload);
+      }
+
+      closeModal();
+      if (typeof toast === 'function') toast(isEdit ? 'Contact mis à jour ✓' : 'Contact créé ✓');
+      if (typeof callback === 'function') callback(saved);
+
+    } catch(e) {
+      var err = document.getElementById('_ccm_err');
+      if (err) { err.textContent = 'Erreur : '+(e.message||e); err.style.display='block'; }
+      submitBtn.textContent = btnLabel;
+      submitBtn.disabled = false;
+    }
+  });
+}
+
+// ── Modal input style helper (shared) ──
+function _ccmInput() {
+  return 'width:100%;padding:8px 11px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f1f5f9;font-family:inherit;font-size:12px;outline:none;box-sizing:border-box;transition:border-color 0.15s;';
+}
+function _ccmEsc(s) {
+  return s ? String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+}
+
 // ---- Sidebar HTML ----
 function renderSidebar(activePage) {
   var links = [
