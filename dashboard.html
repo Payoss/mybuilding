@@ -95,6 +95,7 @@
       <!-- Mes Candidatures Upwork -->
       <div class="tile fade-up fade-up-2">
         <div class="tile-title">Mes Candidatures <span class="teal-chip" style="font-size:9px">Upwork</span> <span class="tile-title-sub" id="cand-count">—</span></div>
+        <input style="width:100%;box-sizing:border-box;padding:7px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-family:inherit;font-size:12px;outline:none;margin-bottom:8px;transition:border-color 0.15s" id="cand-search" placeholder="🔍 Rechercher une candidature..." oninput="filterCandidatures()" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border)'">
         <div id="cand-list">
           <div class="empty-state"><div class="empty-icon">📨</div><div class="empty-text">Chargement...</div></div>
         </div>
@@ -168,6 +169,17 @@
       <div class="sp-label">Notes</div>
       <textarea class="sp-notes" id="sp-notes" placeholder="Ajouter des notes..."></textarea>
     </div>
+    <!-- ENTRETIEN SECTION — visible when status = interviewing -->
+    <div id="sp-entretien" style="display:none;margin-top:12px;padding:12px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:10px">
+      <div style="font-size:11px;font-weight:600;color:#a78bfa;margin-bottom:8px">💬 Message reçu du client</div>
+      <textarea id="sp-client-msg" placeholder="Colle ici le message du client..." style="width:100%;box-sizing:border-box;min-height:90px;background:rgba(255,255,255,0.03);border:1px solid rgba(139,92,246,0.2);border-radius:8px;color:var(--t1);font-family:inherit;font-size:12px;padding:8px 10px;resize:vertical;outline:none;line-height:1.5"></textarea>
+      <button onclick="genererReponseEntretien()" style="width:100%;margin-top:8px;padding:8px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);border-radius:8px;color:#a78bfa;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='rgba(139,92,246,0.25)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">✦ Générer ma réponse</button>
+      <div id="sp-entretien-response" style="margin-top:10px;display:none">
+        <div style="font-size:10px;color:var(--t3);margin-bottom:4px">Réponse suggérée :</div>
+        <textarea id="sp-entretien-text" style="width:100%;box-sizing:border-box;min-height:120px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;color:var(--t2);font-family:inherit;font-size:11px;padding:8px;resize:vertical;outline:none;line-height:1.5"></textarea>
+        <button onclick="copyEntretienResponse()" style="margin-top:6px;padding:5px 12px;background:var(--teal-glow);border:1px solid rgba(13,148,136,0.3);border-radius:6px;color:var(--teal);font-size:11px;font-family:inherit;cursor:pointer">📋 Copier</button>
+      </div>
+    </div>
     <button class="sp-save-btn" onclick="savePanel()">Sauvegarder</button>
   </div>
 </div>
@@ -180,6 +192,7 @@ document.getElementById('sidebar-mount').innerHTML = renderSidebar('dashboard');
 
 var allCandidatures = [];
 var currentPanelJob = null;
+var candSearch = '';
 
 async function loadDashboard() {
   try {
@@ -270,21 +283,32 @@ async function loadCandidatures(showAll) {
     var limit = showAll ? 50 : 10;
     var { data } = await sb.from('upwork_jobs').select('*').in('status', ['applied','interviewing','won','lost']).order('applied_at', { ascending: false }).limit(limit);
     allCandidatures = data || [];
-    var count = allCandidatures.length;
-    document.getElementById('cand-count').textContent = count + ' candidature' + (count !== 1 ? 's' : '');
-    document.getElementById('cand-list').innerHTML = count ? allCandidatures.map(function(j) {
-      var statusMap = { applied:'sc-blue', interviewing:'sc-purple', won:'sc-green', lost:'sc-red' };
-      var labelMap = { applied:'Postulé', interviewing:'Entretien', won:'Won', lost:'Lost' };
-      return '<div class="cand-row" onclick="openPanel(\'' + j.id + '\')">'
-        + '<div class="cand-title">' + (j.title || '—') + '</div>'
-        + scorePill(j.worth_score)
-        + '<span class="status-chip ' + (statusMap[j.status]||'sc-blue') + '" style="font-size:9px;margin-left:4px">' + (labelMap[j.status]||j.status) + '</span>'
-        + '<div class="cand-date">' + fmtRelative(j.applied_at || j.scraped_at) + '</div>'
-        + '</div>';
-    }).join('') : '<div class="empty-state"><div class="empty-icon">📨</div><div class="empty-text">Aucune candidature envoyée</div></div>';
+    document.getElementById('cand-count').textContent = allCandidatures.length + ' candidature' + (allCandidatures.length !== 1 ? 's' : '');
+    renderCandidatures();
   } catch(e) {
     console.error('loadCandidatures', e);
   }
+}
+
+function filterCandidatures() {
+  candSearch = document.getElementById('cand-search').value.toLowerCase().trim();
+  renderCandidatures();
+}
+
+function renderCandidatures() {
+  var filtered = candSearch
+    ? allCandidatures.filter(function(j) { return (j.title || '').toLowerCase().indexOf(candSearch) !== -1 || (j.skills || []).join(' ').toLowerCase().indexOf(candSearch) !== -1; })
+    : allCandidatures;
+  var statusMap = { applied:'sc-blue', interviewing:'sc-purple', won:'sc-green', lost:'sc-red' };
+  var labelMap = { applied:'Postulé', interviewing:'Entretien', won:'Won', lost:'Lost' };
+  document.getElementById('cand-list').innerHTML = filtered.length ? filtered.map(function(j) {
+    return '<div class="cand-row" onclick="openPanel(\'' + j.id + '\')">'
+      + '<div class="cand-title">' + (j.title || '—') + '</div>'
+      + scorePill(j.worth_score)
+      + '<span class="status-chip ' + (statusMap[j.status]||'sc-blue') + '" style="font-size:9px;margin-left:4px">' + (labelMap[j.status]||j.status) + '</span>'
+      + '<div class="cand-date">' + fmtRelative(j.applied_at || j.scraped_at) + '</div>'
+      + '</div>';
+  }).join('') : '<div class="empty-state"><div class="empty-icon">' + (candSearch ? '🔍' : '📨') + '</div><div class="empty-text">' + (candSearch ? 'Aucun résultat pour "' + candSearch + '"' : 'Aucune candidature envoyée') + '</div></div>';
 }
 
 // ---- Side Panel ----
@@ -343,6 +367,11 @@ function openPanel(jobId) {
 
   document.getElementById('sp-notes').value = job.notes || '';
 
+  // Show entretien section if already interviewing
+  document.getElementById('sp-entretien').style.display = job.status === 'interviewing' ? 'block' : 'none';
+  document.getElementById('sp-entretien-response').style.display = 'none';
+  document.getElementById('sp-client-msg').value = '';
+
   document.getElementById('sp-backdrop').classList.add('open');
   document.getElementById('sp-panel').classList.add('open');
 }
@@ -361,6 +390,54 @@ function setPanelStatus(status) {
   btns.forEach(function(btn, i) {
     btn.classList.toggle('active', statuses[i] === status);
   });
+  // Show entretien section when status = interviewing
+  document.getElementById('sp-entretien').style.display = status === 'interviewing' ? 'block' : 'none';
+  document.getElementById('sp-entretien-response').style.display = 'none';
+}
+
+async function genererReponseEntretien() {
+  if (!currentPanelJob) return;
+  var clientMsg = document.getElementById('sp-client-msg').value.trim();
+  if (!clientMsg) { alert('Colle d\'abord le message du client.'); return; }
+  var btn = event.target;
+  btn.textContent = '⏳ Génération...';
+  btn.disabled = true;
+  try {
+    var res = await fetch('/api/cover-letter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: currentPanelJob.title,
+        description: (currentPanelJob.description_full || currentPanelJob.description || '') + '\n\n---\nMESSAGE CLIENT:\n' + clientMsg,
+        skills: currentPanelJob.skills || [],
+        budget_min: currentPanelJob.budget_min,
+        budget_max: currentPanelJob.budget_max,
+        budget_type: currentPanelJob.budget_type,
+        country: currentPanelJob.country
+      })
+    });
+    if (!res.ok) throw new Error('API ' + res.status);
+    var data = await res.json();
+    var text = (data.version_a || data.cover_letter || data.text || JSON.stringify(data)).trim();
+    document.getElementById('sp-entretien-text').value = text;
+    document.getElementById('sp-entretien-response').style.display = 'block';
+    // Save client message in notes
+    var notes = document.getElementById('sp-notes').value;
+    if (!notes.includes(clientMsg.substring(0, 30))) {
+      document.getElementById('sp-notes').value = (notes ? notes + '\n\n' : '') + '[Message client]\n' + clientMsg;
+    }
+  } catch(e) {
+    alert('Erreur : ' + e.message);
+  } finally {
+    btn.textContent = '✦ Générer ma réponse';
+    btn.disabled = false;
+  }
+}
+
+function copyEntretienResponse() {
+  var text = document.getElementById('sp-entretien-text').value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(function() { toast('Copié ✓'); });
 }
 
 async function savePanel() {

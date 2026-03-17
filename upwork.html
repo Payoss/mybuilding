@@ -113,6 +113,14 @@
 .sp-med { background: rgba(245,158,11,0.15); color: #f59e0b; }
 .sp-low { background: rgba(248,113,113,0.15); color: #f87171; }
 
+/* Applied section separator */
+#applied-tile { margin-top: 4px; border-top: 2px solid rgba(139,92,246,0.2); }
+#applied-tile .tile-title { color: #a78bfa; }
+.applied-status-btn { font-size: 10px; padding: 2px 8px; border-radius: 6px; border: none; font-family: inherit; cursor: pointer; font-weight: 600; transition: all 0.15s; }
+.applied-status-btn:hover { opacity: 0.8; }
+.slide-out { animation: slideOut 0.25s ease forwards; }
+@keyframes slideOut { to { opacity:0; transform: translateY(20px); } }
+
 /* Job Detail — redirects to job-detail.html */
 
 /* Quick Eval (mobile-first) */
@@ -243,6 +251,36 @@
           <div class="empty-state"><div class="empty-text">Chargement...</div></div>
         </div>
         <div class="pagination" id="scraped-pagination"></div>
+      </div>
+    </div>
+
+    <!-- MES CANDIDATURES (applied jobs) -->
+    <div class="tile fade-up fade-up-4" id="applied-tile">
+      <div class="tile-title">📨 Mes Candidatures
+        <span class="tile-title-sub" id="applied-count">—</span>
+        <div style="margin-left:auto;display:flex;gap:4px">
+          <button class="filter-chip active" onclick="filterApplied('all',this)">Tous</button>
+          <button class="filter-chip" onclick="filterApplied('applied',this)">✓ Postulé</button>
+          <button class="filter-chip" onclick="filterApplied('interviewing',this)">⟳ Entretien</button>
+          <button class="filter-chip" onclick="filterApplied('won',this)">★ Won</button>
+          <button class="filter-chip" onclick="filterApplied('lost',this)">✗ Lost</button>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input class="search-input" id="applied-search" placeholder="Rechercher dans vos candidatures..." oninput="onAppliedSearch()">
+      </div>
+      <div class="htable-wrap">
+        <div class="hrow hhead" style="grid-template-columns:3fr 1fr 1fr 1fr 1.5fr 1.2fr">
+          <div class="hc">Job</div>
+          <div class="hc">Postulé</div>
+          <div class="hc">Budget</div>
+          <div class="hc">Score</div>
+          <div class="hc">Statut</div>
+          <div class="hc">Actions</div>
+        </div>
+        <div id="applied-rows">
+          <div class="empty-state"><div class="empty-text">Cliquez "Postulé" sur un job pour le retrouver ici.</div></div>
+        </div>
       </div>
     </div>
 
@@ -645,6 +683,9 @@ function showKeywords() {
 
 // ---- Scraped jobs (from extension) ----
 var allScraped = [];
+var allApplied = [];
+var appliedSearch = '';
+var appliedFilter = 'all';
 var allHistory = [];
 var scrapedFilter = 'all';
 var scrapedSort = { key: 'scraped', dir: 'desc' };
@@ -867,9 +908,26 @@ async function bulkAction(action) {
 }
 
 async function markApplied(id) {
+  var job = allScraped.find(function(j) { return j.id === id; });
   await sb.from('upwork_jobs').update({ status: 'applied', applied_at: new Date().toISOString() }).eq('id', id);
-  toast('Marqué postulé ✓');
-  loadScraped();
+  toast('✓ Postulé — ajouté dans "Mes Candidatures"');
+  // Remove from scraped list (animate)
+  allScraped = allScraped.filter(function(j) { return j.id !== id; });
+  document.getElementById('scraped-count').textContent = allScraped.length + ' jobs';
+  renderScraped();
+  renderFunnel();
+  // Add to applied list
+  if (job) {
+    job.status = 'applied';
+    job.applied_at = new Date().toISOString();
+    allApplied.unshift(job);
+  } else {
+    // Fallback: reload from DB
+    var { data } = await sb.from('upwork_jobs').select('*').eq('id', id).single();
+    if (data) allApplied.unshift(data);
+  }
+  document.getElementById('applied-count').textContent = allApplied.length + ' candidature' + (allApplied.length !== 1 ? 's' : '');
+  renderApplied();
 }
 
 async function deleteJob(id) {
@@ -903,6 +961,81 @@ function renderFunnel() {
       + '<div style="font-size:12px;font-weight:700;font-family:DM Mono,monospace;color:' + colors[s] + '">' + counts[s] + '</div>'
       + '</div>';
   }).join('');
+}
+
+// ---- Applied Jobs (Mes Candidatures) ----
+async function loadApplied() {
+  try {
+    var { data } = await sb.from('upwork_jobs')
+      .select('*')
+      .in('status', ['applied','interviewing','won','lost'])
+      .order('applied_at', { ascending: false })
+      .limit(100);
+    allApplied = data || [];
+    document.getElementById('applied-count').textContent = allApplied.length + ' candidature' + (allApplied.length !== 1 ? 's' : '');
+    renderApplied();
+  } catch(e) { console.error('loadApplied', e); }
+}
+
+function onAppliedSearch() {
+  appliedSearch = document.getElementById('applied-search').value.toLowerCase().trim();
+  renderApplied();
+}
+
+function filterApplied(filter, el) {
+  appliedFilter = filter;
+  document.querySelectorAll('#applied-tile .filter-chip').forEach(function(c) { c.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  renderApplied();
+}
+
+function renderApplied() {
+  var filtered = allApplied;
+  if (appliedFilter !== 'all') filtered = filtered.filter(function(j) { return j.status === appliedFilter; });
+  if (appliedSearch) filtered = filtered.filter(function(j) {
+    return (j.title || '').toLowerCase().indexOf(appliedSearch) !== -1
+      || (j.skills || []).join(' ').toLowerCase().indexOf(appliedSearch) !== -1;
+  });
+  if (!filtered.length) {
+    document.getElementById('applied-rows').innerHTML = '<div class="empty-state"><div class="empty-text">'
+      + (appliedSearch ? 'Aucun résultat pour "' + appliedSearch + '"' : 'Aucune candidature dans ce filtre.') + '</div></div>';
+    return;
+  }
+  document.getElementById('applied-rows').innerHTML = filtered.map(function(j) {
+    var budgetStr = '—';
+    if (j.budget_min || j.budget_max) {
+      var bmin = j.budget_min || 0, bmax = j.budget_max || bmin;
+      budgetStr = '$' + (bmin >= 1000 ? (bmin/1000).toFixed(1)+'K' : bmin);
+      if (bmax !== bmin) budgetStr += '–' + (bmax >= 1000 ? (bmax/1000).toFixed(1)+'K' : bmax);
+    }
+    var appliedStr = j.applied_at ? new Date(j.applied_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'short'}) : '—';
+    var isInterviewing = j.status === 'interviewing';
+    return '<div class="hrow hbody-row' + (isInterviewing ? ' row-gold' : '') + '" style="grid-template-columns:3fr 1fr 1fr 1fr 1.5fr 1.2fr">'
+      + '<div onclick="j_openDetail(\'' + j.id + '\')" style="cursor:pointer"><div class="hc-title">' + (j.title || '—') + '</div>'
+      + '<div class="hc-kw">' + (j.skills || []).slice(0,3).join(' · ') + '</div></div>'
+      + '<div class="hc" style="font-size:11px">' + appliedStr + '</div>'
+      + '<div class="hc mono">' + budgetStr + '</div>'
+      + '<div class="hc">' + dualScorePill(j.feasibility, j.worth_score) + '</div>'
+      + '<div class="hc">' + (STATUS_CHIPS[j.status] || j.status || '') + '</div>'
+      + '<div class="hc hc-actions">'
+      + (j.url ? '<a class="action-tiny" href="' + j.url + '" target="_blank" title="Ouvrir sur Upwork">↗</a>' : '')
+      + '<span class="action-tiny" style="color:#a78bfa" onclick="setAppliedStatus(\'' + j.id + '\',\'interviewing\')">Entretien</span>'
+      + '<span class="action-tiny" style="color:#4ade80" onclick="setAppliedStatus(\'' + j.id + '\',\'won\')">Won</span>'
+      + '<span class="action-tiny" style="color:#f87171" onclick="setAppliedStatus(\'' + j.id + '\',\'lost\')">Lost</span>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function j_openDetail(id) {
+  window.location.href = '/job-detail.html?id=' + id;
+}
+
+async function setAppliedStatus(id, status) {
+  await sb.from('upwork_jobs').update({ status: status }).eq('id', id);
+  var job = allApplied.find(function(j) { return j.id === id; });
+  if (job) { job.status = status; renderApplied(); }
+  toast('Statut mis à jour : ' + status);
 }
 
 // ---- Proposal Memory Bank ----
@@ -1123,6 +1256,7 @@ async function qeMarkApplied() {
 
 loadUpwork();
 loadScraped();
+loadApplied();
 loadProposalBank();
 
 // ---- Job Detail — redirect to dedicated page ----
