@@ -1,16 +1,24 @@
 // mybuilding — Popup logic (MV3 CSP-compliant, no inline handlers)
 
 let _isDetailMode = false;
+let _isChatMode = false;
 
 function _isDetailUrl(url) {
   return /\/jobs\/~[a-zA-Z0-9]+/.test(url) || /\/nx\/search\/jobs\/details\/~[a-zA-Z0-9]+/.test(url);
 }
+function _isChatUrl(url) {
+  return url.includes('/messages/rooms/') || url.includes('/ab/messages/') || url.includes('/nx/messages/');
+}
 
 function updateScanMode(url) {
   _isDetailMode = _isDetailUrl(url || '');
+  _isChatMode = _isChatUrl(url || '');
   const btn = document.getElementById('scanBtn');
   const hint = document.getElementById('scan-hint');
-  if (_isDetailMode) {
+  if (_isChatMode) {
+    btn.textContent = '💬 Scan the chat';
+    hint.textContent = 'Extrait les messages de cette conversation et les sync dans le CRM';
+  } else if (_isDetailMode) {
     btn.textContent = '🔍 Enrichir ce job';
     hint.textContent = 'Mode détail — récupère la description complète et met à jour le CRM';
   } else {
@@ -40,9 +48,9 @@ function scanNow() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tabId = tabs[0]?.id;
     chrome.runtime.sendMessage({ type: 'CHECK_NOW', tabId }, () => {
-      btn.textContent = _isDetailMode ? '🔍 Enrichir ce job' : '⚡ Scan This Page';
+      btn.textContent = _isChatMode ? '💬 Scan the chat' : _isDetailMode ? '🔍 Enrichir ce job' : '⚡ Scan This Page';
       btn.disabled = false;
-      toast(_isDetailMode ? 'Job enrichi ✓' : 'Scan terminé ✓');
+      toast(_isChatMode ? 'Chat synchronisé ✓' : _isDetailMode ? 'Job enrichi ✓' : 'Scan terminé ✓');
       loadStatus();
     });
   });
