@@ -786,8 +786,25 @@ async function checkDetailPage(tab) {
   if (existing.length > 0) {
     // PATCH using the URL actually stored in Supabase (not the normalized one)
     const storedUrl = existing[0].url;
-    const patch = { description_full: detail.description, url: canonicalUrl, source: 'extension' };
-    if (detail.title) patch.title = detail.title;  // update title if extracted (fixes "Sans titre" jobs)
+    const patch = { url: canonicalUrl, source: 'extension' };
+
+    // description_full — uniquement si substantielle (évite d'écraser avec une string vide)
+    if (detail.description && detail.description.length > 50) {
+      patch.description_full = detail.description;
+    }
+
+    // title — ne pas écraser avec des titres génériques de pages (ex: "Search Freelance Jobs on Upwork")
+    if (detail.title) {
+      const GENERIC_TITLES = [
+        'search freelance jobs', 'find freelance jobs', 'best matches',
+        'find work on upwork', 'jobs on upwork', 'upwork - hire freelancers'
+      ];
+      const titleLower = detail.title.toLowerCase().trim();
+      const isGeneric = titleLower === 'upwork' ||
+        GENERIC_TITLES.some(g => titleLower.includes(g));
+      if (!isGeneric) patch.title = detail.title;
+    }
+
     if (detail.skills?.length) patch.skills = detail.skills;
     if (detail.country) patch.country = detail.country;
     if (detail.budget) {
@@ -795,6 +812,17 @@ async function checkDetailPage(tab) {
       if (bp.min != null) patch.budget_min = bp.min;
       if (bp.max != null) patch.budget_max = bp.max;
       if (bp.type) patch.budget_type = bp.type;
+    }
+
+    // Re-score avec la description complète (score initial = description tronquée de la liste)
+    if (detail.description && detail.description.length > 200) {
+      const scores = scoreJob({
+        title: patch.title || detail.title || '',
+        description: detail.description,
+        country: patch.country || detail.country || '',
+        scraped_at: new Date().toISOString()
+      });
+      Object.assign(patch, scores);
     }
     try {
       const patchRes = await fetch(`${sbUrl}/rest/v1/upwork_jobs?url=eq.${encodeURIComponent(storedUrl)}`, {
@@ -814,11 +842,17 @@ async function checkDetailPage(tab) {
     chrome.storage.local.set({ mb_last_check: new Date().toISOString(), mb_last_detail_mode: 'patched', mb_last_count: 0, mb_last_snipers: 0, mb_last_golds: 0 });
   } else {
     // INSERT new job with full description
+    // Guard: don't insert if title is a generic page title (extraction failed)
+    const GENERIC_TITLES = ['search freelance jobs', 'find freelance jobs', 'best matches', 'find work on upwork'];
+    if (!detail.title || GENERIC_TITLES.some(g => detail.title.toLowerCase().includes(g))) {
+      console.warn('[mybuilding BG] Detail INSERT aborted — generic title:', detail.title);
+      return;
+    }
     const budgetParsed = parseBudget(detail.budget);
     const base = {
       title: detail.title,
-      description: detail.description,
-      description_full: detail.description,
+      description: detail.description || '',
+      description_full: detail.description && detail.description.length > 50 ? detail.description : null,
       url: detail.url,
       country: detail.country,
       scraped_at: new Date().toISOString(),

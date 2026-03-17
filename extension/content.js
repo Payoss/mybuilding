@@ -146,29 +146,67 @@
   }
 
   // ── Job Detail Page Extraction ──
+
+  // Trouve le container du panel pour scoper les requêtes DOM et éviter la contamination
+  // depuis les cartes de résultats visibles derrière le panel.
+  function _findPanelScope() {
+    // Sur full detail page (URL contient ~ID) → tout le doc est dédié au job
+    if (/\/jobs\/~[a-zA-Z0-9]+/.test(window.location.href)) return document;
+
+    // Le lien "Open job in a new window" est UNIQUE au panel — il a target="_blank"
+    // Les liens des cartes de résultats utilisent le routing SPA (pas target="_blank")
+    const openLink = document.querySelector('a[target="_blank"][href*="/jobs/~"]');
+    if (!openLink) return null;
+
+    // Remonter depuis ce lien pour trouver un container reconnaissable
+    let el = openLink.parentElement;
+    for (let i = 0; i < 12; i++) {
+      if (!el || el === document.body || el === document.documentElement) break;
+      const cls = String(el.className || '') + String(el.getAttribute('data-test') || '') + String(el.getAttribute('role') || '');
+      const tag = el.tagName || '';
+      if (/panel|flyout|detail|drawer|modal|dialog|overlay/i.test(cls) ||
+          tag === 'ASIDE' || tag === 'ARTICLE' ||
+          el.getAttribute('role') === 'dialog') {
+        return el;
+      }
+      el = el.parentElement;
+    }
+    // Fallback : remonter 6 niveaux depuis le lien
+    let anc = openLink;
+    for (let i = 0; i < 6; i++) { if (anc.parentElement) anc = anc.parentElement; }
+    return anc;
+  }
+
   function _isJobDetailPage() {
     const href = window.location.href;
     if (/\/jobs\/~[a-zA-Z0-9]+/.test(href)) return true;
     if (/\/nx\/search\/jobs\/details\/~[a-zA-Z0-9]+/.test(href)) return true;
-    // Side panel sans changement d'URL (ex: Best Matches) — détecter via DOM
-    return !!document.querySelector('a[href*="/jobs/~"]');
+    // Side panel (URL inchangée) : "Open job in a new window" a target="_blank"
+    // Les cartes de résultats n'ont PAS target="_blank" sur leurs liens
+    return !!document.querySelector('a[target="_blank"][href*="/jobs/~"]');
   }
 
   function _extractJobDetail() {
-    // Title — h1 on full page, specific selectors on side panel
-    // Bare h1/h2 avoided — too risky on side panel (match search page headings)
+    // ── Scope de requête — panel ou page complète ──
+    const isFullPage = /\/jobs\/~[a-zA-Z0-9]+/.test(window.location.href);
+    const scope = _findPanelScope() || document;
+    const $ = (sel) => scope.querySelector(sel);
+    const $$ = (sel) => scope.querySelectorAll(sel);
+
+    // ── Title ──
     const titleEl =
-      document.querySelector('h1[data-test="job-title"]') ||
-      document.querySelector('[data-test="job-title"]') ||
-      document.querySelector('h2[class*="job-title"]') ||
-      document.querySelector('h2[class*="JobTitle"]') ||
-      document.querySelector('h2.m-0') ||
-      document.querySelector('h1.m-0') ||
-      document.querySelector('[class*="JobTitle"]') ||
-      document.querySelector('[class*="job-title"]');
+      $('h1[data-test="job-title"]') ||
+      $('[data-test="job-title"]') ||
+      $('h2[class*="job-title"]') ||
+      $('h2[class*="JobTitle"]') ||
+      $('[class*="JobTitle"]') ||
+      $('[class*="job-title"]') ||
+      (scope !== document ? $('h1') || $('h2') : null); // dans le scope panel, h1/h2 = titre du job
     let rawTitle = titleEl?.textContent?.trim() || '';
-    // Fallback: document.title — Upwork sets it to "Job Title | Upwork" on detail pages
-    if (!rawTitle || rawTitle.length >= 200) {
+
+    // document.title fallback UNIQUEMENT sur full detail page
+    // Sur search page, document.title = "Search Freelance Jobs on Upwork | Upwork" → poison
+    if ((!rawTitle || rawTitle.length >= 200) && isFullPage) {
       const docTitle = document.title || '';
       const parts = docTitle.split('|');
       const candidate = parts[0].trim();
@@ -178,46 +216,50 @@
     }
     const title = rawTitle;
 
-    // Full description — p.text-body-sm works on both full page and side panel
+    // ── Description ──
     const descEl =
-      document.querySelector('p.text-body-sm') ||
-      document.querySelector('p[data-test="Description"]') ||
-      document.querySelector('p.text-body-sm.multiline-text') ||
-      document.querySelector('[data-test="Description"]') ||
-      document.querySelector('[data-test="description"]') ||
-      document.querySelector('.air3-rich-text') ||
-      document.querySelector('[data-cy="job-description"]');
+      $('p.text-body-sm') ||
+      $('p[data-test="Description"]') ||
+      $('p.text-body-sm.multiline-text') ||
+      $('[data-test="Description"]') ||
+      $('[data-test="description"]') ||
+      $('.air3-rich-text') ||
+      $('[data-cy="job-description"]');
     const description = descEl?.innerText?.trim() || descEl?.textContent?.trim() || '';
 
-    // Skills — filter out client badges
+    // ── Skills — dédupliqués ──
     const SKILL_NOISE_DETAIL = /^(verified|payment verified|payment unverified|unverified|rising talent|top rated|expert-vetted|enterprise|location|united states|france|\$\d)/i;
-    const skillEls = document.querySelectorAll(
+    const skillEls = $$(
       '[data-test="attr-item"], [data-test="token"], ' +
       '[class*="skill-tag"], a[href*="/o/jobs/browse/"] .air3-token'
     );
-    const skills = Array.from(skillEls)
-      .map(s => s.textContent.trim())
-      .filter(s => s && !SKILL_NOISE_DETAIL.test(s));
+    const skills = [...new Set(
+      Array.from(skillEls)
+        .map(s => s.textContent.trim())
+        .filter(s => s && !SKILL_NOISE_DETAIL.test(s))
+    )];
 
-    // Budget
+    // ── Budget ──
     const budgetEl =
-      document.querySelector('[data-test="budget"]') ||
-      document.querySelector('[data-test="is-fixed-price"]') ||
-      document.querySelector('[data-test="hourly-rate"]') ||
-      document.querySelector('[class*="BudgetAmount"]');
+      $('[data-test="budget"]') ||
+      $('[data-test="is-fixed-price"]') ||
+      $('[data-test="hourly-rate"]') ||
+      $('[class*="BudgetAmount"]');
     const budget = budgetEl?.textContent?.trim() || '';
 
-    // Country
+    // ── Country ──
     const countryEl =
-      document.querySelector('[data-test="client-location"] strong') ||
-      document.querySelector('[data-qa="client-location"]') ||
-      document.querySelector('[class*="ClientLocation"]');
+      $('[data-test="client-location"] strong') ||
+      $('[data-qa="client-location"]') ||
+      $('[class*="ClientLocation"]');
     const country = countryEl?.textContent?.trim() || '';
 
-    // Job ID — URL d'abord, sinon fallback sur le lien job visible dans le panel
-    // ("Open job in a new window" ou tout a[href*="/jobs/~"] dans le panel)
+    // ── Job ID ──
+    // URL d'abord, puis le lien "Open in new window" (target="_blank", spécifique au panel)
     const idFromUrl = window.location.href.match(/~([a-zA-Z0-9]+)/);
-    const jobLink = !idFromUrl ? document.querySelector('a[href*="/jobs/~"]') : null;
+    const jobLink = !idFromUrl
+      ? document.querySelector('a[target="_blank"][href*="/jobs/~"]')
+      : null;
     const idFromLink = jobLink?.href?.match(/~([a-zA-Z0-9]+)/);
     const idMatch = idFromUrl || idFromLink;
     const id = idMatch ? idMatch[1] : null;
