@@ -281,7 +281,7 @@ async function loadDashboard() {
 async function loadCandidatures(showAll) {
   try {
     var limit = showAll ? 50 : 10;
-    var { data } = await sb.from('upwork_jobs').select('*').in('status', ['applied','interviewing','won','lost']).order('applied_at', { ascending: false }).limit(limit);
+    var { data } = await sb.from('upwork_jobs').select('*').in('status', ['applied','interviewing','won','lost']).order('applied_at', { ascending: false, nullsFirst: false }).order('scraped_at', { ascending: false }).limit(limit);
     allCandidatures = data || [];
     document.getElementById('cand-count').textContent = allCandidatures.length + ' candidature' + (allCandidatures.length !== 1 ? 's' : '');
     renderCandidatures();

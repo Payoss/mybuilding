@@ -4,12 +4,12 @@ FastAPI + Groq (enrich/analyze) + claude -p Sonnet streaming (cover letters)
 Port : 3002 (localhost only, nginx proxie /api/)
 
 Performance:
-  - /api/job-enrich, /api/pre-enrich, /api/analyze → Groq Llama 70B (~1s, was ~20s)
-  - /api/cover-letter → Sonnet streaming (tokens live, perceived instant)
-  - /api/full-pipeline → Groq (step1, ~1s) + Sonnet streaming (step2, ~25s perceived fast)
+  - ALL endpoints → Groq Llama 70B (~1-2s). Subprocess/claude CLI eliminated (was 250s+).
+  - /api/cover-letter → Groq JSON (single chunk, frontend parses as before)
+  - /api/full-pipeline → Groq step1+step2, combined <5s
   - worth_score >= 8 → pre-generation triggered by frontend at job open
 """
-import subprocess, json, sys, asyncio, os, pathlib, re
+import json, sys, asyncio, os, pathlib, re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Any
 
@@ -134,54 +134,15 @@ def _run_groq(prompt: str, timeout: int = 30) -> dict:
 
 
 def _run_claude(prompt: str, model: str = "haiku", timeout: int = 120) -> dict:
-    """Route: haiku → Groq (~1s). sonnet → Claude subprocess (~25s, use streaming when possible)."""
-    if model == "haiku":
-        return _run_groq(prompt, timeout=30)
-    # sonnet → Claude subprocess (cover letters — quality writing)
-    cmd = ["claude", "-p", "--model", model]
-    result = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=timeout)
-    if result.returncode != 0:
-        print(f"claude [{model}] stderr: {result.stderr[:500]}", file=sys.stderr)
-        raise ValueError(f"claude [{model}] exit {result.returncode}")
-    return _parse_json_from_output(result.stdout)
+    """All routes → Groq Llama 70B (~1-2s). Subprocess eliminated — was timing out at 250s+."""
+    return _run_groq(prompt, timeout=min(timeout, 55))
 
 
-def _stream_sonnet(prompt: str, timeout: int = 180):
-    """Generator: streams Sonnet tokens via claude -p --output-format stream-json --verbose.
-    Yields raw text chunks for StreamingResponse."""
-    cmd = ["claude", "-p", "--model", "sonnet", "--output-format", "stream-json", "--verbose"]
-    proc = subprocess.Popen(
-        cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE, text=True, encoding="utf-8"
-    )
-    proc.stdin.write(prompt)
-    proc.stdin.close()
-
-    for line in proc.stdout:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            event = json.loads(line)
-            # stream-json --verbose events:
-            # {"type":"assistant","message":{"content":[{"type":"text","text":"..."}],...}}
-            # {"type":"result","result":"<full text>"}
-            if event.get("type") == "assistant":
-                msg = event.get("message", {})
-                for block in msg.get("content", []):
-                    if block.get("type") == "text":
-                        chunk = block.get("text", "")
-                        if chunk:
-                            yield chunk
-            elif event.get("type") == "result":
-                # result event has the full accumulated text — use as final flush
-                result_text = event.get("result", "")
-                if result_text:
-                    yield "\n__RESULT__:" + result_text
-        except (json.JSONDecodeError, KeyError):
-            continue
-
-    proc.wait()
+def _stream_sonnet(prompt: str, timeout: int = 55):
+    """Cover letters via Groq (~1-2s). Returns JSON as single chunk.
+    StreamingResponse kept for frontend compat — client parses the JSON chunk as before."""
+    data = _run_groq(prompt, timeout=timeout)
+    yield json.dumps(data)
 
 
 SYSTEM = """Tu es GUS, analyste Upwork expert ET rédacteur de propositions. Tu travailles pour Paul Annes.
