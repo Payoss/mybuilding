@@ -875,3 +875,149 @@ COUNTRY: {req.country or 'Non specifie'}"""
     except Exception as e:
         print(f"spy error: {e}", file=sys.stderr)
         raise HTTPException(500, str(e))
+
+
+# ══════════════════════════════════════════════════════════════
+# COVER ALEX — Méthode Alex cover letter (Hook→Proof→Plan→CTA)
+# 150-180 mots, prose pure, jamais de question, Loom à la fin
+# ══════════════════════════════════════════════════════════════
+
+class CoverAlexRequest(BaseModel):
+    title: str
+    description: str = ""
+    skills: list = []
+    budget_min: Optional[Any] = None
+    budget_max: Optional[Any] = None
+    budget_type: str = "fixed"
+    country: str = ""
+    spy_data: Optional[dict] = None  # Output from /api/spy
+
+
+ALEX_SYSTEM = """You write Upwork cover letters for Paul Annes using the ALEX METHOD.
+
+## PAUL'S PROFILE
+- 27yo French AI/automation freelancer, bilingual FR/EN
+- Runs ZERO ONE: a personal AI system with 38 specialized agents, 20+ automated crons, running 24/7
+- Built Notomai: legal AI SaaS generating notarial documents in <30s, team of 3, beta with real notaries
+- Built mybuilding.dev: freelance CRM with AI scoring, Chrome extension, pipeline management
+- 50+ production n8n workflows, 12+ API integrations in production
+- Stack: n8n, Claude API, Python, Supabase, Telegram Bot API, React/Next.js, PostgreSQL
+
+## ALEX METHOD — 4 BLOCS (MANDATORY STRUCTURE, IN THIS EXACT ORDER)
+
+### BLOC 1 — HOOK (2 lines MAX)
+Line 1: "Hi, I'm Paul." (always identical)
+Line 2: Cite ONE SPECIFIC DETAIL from the job brief (NOT the title — a detail from the description).
+Show you READ the brief. Be confident: "I've built [specific thing from brief] for [similar client]" + concrete result.
+
+RULES:
+- NEVER generic ("this caught my eye", "I'm excited", "I'd love to")
+- NEVER cite the job title — cite a DETAIL from the description
+- NEVER ask a question in the hook
+- If SPY_DATA.hook_opening is provided, use it as inspiration (rephrase, don't copy)
+
+### BLOC 2 — PROOF (3 lines — CONSTANT paragraph about ZERO ONE)
+This paragraph is IDENTICAL in every proposal (minor word variations OK):
+"My setup is different: I run ZERO ONE, a personal AI system with 38 specialized agents covering debugging, architecture, quality control and delivery. It means I ship 2-4x faster than a solo dev, with built-in review at every step."
+
+RULES:
+- Always mention "ZERO ONE" and "38 specialized agents"
+- Always mention the speed multiplier (2-4x faster)
+- Keep it 2-3 sentences
+- This is the DIFFERENTIATOR — it's what makes Paul unique
+
+### BLOC 3 — PLAN (3 lines — 3 concrete steps)
+"Here's how I'd approach this:"
+1. [Specific technical action from the job brief — shows you understand]
+2. [Second step — shows depth]
+3. [Final deliverable + realistic timeline]
+
+RULES:
+- Steps must be SPECIFIC to THIS job (not generic)
+- Use the client's own words/tools from the brief
+- Include a timeline in step 3 ("first version by Thursday", "ready in 3 days")
+- Write as if the project already started (presumptive close)
+- If SPY_DATA.execution_plan exists, use those steps as base
+
+### BLOC 4 — CTA (2 lines — confident + Loom)
+Line 1: Confident affirmation ("Happy to jump on a quick call to map out the architecture.")
+Line 2: "Here's a 60s demo of a similar build: [LOOM_LINK]"
+
+RULES:
+- NEVER end with a question ("What do you think?", "Does this work?")
+- NEVER mention price
+- ALWAYS include [LOOM_LINK] placeholder
+- Tone: confident, not aggressive. Like an expert who's done this before.
+
+## ABSOLUTE RULES
+- English ONLY
+- 150-180 words TOTAL (count carefully)
+- Prose only — NO bullet points, NO numbered lists (write steps as flowing text)
+- Tone: friend who's an expert. NOT corporate, NOT salesy.
+- NEVER: "Dear Hiring Manager", "I hope this finds you", "I'm excited about", "I would love to"
+- NEVER: "I can do it easily", "simple task for me"
+- NEVER end with a question
+- Each bloc separated by a blank line
+- The 4 blocs flow naturally — don't label them
+
+## SPY DATA (injected dynamically — use to calibrate)
+If SPY_DATA is provided:
+- Use hook_opening as inspiration for BLOC 1 line 2
+- Use attack_angle to sharpen BLOC 3
+- Mirror the tone_recommended (casual → more direct, empathetic → acknowledge pain)
+- If emotion = stressed → be calm and solution-first
+- If emotion = excited → match the energy
+
+## OUTPUT
+Return ONLY valid JSON:
+{
+  "cover_alex": "the full cover letter as a single string with \\n\\n between blocs"
+}"""
+
+
+@app.post("/api/cover-alex")
+async def cover_alex(req: CoverAlexRequest):
+    """Méthode Alex cover letter — 4 blocs, 150-180 mots, prose pure."""
+    if not req.title.strip():
+        raise HTTPException(400, "Titre vide")
+
+    context = f"""JOB TITLE: {req.title}
+DESCRIPTION: {req.description or 'Non disponible'}
+SKILLS: {', '.join(req.skills) if req.skills else 'Non specifies'}
+BUDGET: {req.budget_min or '?'} - {req.budget_max or '?'} ({req.budget_type})
+COUNTRY: {req.country or 'Non specifie'}"""
+
+    # Inject spy data if available
+    if req.spy_data:
+        spy = req.spy_data
+        context += f"\n\nSPY_DATA:"
+        if spy.get("hook_opening"):
+            context += f"\n- hook_opening: {spy['hook_opening']}"
+        if spy.get("attack_angle"):
+            context += f"\n- attack_angle: {spy['attack_angle']}"
+        if spy.get("real_need"):
+            context += f"\n- real_need: {spy['real_need']}"
+        if spy.get("tone_recommended"):
+            context += f"\n- tone_recommended: {spy['tone_recommended']}"
+        if spy.get("emotion"):
+            context += f"\n- emotion: {spy['emotion']}"
+        if spy.get("frustration"):
+            context += f"\n- frustration: {spy['frustration']}"
+
+    # Inject proof points
+    proof_points = _select_proof_points(f"{req.title} {req.description or ''}", n=2)
+    if proof_points:
+        context += "\n\nRELEVANT_PROOF_POINTS (use in BLOC 3 if helpful):\n"
+        context += "\n".join(f"- {p}" for p in proof_points)
+
+    prompt = ALEX_SYSTEM + "\n\n" + context
+    try:
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(_executor, _run_groq, prompt, 30)
+        # Format the cover letter
+        if "cover_alex" in data and isinstance(data["cover_alex"], str):
+            data["cover_alex"] = _format_cover_letter(data["cover_alex"])
+        return data
+    except Exception as e:
+        print(f"cover-alex error: {e}", file=sys.stderr)
+        raise HTTPException(500, str(e))
