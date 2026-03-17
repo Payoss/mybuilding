@@ -280,9 +280,14 @@ async function loadDashboard() {
 // ---- Mes Candidatures ----
 async function loadCandidatures(showAll) {
   try {
-    var limit = showAll ? 50 : 10;
-    var { data } = await sb.from('upwork_jobs').select('*').in('status', ['applied','interviewing','won','lost']).order('applied_at', { ascending: false, nullsFirst: false }).order('scraped_at', { ascending: false }).limit(limit);
-    allCandidatures = data || [];
+    var { data } = await sb.from('upwork_jobs').select('*').in('status', ['applied','interviewing','won','lost']).limit(showAll ? 200 : 100);
+    // Sort client-side on applied_at || scraped_at (same field as display) — newest first
+    allCandidatures = (data || []).sort(function(a, b) {
+      var da = new Date(a.applied_at || a.scraped_at || 0).getTime();
+      var db = new Date(b.applied_at || b.scraped_at || 0).getTime();
+      return db - da;
+    });
+    if (!showAll) allCandidatures = allCandidatures.slice(0, 10);
     document.getElementById('cand-count').textContent = allCandidatures.length + ' candidature' + (allCandidatures.length !== 1 ? 's' : '');
     renderCandidatures();
   } catch(e) {
