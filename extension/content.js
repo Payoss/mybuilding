@@ -248,6 +248,107 @@
   new MutationObserver(_readMsgBadge).observe(document.body, { childList: true, subtree: true, characterData: true });
   setTimeout(_readMsgBadge, 3000);
 
+  // ── Chat Page Detection ──
+  function _isChatPage() {
+    const u = window.location.href;
+    return u.includes('/messages/rooms/') || u.includes('/ab/messages/') || u.includes('/nx/messages/');
+  }
+
+  // ── Chat Extraction ──
+  function _extractChatMessages() {
+    const result = { clientName: null, jobTitle: null, messages: [] };
+
+    // Client name — conversation header
+    const headerEl =
+      document.querySelector('[data-test="room-header-title"]') ||
+      document.querySelector('[data-test="conversation-name"]') ||
+      document.querySelector('[class*="RoomHeader"] h2') ||
+      document.querySelector('[class*="ConversationHeader"] h2') ||
+      document.querySelector('[class*="room-title"]') ||
+      document.querySelector('[class*="RoomTitle"]');
+    result.clientName = headerEl?.textContent?.trim() || null;
+
+    // Job/contract title — often shown in the sidebar or header of chat
+    const jobEl =
+      document.querySelector('[data-test="contract-title"]') ||
+      document.querySelector('[class*="ContractTitle"]') ||
+      document.querySelector('[class*="contract-title"]') ||
+      document.querySelector('[class*="JobTitle"]') ||
+      document.querySelector('a[href*="/contracts/"]') ||
+      document.querySelector('a[href*="/jobs/"]');
+    result.jobTitle = jobEl?.textContent?.trim() || null;
+
+    // Message elements — try multiple patterns React/Next Upwork uses
+    const msgEls = document.querySelectorAll(
+      '[data-test="thread-message"], ' +
+      '[data-test="message"], ' +
+      '[data-test="message-item"], ' +
+      '[class*="MessageItem"], ' +
+      '[class*="message-item"], ' +
+      '[class*="ChatMessage"], ' +
+      '[class*="chat-message"]'
+    );
+
+    msgEls.forEach(el => {
+      try {
+        // Sender name
+        const senderEl =
+          el.querySelector('[data-test="sender-name"]') ||
+          el.querySelector('[class*="SenderName"]') ||
+          el.querySelector('[class*="sender-name"]') ||
+          el.querySelector('[class*="AuthorName"]') ||
+          el.querySelector('[class*="author-name"]') ||
+          el.querySelector('strong:first-child');
+        const senderName = senderEl?.textContent?.trim() || '';
+
+        // Message text — prefer innerText to preserve line breaks
+        const textEl =
+          el.querySelector('[data-test="message-content"]') ||
+          el.querySelector('[data-test="message-text"]') ||
+          el.querySelector('[class*="MessageText"]') ||
+          el.querySelector('[class*="message-text"]') ||
+          el.querySelector('[class*="MessageBody"]') ||
+          el.querySelector('[class*="message-body"]') ||
+          el.querySelector('.air3-typography p') ||
+          el.querySelector('p');
+        const text = (textEl?.innerText || textEl?.textContent || '').trim();
+        if (!text || text.length < 2) return;
+
+        // Timestamp
+        const tsEl =
+          el.querySelector('time') ||
+          el.querySelector('[data-test="message-time"]') ||
+          el.querySelector('[class*="MessageTime"]') ||
+          el.querySelector('[class*="message-time"]') ||
+          el.querySelector('[class*="Timestamp"]');
+        const ts = tsEl?.getAttribute('datetime') || new Date().toISOString();
+
+        // Determine direction — outgoing = sent by me
+        const elClass = Array.from(el.classList).join(' ').toLowerCase();
+        const isOutgoing =
+          elClass.includes('outgoing') ||
+          elClass.includes('sent') ||
+          elClass.includes('-self') ||
+          elClass.includes('mine') ||
+          el.getAttribute('data-own') === 'true' ||
+          el.getAttribute('data-direction') === 'outgoing' ||
+          !!el.querySelector('[class*="outgoing"], [class*="Outgoing"], [class*="self-"], [class*="Self-"]');
+
+        const sender = isOutgoing ? 'me' : 'client';
+        const name = isOutgoing ? 'Paul' : (senderName || result.clientName || 'Client');
+
+        result.messages.push({ sender, name, text, ts });
+      } catch (e) {}
+    });
+
+    // Debug toast to help calibrate selectors
+    if (_isChatPage()) {
+      _showToast(`mybuilding — Chat: ${result.messages.length} msgs, client: ${result.clientName || '?'}, job: ${result.jobTitle || '?'}`);
+    }
+
+    return result;
+  }
+
   // SPA navigation (unified — proposal + detail + badge)
   let _pollHref = location.href;
   setInterval(() => {
@@ -274,6 +375,10 @@
     }
     if (msg.type === 'GET_JOB_DETAIL') {
       sendResponse(_isJobDetailPage() ? _extractJobDetail() : null);
+      return true;
+    }
+    if (msg.type === 'GET_CHAT_MESSAGES') {
+      sendResponse(_isChatPage() ? _extractChatMessages() : null);
       return true;
     }
     return true;

@@ -552,6 +552,121 @@ function parseBudget(str) {
   return { min: null, max: null, type: 'fixed' };
 }
 
+// ── Chat page sync ──
+async function checkChatPage(tab) {
+  const { url: sbUrl, key: sbKey } = await getSupabase();
+  if (!sbUrl || !sbKey) return;
+
+  let chat;
+  try {
+    chat = await chrome.tabs.sendMessage(tab.id, { type: 'GET_CHAT_MESSAGES' });
+  } catch (e) {
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+      await new Promise(r => setTimeout(r, 800));
+      chat = await chrome.tabs.sendMessage(tab.id, { type: 'GET_CHAT_MESSAGES' });
+    } catch (e2) {
+      console.warn('[mybuilding BG] Cannot extract chat:', e2.message);
+      chrome.storage.local.set({ mb_last_chat_sync: { ok: false, reason: 'script_error' } });
+      return;
+    }
+  }
+
+  if (!chat?.messages?.length) {
+    console.log('[mybuilding BG] Chat: no messages extracted — selectors may need updating');
+    chrome.storage.local.set({ mb_last_chat_sync: { ok: false, reason: 'no_messages', clientName: chat?.clientName } });
+    return;
+  }
+
+  // ── Find matching job in Supabase ──
+  let jobId = null;
+
+  // 1. Try by job title (from contract link in chat page)
+  if (chat.jobTitle) {
+    try {
+      const safe = chat.jobTitle.substring(0, 60).replace(/[%_']/g, '\\$&');
+      const res = await fetch(
+        `${sbUrl}/rest/v1/upwork_jobs?select=id&title=ilike.*${encodeURIComponent(safe)}*&limit=1`,
+        { headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` } }
+      );
+      if (res.ok) { const rows = await res.json(); if (rows.length) jobId = rows[0].id; }
+    } catch (e) {}
+  }
+
+  // 2. Try by client name in contacts table
+  if (!jobId && chat.clientName) {
+    try {
+      const safe = chat.clientName.substring(0, 50).replace(/[%_']/g, '\\$&');
+      const res = await fetch(
+        `${sbUrl}/rest/v1/contacts?select=upwork_job_id&name=ilike.*${encodeURIComponent(safe)}*&limit=1`,
+        { headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` } }
+      );
+      if (res.ok) { const rows = await res.json(); if (rows.length && rows[0].upwork_job_id) jobId = rows[0].upwork_job_id; }
+    } catch (e) {}
+  }
+
+  // 3. Try most recent interviewing/negotiation job as fallback
+  if (!jobId) {
+    try {
+      const res = await fetch(
+        `${sbUrl}/rest/v1/upwork_jobs?select=id&status=in.(interviewing,negotiation)&order=applied_at.desc&limit=1`,
+        { headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` } }
+      );
+      if (res.ok) { const rows = await res.json(); if (rows.length) jobId = rows[0].id; }
+    } catch (e) {}
+  }
+
+  if (!jobId) {
+    console.warn('[mybuilding BG] Chat sync: no matching job for', chat.clientName, chat.jobTitle);
+    chrome.storage.local.set({ mb_last_chat_sync: { ok: false, reason: 'no_job_match', clientName: chat.clientName } });
+    return;
+  }
+
+  // ── Merge messages ──
+  let existingAnalysis = {};
+  try {
+    const res = await fetch(
+      `${sbUrl}/rest/v1/upwork_jobs?select=analysis&id=eq.${jobId}`,
+      { headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` } }
+    );
+    if (res.ok) { const rows = await res.json(); if (rows.length) existingAnalysis = rows[0].analysis || {}; }
+  } catch (e) {}
+
+  const existing = existingAnalysis.messages || [];
+  const existingKeys = new Set(existing.map(m => (m.text || '').substring(0, 50) + m.sender));
+  const newMsgs = chat.messages.filter(m => !existingKeys.has((m.text || '').substring(0, 50) + m.sender));
+  const merged = [...existing, ...newMsgs].sort((a, b) => new Date(a.ts) - new Date(b.ts));
+
+  const updatedAnalysis = { ...existingAnalysis, messages: merged };
+
+  // ── PATCH ──
+  try {
+    const patchRes = await fetch(`${sbUrl}/rest/v1/upwork_jobs?id=eq.${jobId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ analysis: updatedAnalysis })
+    });
+    if (patchRes.ok) {
+      console.log(`[mybuilding BG] Chat synced — ${newMsgs.length} new msgs, total ${merged.length}`);
+      chrome.storage.local.set({
+        mb_last_chat_sync: { ok: true, newCount: newMsgs.length, totalCount: merged.length, clientName: chat.clientName },
+        mb_last_check: new Date().toISOString(),
+        mb_last_count: 0
+      });
+      chrome.notifications.create({
+        type: 'basic', iconUrl: 'icon48.png',
+        title: `mybuilding — Chat synchronisé`,
+        message: `${newMsgs.length} nouveau${newMsgs.length > 1 ? 'x' : ''} message${newMsgs.length > 1 ? 's' : ''} — ${chat.clientName || 'client inconnu'}`
+      });
+    }
+  } catch (e) {
+    console.warn('[mybuilding BG] Chat PATCH failed:', e.message);
+  }
+}
+
 // ── Detail page enrichment ──
 async function checkDetailPage(tab) {
   console.log('[mybuilding BG] Detail mode — enriching job...');
@@ -676,8 +791,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const handleTab = async (tab) => {
       if (!tab) { sendResponse({ ok: false }); return; }
       const url = tab.url || '';
+      const isChat = url.includes('/messages/rooms/') || url.includes('/ab/messages/') || url.includes('/nx/messages/');
       const isDetail = /\/jobs\/~[a-zA-Z0-9]+/.test(url) || /\/nx\/search\/jobs\/details\/~[a-zA-Z0-9]+/.test(url);
-      if (isDetail) await checkDetailPage(tab);
+      if (isChat) await checkChatPage(tab);
+      else if (isDetail) await checkDetailPage(tab);
       else await checkForNewJobs();
       sendResponse({ ok: true });
     };
