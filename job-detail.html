@@ -75,12 +75,10 @@
 .jd-battle-risks li::before { background: var(--red); }
 .jd-battle-diff li::before { background: var(--teal); }
 
-/* ── Plan d'exécution Timeline ── */
-.jd-plan-timeline { position: relative; padding-left: 20px; }
-.jd-plan-timeline::before { content: ''; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 2px; background: var(--border); border-radius: 1px; }
-.jd-plan-step { position: relative; margin-bottom: 16px; }
-.jd-plan-step:last-child { margin-bottom: 0; }
-.jd-plan-dot { position: absolute; left: -20px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg, #0e0e1a); border: 2px solid var(--teal); z-index: 1; }
+/* ── Plan d'exécution — horizontal grid ── */
+.jd-plan-timeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.jd-plan-step { position: relative; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.jd-plan-dot { display: none; }
 .jd-plan-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
 .jd-plan-num { font-size: 10px; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 0.05em; }
 .jd-plan-time { font-size: 10px; font-weight: 600; color: var(--t3); font-family: 'DM Mono', monospace; background: var(--glass); padding: 1px 7px; border-radius: 4px; border: 1px solid var(--border); }
@@ -331,11 +329,12 @@ function renderPage() {
     + '<div class="jd-card-title">🇫🇷 Description traduite</div>'
     + '<div id="descfr-content"></div>'
     + '</div>'
-    // Plan d'execution
-    + '<div class="jd-card" id="card-plan">'
+    + '</div>'
+
+    // Plan d'execution — full width under both columns
+    + '<div class="jd-card jd-card-full" id="card-plan">'
     + '<div class="jd-card-title">📋 Plan d\'execution</div>'
     + '<div id="plan-content"></div>'
-    + '</div>'
     + '</div>'
 
     + '</div>'; // end columns

@@ -552,10 +552,139 @@ function parseBudget(str) {
   return { min: null, max: null, type: 'fixed' };
 }
 
+// ── Detail page enrichment ──
+async function checkDetailPage(tab) {
+  console.log('[mybuilding BG] Detail mode — enriching job...');
+  const { url: sbUrl, key: sbKey } = await getSupabase();
+  if (!sbUrl || !sbKey) { console.warn('[mybuilding BG] Supabase non configuré'); return; }
+
+  let detail;
+  try {
+    detail = await chrome.tabs.sendMessage(tab.id, { type: 'GET_JOB_DETAIL' });
+  } catch (e) {
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+      await new Promise(r => setTimeout(r, 800));
+      detail = await chrome.tabs.sendMessage(tab.id, { type: 'GET_JOB_DETAIL' });
+    } catch (e2) {
+      console.warn('[mybuilding BG] Cannot contact content script:', e2.message);
+      return;
+    }
+  }
+
+  if (!detail?.id || !detail?.description) {
+    console.warn('[mybuilding BG] Detail page: no description extracted');
+    return;
+  }
+
+  // Check if job exists — try canonical URL, side-panel URL, then LIKE on job ID (handles slug URLs)
+  const canonicalUrl = `https://www.upwork.com/jobs/~${detail.id}`;
+  const sideUrl = `https://www.upwork.com/nx/search/jobs/details/~${detail.id}`;
+  let existing = [];
+  const lookups = [
+    `url=eq.${encodeURIComponent(canonicalUrl)}`,
+    `url=eq.${encodeURIComponent(sideUrl)}`,
+    `url=like.*~${detail.id}*`
+  ];
+  for (const q of lookups) {
+    try {
+      const res = await fetch(
+        `${sbUrl}/rest/v1/upwork_jobs?select=id,url&${q}`,
+        { headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` } }
+      );
+      if (res.ok) {
+        const rows = await res.json();
+        if (rows.length > 0) { existing = rows; break; }
+      }
+    } catch (e) {
+      console.warn('[mybuilding BG] Detail existence check failed:', e.message);
+    }
+  }
+  console.log(`[mybuilding BG] Detail lookup: found=${existing.length}, id=${detail.id}`);
+
+  if (existing.length > 0) {
+    // PATCH using the URL actually stored in Supabase (not the normalized one)
+    const storedUrl = existing[0].url;
+    const patch = { description_full: detail.description, url: canonicalUrl };
+    if (detail.skills?.length) patch.skills = detail.skills;
+    if (detail.country) patch.country = detail.country;
+    if (detail.budget) {
+      const bp = parseBudget(detail.budget);
+      if (bp.min != null) patch.budget_min = bp.min;
+      if (bp.max != null) patch.budget_max = bp.max;
+      if (bp.type) patch.budget_type = bp.type;
+    }
+    try {
+      const patchRes = await fetch(`${sbUrl}/rest/v1/upwork_jobs?url=eq.${encodeURIComponent(storedUrl)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Prefer': 'return=minimal' },
+        body: JSON.stringify(patch)
+      });
+      if (patchRes.ok) {
+        console.log('[mybuilding BG] Detail PATCHED OK — status:', patchRes.status, 'url:', storedUrl.slice(-40));
+      } else {
+        const errText = await patchRes.text();
+        console.warn('[mybuilding BG] PATCH FAILED:', patchRes.status, errText);
+      }
+    } catch (e) {
+      console.warn('[mybuilding BG] Detail PATCH failed:', e.message);
+    }
+    chrome.storage.local.set({ mb_last_check: new Date().toISOString(), mb_last_detail_mode: 'patched', mb_last_count: 0, mb_last_snipers: 0, mb_last_golds: 0 });
+  } else {
+    // INSERT new job with full description
+    const budgetParsed = parseBudget(detail.budget);
+    const base = {
+      title: detail.title,
+      description: detail.description,
+      description_full: detail.description,
+      url: detail.url,
+      country: detail.country,
+      scraped_at: new Date().toISOString(),
+      budget_min: budgetParsed.min,
+      budget_max: budgetParsed.max,
+      budget_type: budgetParsed.type,
+      skills: detail.skills || [],
+      source: 'extension_detail',
+      status: 'new'
+    };
+    const scores = scoreJob(base);
+    const row = { ...base, ...scores };
+    const result = await supabaseInsert('upwork_jobs', [row]);
+    if (!result.error) {
+      await addSeenIds([detail.id]);
+      console.log('[mybuilding BG] Detail INSERTED:', detail.title?.slice(0, 50));
+      chrome.notifications.create({
+        type: 'basic', iconUrl: 'icon48.png',
+        title: `mybuilding — Nouveau job ajouté`,
+        message: `${detail.title?.slice(0, 60)}\nScore : ${row.worth_score}/10`
+      });
+    }
+    chrome.storage.local.set({
+      mb_last_check: new Date().toISOString(),
+      mb_last_count: result.error ? 0 : 1,
+      mb_last_snipers: row.sniper_mode ? 1 : 0,
+      mb_last_golds: (row.worth_score >= 8 && !row.sniper_mode) ? 1 : 0,
+      mb_last_detail_mode: result.error ? 'error' : 'inserted'
+    });
+  }
+}
+
 // ── Message handlers ──
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'CHECK_NOW') {
-    checkForNewJobs().then(() => sendResponse({ ok: true }));
+    const handleTab = async (tab) => {
+      if (!tab) { sendResponse({ ok: false }); return; }
+      const url = tab.url || '';
+      const isDetail = /\/jobs\/~[a-zA-Z0-9]+/.test(url) || /\/nx\/search\/jobs\/details\/~[a-zA-Z0-9]+/.test(url);
+      if (isDetail) await checkDetailPage(tab);
+      else await checkForNewJobs();
+      sendResponse({ ok: true });
+    };
+    if (msg.tabId) {
+      chrome.tabs.get(msg.tabId, handleTab);
+    } else {
+      chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => handleTab(tabs[0]));
+    }
     return true;
   }
   if (msg.type === 'UPDATE_SETTINGS') {

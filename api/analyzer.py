@@ -519,8 +519,9 @@ L4 — UNDERSTANDING (THE KEY BLOC — spend the most effort here):
   - State concrete deliverables the client will receive
   - NEVER open with "Looking at what you've described" — vary the transition every time
 
-L5 — STACK: List tools/technologies relevant to the job. Job-mentioned skills FIRST, then Paul's additional relevant tools.
-  Format: "Stack: [tool1], [tool2], [tool3], ..."
+L5 — STACK: One line only. Job-mentioned tools first, then Paul's additional relevant tools.
+  Format: "Built on [tool1], [tool2], [tool3]."
+  Place BEFORE the CTA — never after. Never a bullet list.
 
 L6 — CTA (adaptive — pick the best fit):
   - Urgent/complex job: "I can start today. Send me a message and I'll have a first draft by [tomorrow/next day]."

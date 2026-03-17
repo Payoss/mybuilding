@@ -1,5 +1,24 @@
 // mybuilding — Popup logic (MV3 CSP-compliant, no inline handlers)
 
+let _isDetailMode = false;
+
+function _isDetailUrl(url) {
+  return /\/jobs\/~[a-zA-Z0-9]+/.test(url) || /\/nx\/search\/jobs\/details\/~[a-zA-Z0-9]+/.test(url);
+}
+
+function updateScanMode(url) {
+  _isDetailMode = _isDetailUrl(url || '');
+  const btn = document.getElementById('scanBtn');
+  const hint = document.getElementById('scan-hint');
+  if (_isDetailMode) {
+    btn.textContent = '🔍 Enrichir ce job';
+    hint.textContent = 'Mode détail — récupère la description complète et met à jour le CRM';
+  } else {
+    btn.textContent = '⚡ Scan This Page';
+    hint.textContent = "Scans the current Upwork search page you're viewing — manual only, no auto-refresh";
+  }
+}
+
 function switchTab(tab, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -16,13 +35,16 @@ function toast(msg) {
 
 function scanNow() {
   const btn = document.getElementById('scanBtn');
-  btn.textContent = '⏳ Scanning...';
+  btn.textContent = '⏳ En cours...';
   btn.disabled = true;
-  chrome.runtime.sendMessage({ type: 'CHECK_NOW' }, () => {
-    btn.textContent = '⚡ Scan This Page';
-    btn.disabled = false;
-    toast('Scan terminé ✓');
-    loadStatus();
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tabId = tabs[0]?.id;
+    chrome.runtime.sendMessage({ type: 'CHECK_NOW', tabId }, () => {
+      btn.textContent = _isDetailMode ? '🔍 Enrichir ce job' : '⚡ Scan This Page';
+      btn.disabled = false;
+      toast(_isDetailMode ? 'Job enrichi ✓' : 'Scan terminé ✓');
+      loadStatus();
+    });
   });
 }
 
@@ -70,6 +92,11 @@ document.getElementById('saveBtn').addEventListener('click', saveSettings);
 document.getElementById('reloadBtn').addEventListener('click', () => chrome.runtime.reload());
 document.getElementById('clearCacheBtn').addEventListener('click', () => {
   chrome.storage.local.remove('mb_seen_ids', () => toast('Cache vidé ✓'));
+});
+
+// Detect active tab context to set scan mode
+chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  updateScanMode(tabs[0]?.url || '');
 });
 
 loadStatus();

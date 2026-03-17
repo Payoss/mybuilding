@@ -102,9 +102,10 @@
 
         let url = titleEl?.href || '';
         if (url && !url.startsWith('http')) url = 'https://www.upwork.com' + url;
-        // Strip referrer params for clean dedup
         url = url.split('?')[0];
+        // Normalize to canonical /jobs/~XXX regardless of page context
         const idMatch = url.match(/~([a-zA-Z0-9]+)/) || url.match(/jobs\/([a-zA-Z0-9]+)/);
+        if (idMatch) url = `https://www.upwork.com/jobs/~${idMatch[1]}`;
         const id = idMatch ? idMatch[1] : btoa(title).slice(0, 16);
 
         // Description — ordered from most specific to least, never fall back to bare `p`
@@ -151,15 +152,20 @@
   }
 
   function _extractJobDetail() {
-    // Title
+    // Title — h1 on full page, h2/div on side panel
     const titleEl =
       document.querySelector('h1[data-test="job-title"]') ||
       document.querySelector('h1.m-0') ||
-      document.querySelector('h1');
+      document.querySelector('[data-test="job-title"]') ||
+      document.querySelector('h2[class*="job-title"]') ||
+      document.querySelector('h2[class*="JobTitle"]') ||
+      document.querySelector('h1') ||
+      document.querySelector('h2');
     const title = titleEl?.textContent?.trim() || '';
 
-    // Full description — selector confirmed via DevTools 2026-03-17
+    // Full description — p.text-body-sm works on both full page and side panel
     const descEl =
+      document.querySelector('p.text-body-sm') ||
       document.querySelector('p[data-test="Description"]') ||
       document.querySelector('p.text-body-sm.multiline-text') ||
       document.querySelector('[data-test="Description"]') ||
@@ -193,10 +199,10 @@
       document.querySelector('[class*="ClientLocation"]');
     const country = countryEl?.textContent?.trim() || '';
 
-    // Job ID from URL
+    // Job ID from URL — normalize to canonical /jobs/~XXX regardless of side panel URL
     const idMatch = window.location.href.match(/~([a-zA-Z0-9]+)/);
     const id = idMatch ? idMatch[1] : null;
-    const url = window.location.href.split('?')[0];
+    const url = id ? `https://www.upwork.com/jobs/~${id}` : window.location.href.split('?')[0];
 
     return { id, title, url, description, skills, budget, country };
   }
@@ -212,9 +218,6 @@
 
   // Proposal page
   if (_isProposalPage()) setTimeout(_startProposalWatcher, 500);
-
-  // Detail page
-  if (_isJobDetailPage()) setTimeout(_sendDetailUpdate, 1500);
 
   // Badge messages
   let _lastMsgCount = 0;
@@ -239,13 +242,11 @@
     if (location.href !== _pollHref) {
       _pollHref = location.href;
       if (_isProposalPage()) _startProposalWatcher();
-      else if (_isJobDetailPage()) setTimeout(_sendDetailUpdate, 800);
     }
   }, 1000);
 
   window.addEventListener('popstate', () => {
     if (_isProposalPage()) setTimeout(_startProposalWatcher, 600);
-    else if (_isJobDetailPage()) setTimeout(_sendDetailUpdate, 800);
   });
 
   // ── Message Handler ──
