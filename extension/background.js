@@ -581,8 +581,12 @@ async function checkChatPage(tab) {
   // ── Find matching job in Supabase ──
   let jobId = null;
 
-  // 1. Try by job title (from contract link in chat page)
-  if (chat.jobTitle) {
+  // Generic Upwork labels that are NOT real job titles — skip title search for these
+  const GENERIC_LABELS = ['direct contracts', 'messages', 'inbox', 'contracts', 'my jobs'];
+  const titleIsGeneric = !chat.jobTitle || GENERIC_LABELS.some(l => chat.jobTitle.toLowerCase().includes(l));
+
+  // 1. Try by job title (only if not a generic label)
+  if (!titleIsGeneric) {
     try {
       const safe = chat.jobTitle.substring(0, 60).replace(/[%_']/g, '\\$&');
       const res = await fetch(
@@ -593,16 +597,20 @@ async function checkChatPage(tab) {
     } catch (e) {}
   }
 
-  // 2. Try by client name in contacts table
+  // 2. Try by client name — handle "Name1, Name2" (group chats) by trying each part
   if (!jobId && chat.clientName) {
-    try {
-      const safe = chat.clientName.substring(0, 50).replace(/[%_']/g, '\\$&');
-      const res = await fetch(
-        `${sbUrl}/rest/v1/contacts?select=upwork_job_id&name=ilike.*${encodeURIComponent(safe)}*&limit=1`,
-        { headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` } }
-      );
-      if (res.ok) { const rows = await res.json(); if (rows.length && rows[0].upwork_job_id) jobId = rows[0].upwork_job_id; }
-    } catch (e) {}
+    const nameParts = chat.clientName.split(',').map(n => n.trim()).filter(Boolean);
+    for (const namePart of nameParts) {
+      if (jobId) break;
+      try {
+        const safe = namePart.substring(0, 50).replace(/[%_']/g, '\\$&');
+        const res = await fetch(
+          `${sbUrl}/rest/v1/contacts?select=upwork_job_id&name=ilike.*${encodeURIComponent(safe)}*&limit=1`,
+          { headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` } }
+        );
+        if (res.ok) { const rows = await res.json(); if (rows.length && rows[0].upwork_job_id) jobId = rows[0].upwork_job_id; }
+      } catch (e) {}
+    }
   }
 
   // 3. Try most recent interviewing/negotiation job as fallback
