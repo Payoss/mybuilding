@@ -475,20 +475,21 @@ Generate TWO versions (A=direct, B=conversational) following the EXACT SAME 4-bl
 def _build_cover_context(req) -> str:
     """Build cover letter prompt context from request."""
     context = f"""JOB TITLE: {req.title}
-DESCRIPTION: {req.description or 'Non disponible'}
-SKILLS: {', '.join(req.skills) if req.skills else 'Non specifies'}
+DESCRIPTION: {req.description or 'Not available'}
+SKILLS: {', '.join(req.skills) if req.skills else 'Not specified'}
 BUDGET: {req.budget_min or '?'} - {req.budget_max or '?'} ({req.budget_type})
-COUNTRY: {req.country or 'Non specifie'}"""
+COUNTRY: {req.country or 'Not specified'}"""
     if req.enrichment:
         if req.enrichment.get("why_for_you"):
-            context += f"\n\nWHY FOR PAUL (context): {req.enrichment['why_for_you']}"
+            # Context is in French — remind model to write in English
+            context += f"\n\nINTERNAL CONTEXT (in French — DO NOT write in French, use this for context ONLY, output must be 100% ENGLISH):\n{req.enrichment['why_for_you']}"
         if req.enrichment.get("execution_plan"):
             steps = req.enrichment["execution_plan"]
             plan_str = "\n".join(
                 f"  Step {s.get('step', i+1)}: {s.get('title', '')} ({s.get('hours', '')})"
                 for i, s in enumerate(steps)
             )
-            context += f"\n\nEXECUTION PLAN:\n{plan_str}"
+            context += f"\n\nEXECUTION PLAN (translate to English in output):\n{plan_str}"
     # Inject human signals + selected proof points
     full_text = f"{req.title} {req.description or ''}"
     signals = _extract_client_signals(req.title, req.description or "")
@@ -497,6 +498,7 @@ COUNTRY: {req.country or 'Non specifie'}"""
     if proof_points:
         context += "\n\nSELECTED_PROOF_POINTS (use these in L3, rephrase naturally):\n"
         context += "\n".join(f"- {p}" for p in proof_points)
+    context += "\n\nREMINDER: The ENTIRE cover letter must be in ENGLISH. Not a single word in French. Even if the job description or context above is in French, your output MUST be 100% English."
     return context
 
 
@@ -646,14 +648,15 @@ COUNTRY: {req.country or 'Non specifie'}"""
     enrichment = analysis.get("enrichment", {})
     cover_context = job_context
     if enrichment.get("why_for_you"):
-        cover_context += f"\n\nWHY FOR PAUL (context): {enrichment['why_for_you']}"
+        cover_context += f"\n\nINTERNAL CONTEXT (in French — DO NOT write in French, use for context ONLY, output must be 100% ENGLISH):\n{enrichment['why_for_you']}"
     if enrichment.get("execution_plan"):
         steps = enrichment["execution_plan"]
         plan_str = "\n".join(
             f"  Step {s.get('step', i+1)}: {s.get('title', '')} ({s.get('hours', '')})"
             for i, s in enumerate(steps)
         )
-        cover_context += f"\n\nEXECUTION PLAN:\n{plan_str}"
+        cover_context += f"\n\nEXECUTION PLAN (translate to English in output):\n{plan_str}"
+    cover_context += "\n\nREMINDER: The ENTIRE cover letter must be in ENGLISH. Not a single word in French."
 
     prompt_cover = COVER_SYSTEM + "\n\n" + cover_context
 
