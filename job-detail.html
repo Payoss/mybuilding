@@ -180,6 +180,28 @@ document.getElementById('sidebar-mount').innerHTML = renderSidebar('upwork');
 var _job = null;
 var _enrichment = null;
 
+// ── Fetch with timeout + 1 retry (30s default) ──
+async function _fetchRetry(url, opts, timeoutMs) {
+  timeoutMs = timeoutMs || 30000;
+  async function _once() {
+    var ctrl = new AbortController();
+    var tid = setTimeout(function() { ctrl.abort(); }, timeoutMs);
+    try {
+      var res = await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
+      clearTimeout(tid);
+      return res;
+    } catch(e) {
+      clearTimeout(tid);
+      throw e;
+    }
+  }
+  try { return await _once(); }
+  catch(e) {
+    console.warn('[retry] 1st attempt failed:', e.message, '— retrying...');
+    return await _once();
+  }
+}
+
 // ══════════════════════════════════════════════════════════════
 // INIT — Load job from URL param
 // ══════════════════════════════════════════════════════════════
@@ -271,7 +293,10 @@ function renderPage() {
     + '<div class="jd-generate-zone jd-card">'
     + '<div class="jd-card-title">✦ Candidature</div>'
     + '<div id="generate-zone-inner">'
-    + '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()">✦ Generer ma candidature (Version A + B)</button>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    + '<button class="jd-generate-btn" id="generateAlexBtn" onclick="generateAlexCover()" style="flex:1;background:linear-gradient(135deg,var(--teal),#0d9488)">⚡ Méthode Alex (rapide)</button>'
+    + '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--t2)">✦ Version A + B (détaillée)</button>'
+    + '</div>'
     + '<div class="gen-progress" id="genProgress">'
     + '<div class="gen-steps">'
     + '<div class="gen-step" id="gs-0"><div class="gen-step-dot">1</div><div class="gen-step-label">Analyse</div></div>'
@@ -498,7 +523,7 @@ async function loadEnrichment() {
 
   // Call API
   try {
-    var res = await fetch('/api/job-enrich', {
+    var res = await _fetchRetry('/api/job-enrich', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -610,7 +635,7 @@ async function maybePregenCovers() {
 
   _pregenPromise = (async function() {
     try {
-      var res = await fetch('/api/cover-letter', {
+      var res = await _fetchRetry('/api/cover-letter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -623,7 +648,7 @@ async function maybePregenCovers() {
           country: _job.country,
           enrichment: _enrichment
         })
-      });
+      }, 20000);
       if (!res.ok) return;
       // Stream response — accumulate full text then parse JSON
       var text = await _readStream(res, null); // no live display for pregen
@@ -645,8 +670,10 @@ async function _readStream(response, liveTargets) {
   var decoder = new TextDecoder();
   var full = '';
   var liveDisplay = '';
+  var streamStart = Date.now();
 
   while (true) {
+    if (Date.now() - streamStart > 45000) { reader.cancel(); throw new Error('Stream timeout (45s)'); }
     var _ref = await reader.read();
     var done = _ref.done, value = _ref.value;
     if (done) break;
@@ -743,6 +770,117 @@ function stopGenProgress(success) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════
+// ALEX METHOD — Spy + Cover in 2 calls (~4s total)
+// ══════════════════════════════════════════════════════════════
+async function generateAlexCover() {
+  var btn = document.getElementById('generateAlexBtn');
+  var oldText = btn.textContent;
+  btn.textContent = '🔍 Espionnage en cours...';
+  btn.disabled = true;
+  document.getElementById('generateBtn').style.display = 'none';
+
+  var skills = (_job.skills || []).filter(function(s) { return s && !/^(Location|Unverified|Payment|\$\d)/.test(s); });
+  var payload = {
+    title: _job.title,
+    description: _job.description_full || _job.description,
+    skills: skills,
+    budget_min: _job.budget_min,
+    budget_max: _job.budget_max,
+    budget_type: _job.budget_type,
+    country: _job.country
+  };
+
+  try {
+    // Step 1: Spy (~2s)
+    var spyRes = await _fetchRetry('/api/spy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, 15000);
+    if (!spyRes.ok) throw new Error('Spy API error ' + spyRes.status);
+    var spyData = await spyRes.json();
+
+    btn.textContent = '✍️ Rédaction Alex...';
+
+    // Step 2: Cover Alex with spy data (~2s)
+    var coverRes = await _fetchRetry('/api/cover-alex', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({}, payload, { spy_data: spyData }))
+    }, 15000);
+    if (!coverRes.ok) throw new Error('Cover Alex API error ' + coverRes.status);
+    var coverData = await coverRes.json();
+
+    var coverText = coverData.cover_alex;
+    if (!coverText) throw new Error('Pas de cover letter generee');
+
+    // Display
+    var container = document.getElementById('coverResults');
+    container.innerHTML = ''
+      + '<div class="jd-cover-tabs">'
+      + '<div class="jd-cover-tab active" id="tab-alex">Méthode Alex</div>'
+      + '</div>'
+      + '<div class="jd-cover-panel active" id="panel-alex">'
+      + '<textarea class="jd-cover-text" id="cover-text-alex">' + escHtml(coverText) + '</textarea>'
+      + '<div class="jd-cover-actions">'
+      + '<button class="jd-copy-btn" onclick="copyCoverAlex()">📋 Copier</button>'
+      + '<button class="jd-copy-btn" onclick="sendCoverToExtensionAlex()">🚀 Extension</button>'
+      + '<button class="jd-copy-btn" onclick="generateAlexCover()">🔄 Regenerer</button>'
+      + '</div>'
+      + '</div>'
+      + '<details style="margin-top:10px;cursor:pointer">'
+      + '<summary style="font-size:11px;color:var(--t3)">🔍 Données espionnage</summary>'
+      + '<div style="margin-top:8px;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:11px;color:var(--t2);line-height:1.6;white-space:pre-wrap">'
+      + '🎯 Besoin réel: ' + escHtml(spyData.real_need || '') + '\n'
+      + '😤 Frustration: ' + escHtml(spyData.frustration || '') + '\n'
+      + '💰 Budget réel: ' + escHtml(spyData.real_budget || '') + '\n'
+      + '⚔️ Angle: ' + escHtml(spyData.attack_angle || '') + '\n'
+      + '🚩 Red flags: ' + escHtml(spyData.red_flags || '') + '\n'
+      + '🎣 Hook: ' + escHtml(spyData.hook_opening || '') + '\n'
+      + '🏷️ Niche: ' + escHtml(spyData.niche_matched || '')
+      + '</div></details>';
+    container.classList.add('visible');
+
+    // Save to Supabase
+    sb.from('upwork_jobs').update({ cover_letter: coverText }).eq('id', _job.id);
+    _job.cover_letter = coverText;
+    toast('Cover letter Alex generee ⚡');
+
+  } catch(e) {
+    console.error('Alex cover error:', e);
+    toast('Erreur: ' + e.message, 'error');
+    document.getElementById('generateBtn').style.display = '';
+  } finally {
+    btn.textContent = oldText;
+    btn.disabled = false;
+  }
+}
+
+function copyCoverAlex() {
+  var ta = document.getElementById('cover-text-alex');
+  if (!ta || !ta.value.trim()) { toast('Rien a copier', 'error'); return; }
+  navigator.clipboard.writeText(ta.value).then(function() { toast('Cover letter copiee ✓'); });
+}
+
+function sendCoverToExtensionAlex() {
+  var ta = document.getElementById('cover-text-alex');
+  if (!ta || !ta.value.trim()) { toast('Rien a envoyer', 'error'); return; }
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ mb_last_cover: ta.value }, function() {
+        toast('Cover envoyee a l\'extension ✓');
+      });
+    } else {
+      localStorage.setItem('mb_last_cover', ta.value);
+      toast('Cover stockee. Ouvre la page proposal Upwork.');
+    }
+  } catch(e) {
+    localStorage.setItem('mb_last_cover', ta.value);
+    toast('Cover stockee localement.');
+  }
+}
+
 async function generateCoverLetter() {
   var btn = document.getElementById('generateBtn');
   btn.style.display = 'none';
@@ -791,7 +929,7 @@ async function generateCoverLetter() {
 
     // ── CASE 3: No enrichment — full-pipeline (Groq enrich ~1s + Sonnet stream) ──
     if (!_enrichment) {
-      var res = await fetch('/api/full-pipeline', {
+      var res = await _fetchRetry('/api/full-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -799,7 +937,7 @@ async function generateCoverLetter() {
           budget_min: _job.budget_min, budget_max: _job.budget_max,
           budget_type: _job.budget_type, country: _job.country
         })
-      });
+      }, 30000);
       if (!res.ok) throw new Error('API error ' + res.status);
 
       // Full-pipeline streams: "ANALYSIS:{...}\nCOVER:{tokens...}"
@@ -834,7 +972,7 @@ async function generateCoverLetter() {
       showStreamingCovers();
       setGenStep(2);
 
-      var res = await fetch('/api/cover-letter', {
+      var res = await _fetchRetry('/api/cover-letter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -843,7 +981,7 @@ async function generateCoverLetter() {
           budget_type: _job.budget_type, country: _job.country,
           enrichment: _enrichment
         })
-      });
+      }, 20000);
       if (!res.ok) throw new Error('API error ' + res.status);
 
       var taA = document.getElementById('stream-cover-a');
