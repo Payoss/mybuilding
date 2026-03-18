@@ -293,10 +293,7 @@ function renderPage() {
     + '<div class="jd-generate-zone jd-card">'
     + '<div class="jd-card-title">✦ Candidature</div>'
     + '<div id="generate-zone-inner">'
-    + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-    + '<button class="jd-generate-btn" id="generateAlexBtn" onclick="generateAlexCover()" style="flex:1;background:linear-gradient(135deg,var(--teal),#0d9488)">⚡ Méthode Alex (rapide)</button>'
-    + '<button class="jd-generate-btn" id="generateBtn" onclick="generateCoverLetter()" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--t2)">✦ Version A + B (détaillée)</button>'
-    + '</div>'
+    + '<button class="jd-generate-btn" id="generateAlexBtn" onclick="generateAlexCover()" style="width:100%;background:linear-gradient(135deg,var(--teal),#0d9488)">⚡ Générer ma candidature</button>'
     + '<div class="gen-progress" id="genProgress">'
     + '<div class="gen-steps">'
     + '<div class="gen-step" id="gs-0"><div class="gen-step-dot">1</div><div class="gen-step-label">Analyse</div></div>'
@@ -1028,8 +1025,20 @@ function showStreamingCovers() {
 }
 
 function showExistingCovers(a, b) {
-  document.getElementById('generateBtn').style.display = 'none';
-  showCovers(a, b);
+  document.getElementById('generateAlexBtn').style.display = 'none';
+  // Show single cover (Alex mode) — prefer a over b
+  var coverText = a || b || '';
+  if (!coverText) return;
+  var container = document.getElementById('coverResults');
+  container.innerHTML = ''
+    + '<div class="jd-cover-panel active">'
+    + '<textarea class="jd-cover-text" id="cover-text-alex">' + escHtml(coverText) + '</textarea>'
+    + '<div class="jd-cover-actions">'
+    + '<button class="jd-copy-btn" onclick="copyCoverAlex()">📋 Copier</button>'
+    + '<button class="jd-copy-btn" onclick="sendCoverToExtensionAlex()">🚀 Extension</button>'
+    + '<button class="jd-copy-btn" onclick="generateAlexCover()">🔄 Regenerer</button>'
+    + '</div></div>';
+  container.classList.add('visible');
 }
 
 function showCovers(versionA, versionB) {
