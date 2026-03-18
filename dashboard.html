@@ -375,7 +375,7 @@ function renderCandidatures() {
   var statusMap = { applied:'sc-blue', interviewing:'sc-purple', won:'sc-green', lost:'sc-red' };
   var labelMap = { applied:'Postulé', interviewing:'Entretien', won:'Won', lost:'Lost' };
   document.getElementById('cand-list').innerHTML = filtered.length ? filtered.map(function(j) {
-    return '<div class="cand-row" onclick="openPanel(\'' + j.id + '\')">'
+    return '<div class="cand-row" onclick="window.location.href=\'/job-detail.html?id=' + j.id + '\'">'
       + '<div class="cand-title">' + (j.title || '—') + '</div>'
       + scorePill(j.worth_score)
       + '<span class="status-chip ' + (statusMap[j.status]||'sc-blue') + '" style="font-size:9px;margin-left:4px">' + (labelMap[j.status]||j.status) + '</span>'

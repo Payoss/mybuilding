@@ -376,6 +376,56 @@ function renderPage() {
   if (j.cover_letter || j.cover_letter_b) {
     showExistingCovers(j.cover_letter, j.cover_letter_b);
   }
+
+  // ── Adapt UI based on job status ──
+  var status = (j.status || 'new').toLowerCase();
+  var isPostApply = ['applied', 'interviewing', 'won', 'lost', 'viewed', 'offer'].indexOf(status) !== -1;
+
+  if (isPostApply) {
+    // Hide generate button — already applied
+    var alexBtn = document.getElementById('generateAlexBtn');
+    if (alexBtn) alexBtn.style.display = 'none';
+
+    // Show pipeline status + timeline card
+    var genZone = document.getElementById('generate-zone-inner');
+    if (genZone && !document.getElementById('pipeline-status')) {
+      var statusLabels = { applied:'Postulé', interviewing:'Entretien', won:'Contrat signé', lost:'Perdu', viewed:'Vu par le client', offer:'Offre reçue' };
+      var statusColors = { applied:'var(--blue)', interviewing:'var(--purple)', won:'var(--green)', lost:'var(--red)', viewed:'var(--amber)', offer:'var(--green)' };
+      var timelineHtml = '<div id="pipeline-status" style="margin-bottom:12px">';
+      timelineHtml += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">';
+      timelineHtml += '<div style="width:10px;height:10px;border-radius:50%;background:' + (statusColors[status]||'var(--t3)') + ';box-shadow:0 0 8px ' + (statusColors[status]||'var(--t3)') + '"></div>';
+      timelineHtml += '<span style="font-size:14px;font-weight:600;color:' + (statusColors[status]||'var(--t1)') + '">' + (statusLabels[status]||status) + '</span>';
+      if (j.applied_at) timelineHtml += '<span style="font-size:11px;color:var(--t3);margin-left:auto">Postulé le ' + new Date(j.applied_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'short',year:'numeric'}) + '</span>';
+      timelineHtml += '</div>';
+
+      // Timeline dots
+      var stages = ['applied','viewed','interviewing','offer','won'];
+      var stageLabels = {applied:'Postulé',viewed:'Vu',interviewing:'Entretien',offer:'Offre',won:'Signé'};
+      var currentIdx = stages.indexOf(status);
+      if (currentIdx === -1) currentIdx = 0;
+      timelineHtml += '<div style="display:flex;align-items:center;gap:0;margin:8px 0">';
+      stages.forEach(function(s, i) {
+        var done = i <= currentIdx;
+        var dotColor = done ? (statusColors[s]||'var(--teal)') : 'rgba(255,255,255,0.1)';
+        var lineColor = i < currentIdx ? (statusColors[stages[i+1]]||'var(--teal)') : 'rgba(255,255,255,0.06)';
+        timelineHtml += '<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto">';
+        timelineHtml += '<div style="width:12px;height:12px;border-radius:50%;background:' + dotColor + (done?';box-shadow:0 0 6px '+dotColor:'') + '"></div>';
+        timelineHtml += '<div style="font-size:9px;color:' + (done?'var(--t1)':'var(--t3)') + ';margin-top:4px;font-weight:' + (done?'600':'400') + '">' + stageLabels[s] + '</div>';
+        timelineHtml += '</div>';
+        if (i < stages.length - 1) {
+          timelineHtml += '<div style="flex:1;height:2px;background:' + lineColor + ';margin:0 4px;margin-bottom:16px"></div>';
+        }
+      });
+      timelineHtml += '</div>';
+      timelineHtml += '</div>';
+      genZone.insertAdjacentHTML('afterbegin', timelineHtml);
+    }
+
+    // If cover letter exists, make sure it's shown
+    if ((j.cover_letter || j.cover_letter_b) && !document.querySelector('.jd-cover-text')) {
+      showExistingCovers(j.cover_letter, j.cover_letter_b);
+    }
+  }
 }
 
 // ── Linked contact card ──

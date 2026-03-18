@@ -142,6 +142,24 @@
 .cp-spin { width:16px; height:16px; border:2px solid rgba(255,255,255,0.1); border-top-color:var(--teal); border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
 @keyframes spin { to { transform:rotate(360deg); } }
 .avatar { width:28px; height:28px; border-radius:50%; background:var(--teal-dim); border:1px solid rgba(45,212,191,0.3); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:var(--teal); flex-shrink:0; }
+
+/* ── Kanban Board ── */
+.kanban-board { display:flex; gap:10px; overflow-x:auto; padding-bottom:12px; min-height:400px; }
+.kanban-board::-webkit-scrollbar { height:4px; }
+.kanban-board::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:2px; }
+.kanban-col { flex:0 0 220px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:10px; display:flex; flex-direction:column; max-height:calc(100vh - 200px); }
+.kanban-col-header { padding:10px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:inherit; border-radius:10px 10px 0 0; }
+.kanban-col-title { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; }
+.kanban-col-count { font-size:10px; font-weight:700; color:var(--t3); background:rgba(255,255,255,0.06); padding:1px 7px; border-radius:10px; font-family:'DM Mono',monospace; }
+.kanban-col-body { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px; }
+.kanban-col-body::-webkit-scrollbar { width:3px; }
+.kanban-col-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.06); border-radius:2px; }
+.kanban-card { background:var(--bg-raised,rgba(255,255,255,0.04)); border:1px solid var(--border); border-radius:8px; padding:10px; cursor:pointer; transition:all 0.15s; }
+.kanban-card:hover { border-color:var(--border-h,rgba(45,212,191,0.35)); background:var(--bg-float,rgba(255,255,255,0.06)); }
+.kanban-card-title { font-size:11px; font-weight:500; color:var(--t1); line-height:1.35; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.kanban-card-meta { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--t3); }
+.kanban-card-budget { font-family:'DM Mono',monospace; font-weight:600; }
+.kanban-empty { font-size:11px; color:var(--t3); text-align:center; padding:20px 8px; opacity:0.5; }
 </style>
 </head>
 <body>
@@ -183,6 +201,7 @@
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
       <div class="tabs">
         <div class="tab active" onclick="switchTab('projects',this)">Projets actifs</div>
+        <div class="tab" onclick="switchTab('pipeline',this)">Pipeline</div>
         <div class="tab" onclick="switchTab('contacts',this)">Contacts</div>
       </div>
       <div id="proj-filters" class="fchips">
@@ -212,6 +231,17 @@
         <div class="proj-head-cell">Msgs</div>
       </div>
       <div id="proj-rows"><div class="cp-load"><div class="cp-spin"></div>Chargement...</div></div>
+    </div>
+
+    <!-- PIPELINE TAB (Kanban) -->
+    <div id="tab-pipeline" style="display:none">
+      <div id="pipeline-filters" class="fchips" style="margin-bottom:10px">
+        <span style="font-size:11px;color:var(--t3);margin-right:4px">Vue :</span>
+        <button class="fchip active" onclick="loadPipeline()">Tous</button>
+      </div>
+      <div class="kanban-board" id="kanban-board">
+        <div class="cp-load"><div class="cp-spin"></div>Chargement pipeline...</div>
+      </div>
     </div>
 
     <!-- CONTACTS TAB -->
@@ -341,8 +371,62 @@ function switchTab(tab,el) {
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');}); el.classList.add('active');
   document.getElementById('tab-projects').style.display=tab==='projects'?'':'none';
   document.getElementById('tab-contacts').style.display=tab==='contacts'?'':'none';
+  document.getElementById('tab-pipeline').style.display=tab==='pipeline'?'':'none';
   document.getElementById('proj-filters').style.display=tab==='projects'?'flex':'none';
   document.getElementById('contacts-filters').style.display=tab==='contacts'?'flex':'none';
+  var pf = document.getElementById('pipeline-filters'); if (pf) pf.style.display=tab==='pipeline'?'flex':'none';
+  if (tab==='pipeline') loadPipeline();
+}
+
+// ── PIPELINE KANBAN ──
+async function loadPipeline() {
+  var board = document.getElementById('kanban-board');
+  board.innerHTML = '<div class="cp-load"><div class="cp-spin"></div>Chargement pipeline...</div>';
+
+  try {
+    var { data } = await sb.from('upwork_jobs').select('*').in('status', ['applied','viewed','interviewing','offer','won','lost']).order('applied_at', { ascending: false }).limit(200);
+    var jobs = data || [];
+
+    var stages = [
+      { id: 'applied', label: 'Postulé', color: 'var(--blue)', icon: '📨' },
+      { id: 'viewed', label: 'Vu', color: 'var(--amber)', icon: '👁' },
+      { id: 'interviewing', label: 'Entretien', color: 'var(--purple)', icon: '💬' },
+      { id: 'offer', label: 'Offre', color: 'var(--green)', icon: '🤝' },
+      { id: 'won', label: 'Signé', color: 'var(--green)', icon: '✅' },
+      { id: 'lost', label: 'Perdu', color: 'var(--red)', icon: '✗' }
+    ];
+
+    board.innerHTML = stages.map(function(stage) {
+      var stageJobs = jobs.filter(function(j) { return j.status === stage.id; });
+      return '<div class="kanban-col">'
+        + '<div class="kanban-col-header">'
+        + '<span class="kanban-col-title" style="color:' + stage.color + '">' + stage.icon + ' ' + stage.label + '</span>'
+        + '<span class="kanban-col-count">' + stageJobs.length + '</span>'
+        + '</div>'
+        + '<div class="kanban-col-body">'
+        + (stageJobs.length ? stageJobs.map(function(j) {
+          var budget = '';
+          if (j.budget_min || j.budget_max) {
+            var b = j.budget_max || j.budget_min || 0;
+            budget = '$' + (b >= 1000 ? (b/1000).toFixed(1)+'K' : b);
+          }
+          var ago = j.applied_at ? fmtRelative(j.applied_at) : '';
+          return '<div class="kanban-card" onclick="window.location.href=\'/job-detail.html?id=' + j.id + '\'">'
+            + '<div class="kanban-card-title">' + escH(j.title || '—') + '</div>'
+            + '<div class="kanban-card-meta">'
+            + (budget ? '<span class="kanban-card-budget" style="color:' + stage.color + '">' + budget + '</span>' : '')
+            + (j.worth_score ? scorePill(j.worth_score) : '')
+            + (ago ? '<span style="margin-left:auto">' + ago + '</span>' : '')
+            + '</div>'
+            + '</div>';
+        }).join('') : '<div class="kanban-empty">Aucun job</div>')
+        + '</div></div>';
+    }).join('');
+
+  } catch(e) {
+    console.error('Pipeline error:', e);
+    board.innerHTML = '<div class="kanban-empty">Erreur chargement pipeline</div>';
+  }
 }
 
 // ── PANEL OPEN ──
