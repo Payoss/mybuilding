@@ -9,7 +9,7 @@ Performance:
   - /api/full-pipeline → Groq step1+step2, combined <5s
   - worth_score >= 8 → pre-generation triggered by frontend at job open
 """
-import json, sys, asyncio, os, pathlib, re, subprocess
+import json, sys, asyncio, os, pathlib, re, subprocess, random
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Any
 
@@ -925,23 +925,23 @@ COUNTRY: {req.country or 'Non specifie'}"""
     if req.spy_data:
         spy = req.spy_data
         context += f"\n\nSPY_DATA:"
-        if spy.get("hook_opening"):
-            context += f"\n- hook_opening: {spy['hook_opening']}"
-        if spy.get("attack_angle"):
-            context += f"\n- attack_angle: {spy['attack_angle']}"
-        if spy.get("real_need"):
-            context += f"\n- real_need: {spy['real_need']}"
-        if spy.get("tone_recommended"):
-            context += f"\n- tone_recommended: {spy['tone_recommended']}"
-        if spy.get("emotion"):
-            context += f"\n- emotion: {spy['emotion']}"
-        if spy.get("frustration"):
-            context += f"\n- frustration: {spy['frustration']}"
+        for field in ("hook_opening", "attack_angle", "real_need", "tone_recommended", "emotion", "frustration"):
+            if spy.get(field):
+                context += f"\n- {field}: {spy[field]}"
 
-    # Inject proof points
-    proof_points = _select_proof_points(f"{req.title} {req.description or ''}", n=2)
+    # Inject niche hooks as few-shot examples
+    niche, hooks = _match_niche(req.title, req.description or "")
+    if hooks:
+        selected = random.sample(hooks, min(3, len(hooks)))
+        context += f"\n\nHOOK EXAMPLES FOR NICHE '{niche}' (use as INSPIRATION — adapt to THIS brief, NEVER copy word-for-word):"
+        for i, h in enumerate(selected, 1):
+            context += f"\n  Example {i}: \"Hi! {h}\""
+        context += "\n\nIMPORTANT: These are examples of tone and structure. Replace ALL placeholders with REAL details from the job description above."
+
+    # Inject proof points for hook line 3
+    proof_points = _select_proof_points(f"{req.title} {req.description or ''}", n=3)
     if proof_points:
-        context += "\n\nRELEVANT_PROOF_POINTS (use in BLOC 3 if helpful):\n"
+        context += "\n\nPROOF POINTS (use the most relevant one for Hook line 3 — 'I've built [similar] — [result]'):\n"
         context += "\n".join(f"- {p}" for p in proof_points)
 
     prompt = ALEX_SYSTEM + "\n\n" + context

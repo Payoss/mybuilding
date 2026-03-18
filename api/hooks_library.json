@@ -1,68 +1,90 @@
 {
-  "version": "1.0",
-  "description": "Cover letter hooks by niche — injected into L1 of the cover letter generator",
+  "version": "2.0",
+  "description": "Cover letter hooks by niche — injected as few-shot examples into cover letter generator. 4-5 per niche for variety.",
   "niches": {
     "chatbot": {
       "label": "AI Chatbot / Customer Support",
-      "keywords": ["chatbot", "customer support", "conversational", "bot", "assistant", "support agent", "dialogue"],
+      "keywords": ["chatbot", "customer support", "conversational", "bot", "assistant", "support agent", "dialogue", "customer service", "helpdesk"],
       "hooks": [
-        "I noticed you need the bot to handle {detail_from_brief}. I shipped a similar Telegram bot for a news agency — it runs 7 articles/day fully autonomously.",
-        "The {feature_from_brief} you described is exactly what my own Telegram bot does in production — 100+ messages/day, zero manual input."
+        "I noticed you need the bot to handle {detail_from_brief}. I shipped a similar Telegram bot for a news agency — it runs 7 articles/day fully autonomously, zero manual input.",
+        "The {feature_from_brief} you described is exactly what my own Telegram bot does in production — 100+ messages/day, context memory, multi-command routing.",
+        "A bot that feels natural instead of rigid for {detail_from_brief} — I built exactly this. My production bot handles conversation buffers and remembers context across sessions.",
+        "Your team spending {time_wasted} on {manual_task} — I eliminated that exact bottleneck for another client with a conversational AI bot that now runs 24/7 unattended.",
+        "Supporting {languages} in a chatbot is something I've already solved — my Telegram bot handles multi-language routing with context management built in."
       ]
     },
     "n8n_automation": {
       "label": "n8n / Workflow Automation",
-      "keywords": ["n8n", "make", "zapier", "workflow", "automation", "integromat", "trigger", "automate"],
+      "keywords": ["n8n", "make", "zapier", "workflow", "automation", "integromat", "trigger", "automate", "workflow automation"],
       "hooks": [
-        "Your {process_from_brief} workflow sounds like it needs exactly {technical_detail}. I've built 50+ production n8n workflows including a full lead pipeline.",
-        "I've automated exactly this kind of {process_from_brief} before — the last one cut 40 hours/week of manual work down to zero."
+        "Your {process_from_brief} workflow sounds like it needs exactly {technical_detail}. I've built 50+ production n8n workflows including a full lead pipeline that generated 300 qualified leads in 2 weeks.",
+        "I've automated exactly this kind of {process_from_brief} before — the last one cut 40 hours/week of manual work down to zero.",
+        "The {trigger_detail} to {action_detail} pipeline you described — I run a self-hosted n8n instance with 20+ workflows doing exactly this in production right now.",
+        "Turning {manual_process} into a hands-off automation is literally what I do every week. My last n8n build saved a client 15 hours/week and hasn't needed a single manual intervention in 3 months.",
+        "I see you need {detail_from_brief} automated end-to-end. I've built this exact pipeline before — n8n + webhooks + error handling, all self-hosted and monitored."
       ]
     },
     "telegram_whatsapp": {
       "label": "Telegram / WhatsApp Bot",
-      "keywords": ["telegram", "whatsapp", "bot api", "messaging", "twilio"],
+      "keywords": ["telegram", "whatsapp", "bot api", "messaging", "twilio", "signal", "viber"],
       "hooks": [
-        "The {feature_from_brief} you described is exactly what I built last month. My own Telegram bot handles 50+ modules in production.",
-        "I've built a Telegram bot running 24/7 on a dedicated server — {feature_from_brief} is a feature I've already shipped."
+        "The {feature_from_brief} you described — appointment reminders, multilingual support — is exactly what I built last month. My own Telegram bot handles 100+ daily messages in production.",
+        "I've built a Telegram bot running 24/7 on a dedicated server — {feature_from_brief} is a feature I've already shipped and battle-tested.",
+        "A {bot_type} bot with {feature_from_brief} — I run my own in production. It handles conversation context, automated scheduling, and hasn't gone down once in 4 months.",
+        "Building bots that feel human is my specialty. My production Telegram bot uses context buffers and multi-command routing — {feature_from_brief} is a natural extension.",
+        "I noticed you need {detail_from_brief} on {platform}. I've integrated the Bot API at a deep level — edge cases, rate limits, webhook reliability — all solved in my own production bot."
       ]
     },
     "lead_generation": {
       "label": "Lead Generation / Scraping",
-      "keywords": ["lead", "scraping", "scraper", "data extraction", "prospection", "leads", "crawler"],
+      "keywords": ["lead", "scraping", "scraper", "data extraction", "prospection", "leads", "crawler", "enrichment", "lead gen"],
       "hooks": [
-        "I see you need {detail_from_brief} — I've built the exact same pipeline. Delivered 300 qualified leads in 2 weeks, fully automated with n8n.",
-        "Getting {detail_from_brief} is one of my most common builds — last one ran for 3 months straight without a single manual intervention."
+        "I see you need {detail_from_brief} — I've built the exact same pipeline for a marketing agency. Delivered 300 qualified leads in 2 weeks, fully automated with n8n + enrichment.",
+        "Getting {detail_from_brief} is one of my most common builds — last one ran for 3 months straight without a single manual intervention.",
+        "Scraping {source} and enriching with {enrichment_type} — I built a Chrome extension + pipeline that does exactly this. Currently scoring and qualifying leads automatically for my own CRM.",
+        "Your team doing {manual_task} manually — I automated that exact workflow for another client. Pipeline runs daily: scrape, clean, enrich, push to CRM. Zero human touch.",
+        "I noticed you need {volume} leads from {source}. I've built pipelines that deliver this volume weekly — automated extraction, dedup, enrichment, and direct CRM injection."
       ]
     },
     "api_integration": {
-      "label": "API Integration / Make.com",
-      "keywords": ["api", "integration", "webhook", "connect", "rest", "endpoint", "sync"],
+      "label": "API Integration / Make.com / Webhooks",
+      "keywords": ["api", "integration", "webhook", "connect", "rest", "endpoint", "sync", "zapier", "make.com"],
       "hooks": [
-        "Connecting {api_a} to {api_b} with {condition_from_brief} is one of my most common builds. I've integrated 12+ APIs in production.",
-        "I've built this exact kind of {integration_type} integration — clean architecture, error handling, and monitoring included."
+        "Connecting {api_a} to {api_b} with {condition_from_brief} is one of my most common builds. I've integrated 12+ APIs in production — Claude, Gmail, Telegram, Supabase, Cloudflare, government APIs.",
+        "I've built this exact kind of {integration_type} integration — clean architecture, error handling, retry logic, and monitoring included.",
+        "Syncing {system_a} with {system_b} in real-time — I built a similar webhook pipeline that processes thousands of events daily with zero data loss.",
+        "The {api_detail} integration you described — I recently shipped a similar API connector for a production system. Error handling, rate limiting, and logging all built in from day one.",
+        "I noticed you need {detail_from_brief}. I've connected APIs that are much harder to work with — government cadastre, legal document generation, real-time financial data. Your integration is well within scope."
       ]
     },
     "rag_knowledge": {
       "label": "RAG / Knowledge Base / AI Search",
-      "keywords": ["rag", "vector", "embedding", "knowledge base", "search", "retrieval", "document qa"],
+      "keywords": ["rag", "vector", "embedding", "knowledge base", "search", "retrieval", "document qa", "semantic search", "knowledge graph"],
       "hooks": [
-        "I run a production RAG system with hybrid search — ONNX embeddings + BM25 + knowledge graph. Your {use_case} is a direct fit.",
-        "Building {use_case} with RAG is exactly what I do daily — my own system processes thousands of documents with 95%+ retrieval accuracy."
+        "I run a production RAG system with hybrid search — ONNX embeddings + BM25 + knowledge graph with temporal decay. Your {use_case} is a direct fit for this architecture.",
+        "Building {use_case} with RAG is exactly what I do daily — my own system processes thousands of documents with hybrid search and PageRank scoring.",
+        "The {document_type} retrieval system you need — I built one for legal documents that generates answers in <30 seconds with 85-92% accuracy. Same architecture applies here.",
+        "I noticed you need AI that actually understands your {document_type}. I've built production RAG with ONNX embeddings, BM25 fallback, and knowledge graphs — not just a basic vector store.",
+        "Your {use_case} needs more than simple embedding search. I built a hybrid retrieval system with temporal decay scoring that prioritizes recent and relevant content — exactly what you're describing."
       ]
     },
     "generic": {
       "label": "Generic (fallback)",
       "keywords": [],
       "hooks": [
-        "{detail_from_brief} — I've built something very similar for {client_type}. Shipped in {timeframe}, still running in production.",
-        "I noticed {detail_from_brief}. I've solved this exact problem before — here's how I'd approach yours."
+        "I noticed {detail_from_brief} — I've built something very similar for {client_type}. Shipped in {timeframe}, still running in production today.",
+        "The {detail_from_brief} you described is a problem I've solved before — {result_achieved} for a similar client.",
+        "I see you need {detail_from_brief}. I shipped a comparable system that's been running in production for months — same stack, same challenges, proven solution.",
+        "Your {pain_point} — I eliminated that exact problem for another client. The solution has been running hands-off for {timeframe}.",
+        "I noticed {detail_from_brief}. This is my daily work — I run 38 AI agents in production and have shipped 50+ similar automations."
       ]
     }
   },
-  "rules": {
+  "injection_rules": {
+    "mode": "few_shot_examples",
+    "max_examples_injected": 3,
+    "instruction": "Use these hooks as INSPIRATION — adapt the structure and tone but fill in with REAL details from the job brief. NEVER copy a hook word-for-word.",
     "always_cite_brief_detail": true,
-    "never_use_title_only": true,
-    "max_2_sentences": true,
-    "placeholders": ["{detail_from_brief}", "{feature_from_brief}", "{process_from_brief}", "{api_a}", "{api_b}", "{condition_from_brief}", "{integration_type}", "{use_case}", "{client_type}", "{timeframe}", "{technical_detail}"]
+    "never_use_title_only": true
   }
 }
