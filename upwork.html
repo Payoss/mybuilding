@@ -1334,7 +1334,10 @@ async function enrichJob(jobId) {
 
     // Re-render the list to show updated scores
     renderScraped();
-    toast('⚡ Job enrichi — ' + (result.description_length || 0) + ' chars' + (result.has_enrichment ? ' + plan IA' : ''));
+    var msg = '⚡ Job enrichi — ' + (result.description_length || 0) + ' chars';
+    if (result.has_enrichment) msg += ' + plan IA ✓';
+    else if (result.enrich_error) msg += ' ⚠️ plan IA échoué: ' + result.enrich_error;
+    toast(msg);
   } catch(e) {
     console.error('enrichJob error:', e);
     // Fallback: try direct API enrichment with existing data (no full description)

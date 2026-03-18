@@ -1053,34 +1053,46 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           body: JSON.stringify(patch)
         });
 
-        // 6. Call AI enrichment (async — non-blocking for the response)
+        // 6. Call AI enrichment WITH the full description (blocking — must complete before response)
         const settings = await getSettings();
         const apiBase = settings.apiUrl || 'https://mybuilding.dev';
+        const fullDesc = detail.description || '';
 
         let enrichResult = null;
-        try {
-          const enrichRes = await fetch(`${apiBase}/api/job-enrich`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: patch.title || detail.title || '',
-              description: detail.description || '',
-              skills: detail.skills || [],
-              budget_min: patch.budget_min ?? null,
-              budget_max: patch.budget_max ?? null,
-              budget_type: patch.budget_type ?? null,
-              country: patch.country || detail.country || '',
-              feasibility: patch.feasibility ?? null,
-              worth_score: patch.worth_score ?? null,
-              time_estimate: patch.time_estimate ?? null
-            })
-          });
-          if (enrichRes.ok) enrichResult = await enrichRes.json();
-        } catch (e) {
-          console.warn('[ENRICH_JOB] AI enrich error (non-critical):', e.message);
+        let enrichError = null;
+        if (fullDesc.length > 30) {
+          try {
+            console.log('[ENRICH_JOB] Calling AI enrich with', fullDesc.length, 'chars description');
+            const enrichRes = await fetch(`${apiBase}/api/job-enrich`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: patch.title || detail.title || '',
+                description: fullDesc,
+                skills: detail.skills || [],
+                budget_min: patch.budget_min ?? null,
+                budget_max: patch.budget_max ?? null,
+                budget_type: patch.budget_type ?? null,
+                country: patch.country || detail.country || '',
+                feasibility: patch.feasibility ?? null,
+                worth_score: patch.worth_score ?? null,
+                time_estimate: patch.time_estimate ?? null
+              })
+            });
+            if (enrichRes.ok) {
+              enrichResult = await enrichRes.json();
+              console.log('[ENRICH_JOB] AI enrich OK — description_fr:', (enrichResult.description_fr || '').length, 'chars');
+            } else {
+              enrichError = 'HTTP ' + enrichRes.status;
+              console.warn('[ENRICH_JOB] AI enrich HTTP error:', enrichRes.status);
+            }
+          } catch (e) {
+            enrichError = e.message;
+            console.warn('[ENRICH_JOB] AI enrich fetch error:', e.message);
+          }
         }
 
-        // 7. Store enrichment in analysis.enrichment (preserving existing data)
+        // 7. Store enrichment — ALWAYS overwrite old enrichment with new one
         if (enrichResult) {
           let existingAnalysis = {};
           try {
@@ -1090,22 +1102,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             if (existRes.ok) { const rows = await existRes.json(); existingAnalysis = rows[0]?.analysis || {}; }
           } catch (e) {}
 
+          // Force-overwrite enrichment with new result (not merge — replace entirely)
           const updatedAnalysis = Object.assign({}, existingAnalysis, { enrichment: enrichResult });
           await fetch(`${sbUrl}/rest/v1/upwork_jobs?id=eq.${jobId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Prefer': 'return=minimal' },
             body: JSON.stringify({ analysis: updatedAnalysis })
           });
+          console.log('[ENRICH_JOB] Enrichment saved to Supabase for job', jobId);
+        } else if (enrichError) {
+          console.warn('[ENRICH_JOB] Enrichment NOT saved — AI call failed:', enrichError);
         }
 
-        console.log('[ENRICH_JOB] Complete:', detail.title?.slice(0, 50), 'desc:', (detail.description || '').length, 'chars');
+        console.log('[ENRICH_JOB] Complete:', detail.title?.slice(0, 50), 'desc:', fullDesc.length, 'chars, enriched:', !!enrichResult);
         sendResponse({
           ok: true,
-          description_length: (detail.description || '').length,
+          description_length: fullDesc.length,
           worth_score: patch.worth_score,
           feasibility: patch.feasibility,
           skills: detail.skills,
-          has_enrichment: !!enrichResult
+          has_enrichment: !!enrichResult,
+          enrich_error: enrichError
         });
       } catch (e) {
         console.error('[ENRICH_JOB] Error:', e);
