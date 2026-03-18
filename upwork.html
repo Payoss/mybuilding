@@ -698,6 +698,10 @@ var selectedJobs = new Set();
 
 async function loadScraped() {
   try {
+    // Auto-purge: delete jobs with status 'new' scraped > 24h ago
+    var cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    await sb.from('upwork_jobs').delete().eq('status', 'new').lt('scraped_at', cutoff);
+
     var { data } = await sb.from('upwork_jobs').select('*').eq('source', 'extension').order('scraped_at', { ascending: false }).order('id', { ascending: true }).limit(200);
     allScraped = data || [];
     document.getElementById('scraped-count').textContent = allScraped.length + ' jobs';
