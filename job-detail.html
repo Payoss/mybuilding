@@ -775,7 +775,7 @@ async function generateAlexCover() {
   var oldText = btn.textContent;
   btn.textContent = '🔍 Espionnage en cours...';
   btn.disabled = true;
-  document.getElementById('generateBtn').style.display = 'none';
+  var _oldBtn = document.getElementById('generateBtn'); if (_oldBtn) _oldBtn.style.display = 'none';
 
   var skills = (_job.skills || []).filter(function(s) { return s && !/^(Location|Unverified|Payment|\$\d)/.test(s); });
   var payload = {
@@ -847,7 +847,7 @@ async function generateAlexCover() {
   } catch(e) {
     console.error('Alex cover error:', e);
     toast('Erreur: ' + e.message, 'error');
-    document.getElementById('generateBtn').style.display = '';
+    var _oldBtn2 = document.getElementById('generateBtn'); if (_oldBtn2) _oldBtn2.style.display = '';
   } finally {
     btn.textContent = oldText;
     btn.disabled = false;
