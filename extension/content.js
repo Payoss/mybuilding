@@ -108,15 +108,27 @@
         if (idMatch) url = `https://www.upwork.com/jobs/~${idMatch[1]}`;
         const id = idMatch ? idMatch[1] : btoa(title).slice(0, 16);
 
-        // Description — ordered from most specific to least, never fall back to bare `p`
+        // Description — ordered from most specific to least, with broad fallback
         const descEl =
           card.querySelector('[data-test="job-description-text"]') ||
           card.querySelector('[data-test="UpCLineClamp"]') ||
           card.querySelector('[data-test="job-description"]') ||
+          card.querySelector('[data-test="JobDescription"]') ||
           card.querySelector('.air3-line-clamp') ||
           card.querySelector('[class*="JobDescription"]') ||
-          card.querySelector('[class*="job-description"]');
-        const description = descEl?.textContent?.trim()?.slice(0, 2000) || '';
+          card.querySelector('[class*="job-description"]') ||
+          card.querySelector('[class*="description"]') ||
+          card.querySelector('[class*="clamp"]');
+        let description = descEl?.textContent?.trim()?.slice(0, 2000) || '';
+        // Fallback: find longest <p> or <span> in the card (> 40 chars, likely description)
+        if (!description) {
+          let best = '';
+          card.querySelectorAll('p, span, div').forEach(el => {
+            const t = el.textContent?.trim() || '';
+            if (t.length > best.length && t.length > 40 && t !== title) best = t;
+          });
+          description = best.slice(0, 2000);
+        }
 
         const budgetEl = card.querySelector(
           '[data-test="budget"], [data-test="is-fixed-price"], ' +

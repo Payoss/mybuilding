@@ -66,6 +66,8 @@
 .hc-kw { font-size: 10px; color: var(--t3); margin-top: 1px; }
 .action-tiny { font-size: 11px; color: var(--t3); cursor: pointer; transition: color 0.12s; }
 .action-tiny:hover { color: var(--teal); }
+.enrich-btn { font-size: 13px; padding: 1px 4px; border-radius: 4px; }
+.enrich-btn:hover { background: rgba(13,148,136,0.15); color: var(--teal); }
 .action-del { font-size: 11px; color: var(--t3); cursor: pointer; transition: color 0.12s; background: none; border: none; font-family: inherit; padding: 2px 6px; border-radius: 4px; }
 .action-del:hover { color: var(--red); background: var(--red-bg); }
 .time-stale { color: var(--amber) !important; }
@@ -828,6 +830,7 @@ function renderScraped() {
       + '<div class="hc">' + (j.country || '—').replace(/^Location\s+/i, '') + '</div>'
       + '<div class="hc">' + (STATUS_CHIPS[j.status] || j.status || '') + '</div>'
       + '<div class="hc hc-actions">'
+      + '<span class="action-tiny enrich-btn" id="enrich-' + j.id + '" onclick="event.stopPropagation();enrichJob(\'' + j.id + '\')" title="Ouvrir la page Upwork en arrière-plan, extraire la description complète, mettre à jour score + plan IA">⚡</span>'
       + '<span class="action-tiny" onclick="event.stopPropagation();markApplied(\'' + j.id + '\')">Postulé</span>'
       + '<button class="action-del" onclick="event.stopPropagation();deleteJob(\'' + j.id + '\')" title="Supprimer">✕</button>'
       + '</div>'
@@ -1274,6 +1277,98 @@ loadProposalBank();
 // ---- Job Detail — redirect to dedicated page ----
 function openJobDetail(jobId) {
   window.location.href = '/job-detail.html?id=' + jobId;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ENRICH JOB — Background tab via extension bridge
+// Opens Upwork page in hidden tab, extracts full description,
+// updates score + AI enrichment, auto-refreshes row.
+// ══════════════════════════════════════════════════════════════
+var _bridgeReady = false;
+var _bridgeCallbacks = {};
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.source === 'mybuilding-extension') {
+    if (event.data.type === 'BRIDGE_READY') { _bridgeReady = true; return; }
+    var cb = _bridgeCallbacks[event.data.id];
+    if (cb) { delete _bridgeCallbacks[event.data.id]; cb(event.data.response); }
+  }
+});
+
+function sendToExtension(payload) {
+  return new Promise(function(resolve, reject) {
+    if (!_bridgeReady) { reject(new Error('Extension non détectée. Rechargez la page après avoir installé l\'extension.')); return; }
+    var id = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    _bridgeCallbacks[id] = resolve;
+    window.postMessage({ source: 'mybuilding-page', id: id, payload: payload }, '*');
+    // Timeout 60s
+    setTimeout(function() {
+      if (_bridgeCallbacks[id]) { delete _bridgeCallbacks[id]; reject(new Error('Extension timeout (60s)')); }
+    }, 60000);
+  });
+}
+
+async function enrichJob(jobId) {
+  var job = allScraped.find(function(j) { return j.id === jobId; });
+  if (!job) { toast('Job non trouvé', 'error'); return; }
+  if (!job.url) { toast('Pas d\'URL Upwork pour ce job', 'error'); return; }
+
+  var btn = document.getElementById('enrich-' + jobId);
+  if (!btn) return;
+  var oldText = btn.textContent;
+  btn.textContent = '⏳';
+  btn.style.pointerEvents = 'none';
+  btn.style.opacity = '0.5';
+
+  try {
+    var result = await sendToExtension({ type: 'ENRICH_JOB', jobUrl: job.url, jobId: jobId });
+
+    if (!result || !result.ok) {
+      throw new Error(result?.error || 'Enrichissement échoué');
+    }
+
+    // Update local data with new scores
+    if (result.worth_score != null) job.worth_score = result.worth_score;
+    if (result.feasibility != null) job.feasibility = result.feasibility;
+    if (result.skills) job.skills = result.skills;
+    if (result.description_length) job.description_full = '(enrichi — ' + result.description_length + ' chars)';
+
+    // Re-render the list to show updated scores
+    renderScraped();
+    toast('⚡ Job enrichi — ' + (result.description_length || 0) + ' chars' + (result.has_enrichment ? ' + plan IA' : ''));
+  } catch(e) {
+    console.error('enrichJob error:', e);
+    // Fallback: try direct API enrichment with existing data (no full description)
+    try {
+      var res = await fetch('/api/job-enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: job.title, description: job.description || '',
+          skills: job.skills || [], budget_min: job.budget_min, budget_max: job.budget_max,
+          budget_type: job.budget_type, country: job.country,
+          feasibility: job.feasibility, worth_score: job.worth_score
+        })
+      });
+      if (res.ok) {
+        var enrichData = await res.json();
+        // Save enrichment to Supabase
+        var existAnalysis = job.analysis || {};
+        var updatedAnalysis = Object.assign({}, existAnalysis, { enrichment: enrichData });
+        await sb.from('upwork_jobs').update({ analysis: updatedAnalysis }).eq('id', jobId);
+        job.analysis = updatedAnalysis;
+        toast('⚡ Enrichi (API directe — pas de description complète)');
+      } else {
+        toast('Erreur enrichissement: ' + e.message, 'error');
+      }
+    } catch(e2) {
+      toast('Erreur: ' + e.message, 'error');
+    }
+  } finally {
+    btn.textContent = '✓';
+    btn.style.pointerEvents = '';
+    btn.style.opacity = '';
+    setTimeout(function() { btn.textContent = oldText; }, 3000);
+  }
 }
 </script>
 </body>

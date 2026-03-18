@@ -962,5 +962,158 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.storage.local.set({ mb_last_cover: msg.cover });
     return false;
   }
+
+  // ── ENRICH_JOB — called from mybuilding.dev via bridge.js ──
+  // Opens Upwork job page in background tab, extracts full description,
+  // patches Supabase (description + re-score + AI enrichment), closes tab.
+  if (msg.type === 'ENRICH_JOB') {
+    const jobUrl = msg.jobUrl;
+    const jobId = msg.jobId;
+    if (!jobUrl || !jobId) { sendResponse({ ok: false, error: 'missing jobUrl or jobId' }); return true; }
+
+    (async () => {
+      try {
+        // 1. Open background tab (invisible to user)
+        const tab = await chrome.tabs.create({ url: jobUrl, active: false });
+
+        // 2. Wait for page load
+        await new Promise(resolve => {
+          const listener = (tabId, info) => {
+            if (tabId === tab.id && info.status === 'complete') {
+              chrome.tabs.onUpdated.removeListener(listener);
+              resolve();
+            }
+          };
+          chrome.tabs.onUpdated.addListener(listener);
+          // Safety timeout — don't wait forever
+          setTimeout(() => { chrome.tabs.onUpdated.removeListener(listener); resolve(); }, 12000);
+        });
+
+        // Small extra delay for SPA hydration
+        await new Promise(r => setTimeout(r, 1500));
+
+        // 3. Inject content script + extract
+        try {
+          await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+        } catch (e) { /* might already be injected */ }
+        await new Promise(r => setTimeout(r, 500));
+
+        let detail;
+        try {
+          detail = await chrome.tabs.sendMessage(tab.id, { type: 'GET_JOB_DETAIL' });
+        } catch (e) {
+          console.warn('[ENRICH_JOB] content script comm error:', e.message);
+        }
+
+        // 4. Close background tab immediately
+        chrome.tabs.remove(tab.id).catch(() => {});
+
+        if (!detail?.id && !detail?.description) {
+          sendResponse({ ok: false, error: 'extraction failed' });
+          return;
+        }
+
+        // 5. Patch Supabase with full description + re-score
+        const { url: sbUrl, key: sbKey } = await getSupabase();
+        if (!sbUrl || !sbKey) { sendResponse({ ok: false, error: 'supabase not configured' }); return; }
+
+        const patch = {};
+        if (detail.description && detail.description.length > 50) {
+          patch.description_full = detail.description;
+          patch.description = detail.description; // also update short description
+        }
+        if (detail.title) patch.title = detail.title;
+        if (detail.skills?.length) patch.skills = detail.skills;
+        if (detail.country) patch.country = detail.country;
+        if (detail.budget) {
+          const bp = parseBudget(detail.budget);
+          if (bp.min != null) patch.budget_min = bp.min;
+          if (bp.max != null) patch.budget_max = bp.max;
+          if (bp.type) patch.budget_type = bp.type;
+        }
+
+        // Re-score with full description
+        if (detail.description && detail.description.length > 100) {
+          const scores = scoreJob({
+            title: patch.title || detail.title || '',
+            description: detail.description,
+            country: patch.country || detail.country || '',
+            scraped_at: new Date().toISOString()
+          });
+          Object.assign(patch, scores);
+        }
+
+        // PATCH Supabase
+        await fetch(`${sbUrl}/rest/v1/upwork_jobs?id=eq.${jobId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(patch)
+        });
+
+        // 6. Call AI enrichment (async — non-blocking for the response)
+        const settings = await getSettings();
+        const apiBase = settings.apiUrl || 'https://mybuilding.dev';
+
+        let enrichResult = null;
+        try {
+          const enrichRes = await fetch(`${apiBase}/api/job-enrich`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: patch.title || detail.title || '',
+              description: detail.description || '',
+              skills: detail.skills || [],
+              budget_min: patch.budget_min ?? null,
+              budget_max: patch.budget_max ?? null,
+              budget_type: patch.budget_type ?? null,
+              country: patch.country || detail.country || '',
+              feasibility: patch.feasibility ?? null,
+              worth_score: patch.worth_score ?? null,
+              time_estimate: patch.time_estimate ?? null
+            })
+          });
+          if (enrichRes.ok) enrichResult = await enrichRes.json();
+        } catch (e) {
+          console.warn('[ENRICH_JOB] AI enrich error (non-critical):', e.message);
+        }
+
+        // 7. Store enrichment in analysis.enrichment (preserving existing data)
+        if (enrichResult) {
+          let existingAnalysis = {};
+          try {
+            const existRes = await fetch(`${sbUrl}/rest/v1/upwork_jobs?select=analysis&id=eq.${jobId}`, {
+              headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` }
+            });
+            if (existRes.ok) { const rows = await existRes.json(); existingAnalysis = rows[0]?.analysis || {}; }
+          } catch (e) {}
+
+          const updatedAnalysis = Object.assign({}, existingAnalysis, { enrichment: enrichResult });
+          await fetch(`${sbUrl}/rest/v1/upwork_jobs?id=eq.${jobId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ analysis: updatedAnalysis })
+          });
+        }
+
+        console.log('[ENRICH_JOB] Complete:', detail.title?.slice(0, 50), 'desc:', (detail.description || '').length, 'chars');
+        sendResponse({
+          ok: true,
+          description_length: (detail.description || '').length,
+          worth_score: patch.worth_score,
+          feasibility: patch.feasibility,
+          skills: detail.skills,
+          has_enrichment: !!enrichResult
+        });
+      } catch (e) {
+        console.error('[ENRICH_JOB] Error:', e);
+        sendResponse({ ok: false, error: e.message });
+      }
+    })();
+    return true; // async sendResponse
+  }
+
   return false;
 });

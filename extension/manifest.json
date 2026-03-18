@@ -33,6 +33,11 @@
       "matches": ["https://www.upwork.com/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://mybuilding.dev/*", "http://localhost:*/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_idle"
     }
   ]
 }
