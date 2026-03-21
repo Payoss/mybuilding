@@ -3,126 +3,349 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>mybuilding — Login</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<title>mybuilding — Access</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
 :root {
-  --bg: #161821;
+  --bg: #06060a;
   --teal: #2dd4bf;
   --teal-dark: #0d9488;
-  --glass: rgba(255,255,255,0.07);
-  --border: rgba(255,255,255,0.10);
+  --indigo: #818cf8;
+  --violet: #a78bfa;
   --t1: #f1f5f9;
   --t2: #94a3b8;
   --t3: #475569;
-  --red: #f87171;
+  --red: #fb7185;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 html, body { height: 100%; }
 body {
   background: var(--bg);
   color: var(--t1);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  letter-spacing: -0.02em;
+  -webkit-font-smoothing: antialiased;
 }
-.blob-1 { background: radial-gradient(circle, rgba(45,212,191,0.08) 0%, transparent 70%); }
-.blob-2 { background: radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%); }
-.blob { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; }
-.blob-1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(13,148,136,0.12) 0%, transparent 70%); top: -100px; right: 100px; animation: bf1 22s ease-in-out infinite; }
-.blob-2 { width: 350px; height: 350px; background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%); bottom: -60px; left: 150px; animation: bf2 28s ease-in-out infinite; }
-@keyframes bf1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,20px)} }
-@keyframes bf2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,-25px)} }
 
+/* ── Aurora background ── */
+.aurora {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  overflow: hidden;
+}
+.aurora-layer {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.6;
+  mix-blend-mode: screen;
+}
+.al-1 {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(45,212,191,0.15) 0%, transparent 70%);
+  top: -20%; right: -5%;
+  animation: aurora1 12s ease-in-out infinite;
+}
+.al-2 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(129,140,248,0.12) 0%, transparent 70%);
+  bottom: -15%; left: -5%;
+  animation: aurora2 15s ease-in-out infinite;
+}
+.al-3 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(167,139,250,0.10) 0%, transparent 70%);
+  top: 30%; left: 40%;
+  animation: aurora3 18s ease-in-out infinite;
+}
+.al-4 {
+  width: 350px; height: 350px;
+  background: radial-gradient(circle, rgba(45,212,191,0.08) 0%, transparent 70%);
+  bottom: 10%; right: 20%;
+  animation: aurora4 20s ease-in-out infinite;
+}
+@keyframes aurora1 {
+  0%,100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-60px, 40px) scale(1.1); }
+  66% { transform: translate(30px, -20px) scale(0.95); }
+}
+@keyframes aurora2 {
+  0%,100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(50px, -30px) scale(1.08); }
+  66% { transform: translate(-40px, 50px) scale(0.92); }
+}
+@keyframes aurora3 {
+  0%,100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-30px, -40px) scale(1.15); }
+}
+@keyframes aurora4 {
+  0%,100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  50% { transform: translate(40px, 20px) scale(1.1); opacity: 0.8; }
+}
+
+/* ── Grid lines ── */
+.grid-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+}
+
+/* ── Noise ── */
+.noise {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+}
+
+/* ── Login card ── */
 .login-card {
   position: relative;
   z-index: 1;
-  background: var(--glass);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 40px 36px;
-  width: 380px;
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px;
+  padding: 48px 40px 40px;
+  width: 400px;
   text-align: center;
+  box-shadow:
+    0 32px 80px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(255,255,255,0.03) inset,
+    0 1px 0 rgba(255,255,255,0.05) inset;
+  animation: cardIn 0.8s var(--ease) both;
 }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Glow ring behind card ── */
+.login-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(45,212,191,0.2), rgba(129,140,248,0.1), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ── Logo — MB monogram ── */
 .login-logo {
-  width: 48px; height: 48px;
+  width: 56px; height: 56px;
+  margin: 0 auto 20px;
+  position: relative;
+  animation: logoIn 0.8s var(--ease) 0.15s both;
+}
+@keyframes logoIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+.logo-glow {
+  position: absolute; inset: -8px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(45,212,191,0.25), rgba(129,140,248,0.15));
+  filter: blur(16px);
+  animation: glowPulse 3s ease-in-out infinite;
+}
+@keyframes glowPulse {
+  0%,100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+.logo-box {
+  position: relative;
+  width: 56px; height: 56px;
   background: linear-gradient(135deg, var(--teal), var(--teal-dark));
   border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 16px;
-  box-shadow: 0 0 24px rgba(13,148,136,0.4);
+  box-shadow: 0 4px 24px rgba(45,212,191,0.35);
 }
-.login-logo svg { width: 24px; height: 24px; }
-.login-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
-.login-sub { font-size: 12px; color: var(--t3); margin-bottom: 28px; }
+
+.login-title {
+  font-size: 22px; font-weight: 800; letter-spacing: -0.04em;
+  margin-bottom: 4px;
+  animation: textIn 0.6s var(--ease) 0.25s both;
+}
+@keyframes textIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.login-sub {
+  font-size: 13px; color: var(--t3); margin-bottom: 32px;
+  font-weight: 400; letter-spacing: 0.02em;
+  animation: textIn 0.6s var(--ease) 0.3s both;
+}
+
+/* ── Input ── */
+.input-wrap {
+  position: relative;
+  margin-bottom: 16px;
+  animation: textIn 0.6s var(--ease) 0.35s both;
+}
+.input-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--t3); pointer-events: none;
+  transition: color 0.2s;
+}
+.input-wrap:focus-within .input-icon { color: var(--teal); }
 .login-input {
   width: 100%;
-  padding: 12px 14px;
+  padding: 14px 44px 14px 42px;
   background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
   color: var(--t1);
   font-family: inherit;
   font-size: 14px;
   outline: none;
-  transition: border-color 0.2s;
-  margin-bottom: 14px;
+  transition: all 0.25s;
 }
-.login-input:focus { border-color: var(--teal); }
+.login-input:focus {
+  border-color: rgba(45,212,191,0.4);
+  box-shadow: 0 0 0 4px rgba(45,212,191,0.08), 0 0 20px rgba(45,212,191,0.06);
+  background: rgba(255,255,255,0.06);
+}
 .login-input::placeholder { color: var(--t3); }
+.toggle-pwd {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--t3); cursor: pointer;
+  padding: 4px; border-radius: 4px; transition: color 0.15s;
+}
+.toggle-pwd:hover { color: var(--t1); }
+
+/* ── Button ── */
 .login-btn {
   width: 100%;
-  padding: 12px;
-  background: var(--teal);
+  padding: 14px;
+  background: linear-gradient(135deg, var(--teal), var(--teal-dark));
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 0 20px rgba(13,148,136,0.3);
+  transition: all 0.25s;
+  box-shadow: 0 4px 24px rgba(45,212,191,0.25);
+  position: relative;
+  overflow: hidden;
+  animation: textIn 0.6s var(--ease) 0.4s both;
+  letter-spacing: -0.01em;
 }
-.login-btn:hover { opacity: 0.9; box-shadow: 0 0 28px rgba(13,148,136,0.45); }
+.login-btn:hover {
+  box-shadow: 0 8px 32px rgba(45,212,191,0.4);
+  transform: translateY(-1px);
+}
+.login-btn:active { transform: translateY(0); }
+.login-btn::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+.login-btn:hover::after { transform: translateX(100%); }
+
+/* ── Error ── */
 .login-error {
   color: var(--red);
   font-size: 12px;
-  margin-top: 12px;
+  margin-top: 14px;
   display: none;
+  font-weight: 500;
 }
-.login-error.visible { display: block; animation: shake 0.3s ease; }
-@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+.login-error.visible { display: block; animation: shake 0.4s var(--ease); }
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* ── Footer ── */
+.login-footer {
+  margin-top: 28px;
+  font-size: 11px;
+  color: var(--t3);
+  animation: textIn 0.6s var(--ease) 0.5s both;
+}
+.login-footer a {
+  color: var(--teal);
+  text-decoration: none;
+  font-weight: 500;
+}
+.login-footer a:hover { text-decoration: underline; }
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .login-card { width: calc(100vw - 32px); padding: 36px 28px 32px; }
+}
 </style>
 </head>
 <body>
-<div class="blob blob-1"></div>
-<div class="blob blob-2"></div>
 
+<!-- Aurora background -->
+<div class="aurora">
+  <div class="aurora-layer al-1"></div>
+  <div class="aurora-layer al-2"></div>
+  <div class="aurora-layer al-3"></div>
+  <div class="aurora-layer al-4"></div>
+</div>
+<div class="grid-bg"></div>
+<div class="noise"></div>
+
+<!-- Login card -->
 <div class="login-card">
   <div class="login-logo">
-    <svg width="24" height="24" viewBox="0 0 18 18" fill="none">
-      <rect x="3" y="8" width="12" height="9" rx="1" fill="white" opacity="0.9"/>
-      <path d="M1.5 9L9 2L16.5 9" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-      <rect x="7" y="12" width="4" height="5" rx="0.5" fill="rgba(13,148,136,0.9)"/>
-    </svg>
+    <div class="logo-glow"></div>
+    <div class="logo-box">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <!-- MB monogram — geometric, negative space -->
+        <path d="M6 6h4l6 10L22 6h4v20h-4V14l-6 9.5L10 14v12H6V6z" fill="white" opacity="0.95"/>
+      </svg>
+    </div>
   </div>
+
   <div class="login-title">mybuilding</div>
-  <div class="login-sub">Espace prive — acces restreint</div>
+  <div class="login-sub">Private workspace</div>
 
   <form id="loginForm" onsubmit="return doLogin(event)">
-    <input type="password" class="login-input" id="pwd" placeholder="Mot de passe" autocomplete="current-password" autofocus>
-    <button type="submit" class="login-btn">Entrer</button>
+    <div class="input-wrap">
+      <svg class="input-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 1a4 4 0 00-4 4v2H3a1 1 0 00-1 1v6a1 1 0 001 1h10a1 1 0 001-1V8a1 1 0 00-1-1h-1V5a4 4 0 00-4-4zm-2.5 4a2.5 2.5 0 015 0v2h-5V5zM8 10a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/>
+      </svg>
+      <input type="password" class="login-input" id="pwd" placeholder="Access code" autocomplete="current-password" autofocus>
+      <button type="button" class="toggle-pwd" onclick="togglePwd()" tabindex="-1">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" id="eyeIcon">
+          <path d="M8 3C4.5 3 1.7 5.1.5 8c1.2 2.9 4 5 7.5 5s6.3-2.1 7.5-5c-1.2-2.9-4-5-7.5-5zm0 8.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7zM8 6a2 2 0 100 4 2 2 0 000-4z"/>
+        </svg>
+      </button>
+    </div>
+    <button type="submit" class="login-btn">Enter</button>
   </form>
-  <div class="login-error" id="loginError">Mot de passe incorrect</div>
+  <div class="login-error" id="loginError">Wrong access code</div>
+
+  <div class="login-footer">
+    <a href="/landing.html">&larr; Back to mybuilding.dev</a>
+  </div>
 </div>
 
 <script>
-// SHA-256 hash of the password (client-side check)
 var HASH = 'ffb56b8d39faa60b53c15957c255c08e977b6fbe96c4ce9dcf1214bf48b91bc2';
 
 async function sha256(str) {
@@ -141,9 +364,14 @@ async function doLogin(e) {
   } else {
     document.getElementById('loginError').classList.add('visible');
     document.getElementById('pwd').value = '';
-    setTimeout(function() { document.getElementById('loginError').classList.remove('visible'); }, 2000);
+    setTimeout(function() { document.getElementById('loginError').classList.remove('visible'); }, 2500);
   }
   return false;
+}
+
+function togglePwd() {
+  var inp = document.getElementById('pwd');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
 }
 
 // Already logged in?
