@@ -1,12 +1,19 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>mybuilding — Dashboard</title>
+<title>mybuilding — AI-Powered Freelance Suite</title>
 </head>
 <body>
-<script src="/js/auth.js"></script>
-<script>window.location.href = '/dashboard.html'</script>
+<script>
+// If authenticated → dashboard. Otherwise → landing page.
+var HASH = 'ffb56b8d39faa60b53c15957c255c08e977b6fbe96c4ce9dcf1214bf48b91bc2';
+if (sessionStorage.getItem('mb_auth') === HASH) {
+  window.location.href = '/dashboard.html';
+} else {
+  window.location.href = '/landing.html';
+}
+</script>
 </body>
 </html>
