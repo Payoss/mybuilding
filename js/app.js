@@ -305,9 +305,12 @@ function renderSidebar(activePage) {
     + '<div class="nav-section"><div class="nav-label">Finance</div>'
     + financeLinks.map(navItem).join('')
     + '</div>'
-    + '<div class="sidebar-bottom"><div class="user-row">'
+    + '<div class="sidebar-bottom">'
+    + '<div class="user-row">'
     + '<div class="user-av">PA</div>'
     + '<div style="flex:1;min-width:0"><div class="user-name">Paul Annes</div><div class="user-plan">Freelance</div></div>'
     + '<div class="online-dot"></div>'
-    + '</div></div></aside>';
+    + '</div>'
+    + '<div style="padding:6px 8px 2px"><button onclick="sessionStorage.removeItem(\'mb_auth\');window.location.href=\'/landing.html\'" style="width:100%;padding:6px 0;border-radius:6px;background:rgba(251,113,133,0.08);border:1px solid rgba(251,113,133,0.15);color:#fb7185;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.15s" onmouseover="this.style.background=\'rgba(251,113,133,0.15)\'" onmouseout="this.style.background=\'rgba(251,113,133,0.08)\'">Déconnexion</button></div>'
+    + '</div></aside>';
 }
